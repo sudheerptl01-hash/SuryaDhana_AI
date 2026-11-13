@@ -150,10 +150,72 @@ def curve_honesty(curve: dict[str, Any], last_expiry: Any) -> dict[str, Any]:
     return curve
 
 
+# F1-TRADER (13 Nov 2026), R3-NITS: the store pairs each expiry with the LAST session stored BEFORE it
+# (``MAX(date) < expiry``), so a hole in ``iv_expiry_daily`` around an expiry produces a row priced months out —
+# the live find was 2026-06-25 "priced 2025-07-31 (329d)", realised −8.10 %: a data gap, not an implied-vs-realised
+# observation. A healthy pairing prices 1–4 calendar days before expiry (a long weekend at most), so anything whose
+# pricing gap exceeds this bound is dropped here, counted and named in ``excluded_note`` — never silently.
+SCORECARD_MAX_PRICING_GAP_DAYS = 7
+
+
+def _mean(xs: list[float]) -> float:
+    return sum(xs) / len(xs)
+
+
+def _median(xs: list[float]) -> float:
+    s = sorted(xs)
+    n = len(s)
+    return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
+
+
+def _rescore(rows: list[dict[str, Any]], fair: Any) -> dict[str, Any]:
+    """The scorecard stats over the kept rows (the store's own formulae, intraday.scorecard): needed only when a
+    DROPPED bogus row had been scored, so the served stats never count a row the table no longer shows."""
+    scored = [r for r in rows if r.get("implied_move_pct") is not None]
+    stats: dict[str, Any] = {"n": len(scored)}
+    if not scored:
+        return stats
+    err_i = [abs(abs(r["realised_move_pct"]) - r["implied_move_pct"]) for r in scored]
+    stats.update({"exceeded_pct": round(100 * sum(bool(r.get("exceeded")) for r in scored) / len(scored), 1),
+                  "median_ratio": round(_median([r["ratio"] for r in scored]), 3),
+                  "mean_ratio": round(_mean([r["ratio"] for r in scored]), 3),
+                  "mean_abs_miss_pct": round(_mean(err_i), 3)})
+    if fair is not None:
+        stats["fair_exceeded_pct"] = fair
+    both = [r for r in scored if r.get("naive_move_pct") is not None]
+    if both:
+        err_n = [abs(abs(r["realised_move_pct"]) - r["naive_move_pct"]) for r in both]
+        err_ib = [abs(abs(r["realised_move_pct"]) - r["implied_move_pct"]) for r in both]
+        stats.update({"naive_mean_abs_miss_pct": round(_mean(err_n), 3),
+                      "implied_closer": int(sum(a < b for a, b in zip(err_ib, err_n, strict=True))), "compared": len(both)})
+    return stats
+
+
+def filter_scorecard(sc: dict[str, Any]) -> dict[str, Any]:
+    """Drop stale-pairing rows (pricing gap > SCORECARD_MAX_PRICING_GAP_DAYS calendar days) from the served
+    scorecard. The row count and the reason are stated; stats are re-derived only when a dropped row was scored
+    (the live bogus row is unscored — ``implied_move_pct`` null — so the store's stats normally pass through)."""
+    rows = [r for r in (sc.get("rows") or []) if isinstance(r, dict)]
+    kept: list[dict[str, Any]] = []
+    dropped: list[dict[str, Any]] = []
+    for r in rows:
+        (dropped if isinstance(r.get("dte"), (int, float)) and r["dte"] > SCORECARD_MAX_PRICING_GAP_DAYS else kept).append(r)
+    if not dropped:
+        return sc
+    out = dict(sc)
+    out["rows"] = kept
+    out["excluded"] = len(dropped)
+    out["excluded_note"] = ("excluded " + ", ".join(f"{r.get('expiry')} (priced {r.get('priced_on')}, {r.get('dte')}d before)" for r in dropped)
+                            + f": a pricing gap over {SCORECARD_MAX_PRICING_GAP_DAYS} calendar days is a store hole, not an observation")
+    if any(r.get("implied_move_pct") is not None for r in dropped):
+        out["stats"] = _rescore(kept, (sc.get("stats") or {}).get("fair_exceeded_pct"))
+    return out
+
+
 def shape_expiry(body: dict[str, Any] | None, symbol: str, err: str | None, now: datetime | None = None) -> dict[str, Any]:
     b = body or {}
     live = b.get("live") or {"snapshots": 0}
-    sc = b.get("scorecard") or {"rows": [], "stats": {"n": 0}}
+    sc = filter_scorecard(b.get("scorecard") or {"rows": [], "stats": {"n": 0}})
     curve = curve_honesty(dict(b.get("curve") or {"n": 0, "points": []}), b.get("last_expiry"))
     out = {"symbol": symbol, "date": b.get("date"), "is_expiry_day": bool(b.get("is_expiry_day")), "next_expiry": b.get("next_expiry"),
            "last_expiry": b.get("last_expiry"), "live": live, "curve": curve, "scorecard": sc,

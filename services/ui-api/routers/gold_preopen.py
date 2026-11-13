@@ -1334,7 +1334,7 @@ async def gold_preopen(
 
 async def _gold_preopen(baseline: float | None, mcx_price: float | None, threshold: float,
                         eurusd_trigger: float | None = None) -> dict[str, Any]:
-    now = datetime.now(IST)
+    now = _now_ist()   # the module's one clock (testable; a bare datetime.now here made the fair tests weekend-red)
     notes: list[str] = []
     triggers = await asyncio.to_thread(prefs_triggers)
     if eurusd_trigger is None:

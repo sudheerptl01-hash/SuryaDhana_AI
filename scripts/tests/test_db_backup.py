@@ -32,6 +32,10 @@ PREFS_SCHEMA = """CREATE TABLE prefs (key TEXT PRIMARY KEY, value TEXT, updated_
 @pytest.fixture(autouse=True)
 def _isolated_prefs(tmp_path, monkeypatch):
     monkeypatch.setenv("PREFS_DB", str(tmp_path / "no-store" / "ui_prefs.sqlite"))
+    # the other small stores too: no test ever reads the live data/*.sqlite
+    monkeypatch.setenv("ALERTS_DB", str(tmp_path / "no-store" / "alerts.sqlite"))
+    monkeypatch.setenv("JOB_QUEUE_DB", str(tmp_path / "no-store" / "job_queue.sqlite"))
+    monkeypatch.setenv("ASK_AUDIT_DB", str(tmp_path / "no-store" / "ask_audit.sqlite"))
 
 
 def make_store(path: Path, n: int = 3) -> sqlite3.Connection:
@@ -210,3 +214,118 @@ def test_default_prefs_db_follows_prefs_db_env(monkeypatch, tmp_path):
     assert db_backup.default_prefs_db() == tmp_path / "x.sqlite"
     monkeypatch.delenv("PREFS_DB")
     assert db_backup.default_prefs_db() == ROOT / "data" / "ui_prefs.sqlite"
+
+
+# ── job queue + ASK audit stores (F-24/F-31: same pattern as alerts) ─────────────────────────────────────
+
+
+def make_job_queue_store(path: Path, n: int = 4) -> None:
+    """A WAL store shaped like data-service's job_queue.sqlite (job_queue.py _SCHEMA, the counted columns)."""
+    con = sqlite3.connect(str(path))
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("""CREATE TABLE jobs (job_id TEXT PRIMARY KEY, kind TEXT NOT NULL, status TEXT NOT NULL,
+        attempt INTEGER NOT NULL DEFAULT 1, requeued INTEGER NOT NULL DEFAULT 0, submitted_at TEXT NOT NULL)""")
+    for i in range(n):
+        con.execute("INSERT INTO jobs VALUES (?, 'evening', 'done', 1, 0, ?)", (f"j{i}", f"2026-11-13T18:0{i}:00"))
+    con.commit()
+    con.close()
+
+
+def make_ask_audit_store(path: Path, n: int = 2) -> None:
+    """ASK's audit log (ask_engine.AUDIT_SCHEMA shape: ts, question, sql, rows_returned, model)."""
+    con = sqlite3.connect(str(path))
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("""CREATE TABLE ask_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT, question TEXT,
+        sql TEXT, rows_returned INTEGER, model TEXT)""")
+    for i in range(n):
+        con.execute("INSERT INTO ask_audit (ts, question, sql, rows_returned, model) VALUES (?, ?, ?, ?, ?)",
+                    (f"2026-11-13T18:0{i}:00+00:00", "how many rows?", "SELECT 1", 1, "direct-read"))
+    con.commit()
+    con.close()
+
+
+def test_job_queue_backup_copies_counts_and_skips_absent(tmp_path):
+    db = tmp_path / "job_queue.sqlite"
+    make_job_queue_store(db, n=4)
+    dest = tmp_path / "b"
+    meta = db_backup.backup_job_queue(db, dest, "20261113")
+    out = dest / "job_queue-20261113.sqlite"
+    assert meta["jobs"] == 4 and meta["file"] == out.name and out.exists()
+    assert meta["sha256"] == hashlib.sha256(out.read_bytes()).hexdigest()
+    assert json.loads((dest / "job_queue-20261113.meta.json").read_text())["jobs"] == 4
+    with sqlite3.connect(out) as c:
+        assert c.execute("PRAGMA journal_mode").fetchone()[0] == "delete"      # self-contained single file
+        assert c.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == 4
+    # a missing store is quietly skipped, never an error — and nothing is written
+    absent = db_backup.backup_job_queue(tmp_path / "nope.sqlite", dest, "20261114")
+    assert absent == {"skipped": "absent", "src": str(tmp_path / "nope.sqlite")}
+    assert not (dest / "job_queue-20261114.sqlite").exists()
+
+
+def test_ask_audit_backup_copies_counts_and_skips_absent(tmp_path):
+    db = tmp_path / "ask_audit.sqlite"
+    make_ask_audit_store(db, n=2)
+    dest = tmp_path / "b"
+    meta = db_backup.backup_ask_audit(db, dest, "20261113")
+    out = dest / "ask_audit-20261113.sqlite"
+    assert meta["questions"] == 2 and meta["file"] == out.name and out.exists()
+    assert json.loads((dest / "ask_audit-20261113.meta.json").read_text())["sha256"] == meta["sha256"]
+    with sqlite3.connect(out) as c:
+        assert c.execute("SELECT COUNT(*) FROM ask_audit").fetchone()[0] == 2
+    absent = db_backup.backup_ask_audit(tmp_path / "nope.sqlite", dest, "20261114")
+    assert absent["skipped"] == "absent"
+    assert not (dest / "ask_audit-20261114.sqlite").exists()
+
+
+def test_run_includes_both_new_families_and_rotation_covers_them(world, tmp_path):
+    jq = tmp_path / "job_queue.sqlite"
+    aa = tmp_path / "ask_audit.sqlite"
+    make_job_queue_store(jq, n=3)
+    make_ask_audit_store(aa, n=1)
+    meta = db_backup.run(db=world["db"], dest=world["dest"], pointer=world["pointer"],
+                         job_queue_db=jq, ask_audit_db=aa)
+    assert meta["job_queue"]["jobs"] == 3 and meta["ask_audit"]["questions"] == 1
+    stamp = f"{datetime.now():%Y%m%d}"
+    assert (world["dest"] / f"job_queue-{stamp}.sqlite").exists()
+    assert (world["dest"] / f"ask_audit-{stamp}.sqlite").exists()
+    # with no stores at all (fresh install): quietly skipped, exit path unchanged
+    meta2 = db_backup.run(db=world["db"], dest=world["dest"], pointer=world["pointer"])
+    assert meta2["job_queue"]["skipped"] == "absent" and meta2["ask_audit"]["skipped"] == "absent"
+    # the new families rotate like the others (per-family Sundays)
+    dest = tmp_path / "rot"
+    dest.mkdir()
+    today = datetime(2026, 10, 15)
+    for i in range(30):
+        d = today - timedelta(days=i)
+        (dest / f"job_queue-{d:%Y%m%d}.sqlite").write_bytes(b"x")
+        (dest / f"ask_audit-{d:%Y%m%d}.sqlite").write_bytes(b"x")
+        (dest / f"ask_audit-{d:%Y%m%d}.meta.json").write_text("{}")
+    db_backup.rotate(dest, today=today)
+    assert len(list(dest.glob("job_queue-*.sqlite"))) == 10            # 7 daily + 3 older Sundays
+    assert len(list(dest.glob("ask_audit-*.sqlite"))) == 10
+    assert len(list(dest.glob("ask_audit-*.meta.json"))) == 10
+
+
+def test_main_reports_job_queue_and_ask_audit_failures(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(db_backup, "run",
+                        lambda **kw: {"file": "market-x.duckdb", "prefs": {"skipped": "absent"},
+                                      "alerts": {"skipped": "absent"}, "job_queue": {"error": "boom"},
+                                      "ask_audit": {"skipped": "absent"}})
+    assert db_backup.main(["--dest", str(tmp_path)]) == 1
+    assert "job_queue backup FAILED" in capsys.readouterr().err
+    monkeypatch.setattr(db_backup, "run",
+                        lambda **kw: {"file": "market-x.duckdb", "prefs": {}, "alerts": {},
+                                      "job_queue": {}, "ask_audit": {"error": "bad file"}})
+    assert db_backup.main(["--dest", str(tmp_path)]) == 1
+    assert "ask_audit backup FAILED" in capsys.readouterr().err
+
+
+def test_default_store_paths_follow_env(monkeypatch, tmp_path):
+    monkeypatch.setenv("JOB_QUEUE_DB", str(tmp_path / "q.sqlite"))
+    assert db_backup.default_job_queue_db() == tmp_path / "q.sqlite"
+    monkeypatch.delenv("JOB_QUEUE_DB")
+    assert db_backup.default_job_queue_db() == ROOT / "data" / "job_queue.sqlite"
+    monkeypatch.setenv("ASK_AUDIT_DB", str(tmp_path / "a.sqlite"))
+    assert db_backup.default_ask_audit_db() == tmp_path / "a.sqlite"
+    monkeypatch.delenv("ASK_AUDIT_DB")
+    assert db_backup.default_ask_audit_db() == ROOT / "data" / "ask_audit.sqlite"

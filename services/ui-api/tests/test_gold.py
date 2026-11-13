@@ -426,6 +426,7 @@ def _offline(monkeypatch: pytest.MonkeyPatch) -> None:
     gold.STORE.invalidate()
     monkeypatch.setattr(gold, "_db_fetch", _fake_db)
     monkeypatch.setattr(gold, "_now_ist", lambda: NOW)
+    monkeypatch.setattr(gp, "_now_ist", lambda: NOW)   # the fair route reads gp's clock (weekend-proof)
     monkeypatch.setattr(gp, "_load_mcx_master", lambda: (MASTER, PUBLISHED))
     monkeypatch.setattr(gp, "_yahoo_bars", _fake_yahoo)
     monkeypatch.setattr(gp, "_fred_fetch", _no_rows)

@@ -9,13 +9,16 @@
  *    or why the save was refused (rate cap, size, a failed fetch). Browser downloads fire no event: unchanged.
  *  - AlertSaveToasts (P11): a price-alert save that did not reach the server (lib/alerts.ts) says so, instead of the
  *    form closing as if it had worked.
- * Texts: lib/downloadText.ts, lib/alertText.ts (pure, unit-tested).
+ *  - WorkspaceSaveToasts (R3-NITS, F2-TRADER): LAYOUT SAVE confirms itself in a toast — the only confirmation used
+ *    to be LAYOUT LIST.
+ * Texts: lib/downloadText.ts, lib/alertText.ts, lib/workspaces.ts (pure, unit-tested).
  */
 import { useEffect } from 'react'
 import { useToast } from '@/context/ToastContext'
 import { DOWNLOAD_EVENT, type DownloadEventDetail } from '@/lib/platform'
 import { downloadToast } from '@/lib/downloadText'
 import { ALERT_SAVE_FAILED_EVENT, alertSaveFailedText, type AlertSaveFailure } from '@/lib/alertText'
+import { WORKSPACE_SAVED_EVENT, workspaceSavedText, type WorkspaceSavedDetail } from '@/lib/workspaces'
 import { unknownTab, unknownTabText } from '@/lib/deepLink'
 import { OWN_BUILD } from '@/components/desktop/build'
 
@@ -45,6 +48,21 @@ export function DownloadToasts(): null {
     }
     window.addEventListener(DOWNLOAD_EVENT, on)
     return () => window.removeEventListener(DOWNLOAD_EVENT, on)
+  }, [addToast])
+  return null
+}
+
+/** LAYOUT SAVE / the menu's SAVE confirmation (lib/workspaces.ts emits on a successful store). */
+export function WorkspaceSaveToasts(): null {
+  const { addToast } = useToast()
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<WorkspaceSavedDetail>).detail
+      if (!d || typeof d !== 'object' || typeof d.name !== 'string') return
+      addToast(workspaceSavedText(d), 'success', 6000)
+    }
+    window.addEventListener(WORKSPACE_SAVED_EVENT, on)
+    return () => window.removeEventListener(WORKSPACE_SAVED_EVENT, on)
   }, [addToast])
   return null
 }

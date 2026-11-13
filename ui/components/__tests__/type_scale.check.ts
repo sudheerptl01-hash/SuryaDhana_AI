@@ -102,5 +102,38 @@ function check(name: string, cond: unknown, extra?: unknown): void {
   check('negative control: the legacy table renders exactly once (inside the guard)', (a.match(/<DataTable columns=\{cols\}/g) ?? []).length === 1)
 }
 
+// ── R3-NITS (FINAL ROUND round 3): the F2 visual/honesty nits, each measured before the fix ──────────────
+{
+  // F2-DESIGN: the ONE half-px leaf left in 15 pages was OMON's settlement <sup>s</sup> — the UA styles sup as
+  // font-size 'smaller', which computes 8.25px inside the 11px chain table. It is pinned to the 9px nano step.
+  const omon = src('components/OptionChain.tsx')
+  check("OMON settlement sup pinned to the nano token (no UA 'smaller' leaf)",
+    /<sup style=\{\{ fontSize: 'var\(--t-fs-nano\)' \}\}>s<\/sup>/.test(omon))
+  check('negative control: no unstyled <sup>s element left in OMON', !/<sup>s/.test(omon))
+  // the F1 trader's volume/OI unit-chip ask: the per-column "(ctr)" / "(sh)" suffixes already state the unit per
+  // column — recorded in place, not duplicated with a third chip
+  check('OMON unit-chip decision recorded at the chain header', omon.includes('recorded as already satisfied, not duplicated'))
+
+  // F2-DESIGN: the GOLD gauge-delta sub ("$103.89 ▲+$96.79/oz vs the median of the previous 5 pairs") clipped 18px
+  // at 315px — Stat gains an opt-in wrap and the HEALTH gauges use it
+  const kit = src('components/terminal/index.tsx')
+  check('Stat implements wrap (normal whitespace, no ellipsis)', /wrap \? \{ whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const/.test(kit))
+  check('HEALTH gauges pass wrap', /<Stat big=\{false\} wrap label=/.test(src('components/gold/HealthView.tsx')))
+
+  // F2-DESIGN UI ask: hover tooltip on ellipsis-truncated DataTable cells — measured per cell (scrollWidth vs
+  // clientWidth + text-overflow ellipsis) on hover, never a blanket title on every cell
+  check('DataTable sets a measured title on truncated cells only',
+    /el\.scrollWidth <= el\.clientWidth \+ 1/.test(kit) && /getComputedStyle\(el\)\.textOverflow !== 'ellipsis'/.test(kit)
+    && /onMouseOver=\{onOverCell\}/.test(kit))
+  check('an element with its own title is never overwritten', /if \(el\.title \|\| el\.scrollWidth/.test(kit))
+
+  // F2-TRADER: "GO IMPORT has still never been run" — the WTCH empty state offers the one-time settings import
+  const wtch = src('components/WatchMonitor.tsx')
+  check('WTCH empty state links the settings import (GO IMPORT)', /data-wtch-import onClick=\{\(\) => openSettingsImport\(\)\}/.test(wtch))
+  check('…with the RUNBOOK §8 one-liner', wtch.includes('RUNBOOK §8 one-liner: open http://localhost:3000 once in the browser you used before'))
+  check('…keeping the original empty-state sentence (zero copy drift)',
+    wtch.includes('Nothing to watch yet: add a ticker above, ☆ PIN a stock from any chart, or connect ICICI to see your holdings.'))
+}
+
 console.log(`type_scale.check: ${passed} passed, ${failed} failed`)
 if (failed) process.exit(1)

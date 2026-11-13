@@ -13,7 +13,10 @@ Rotation: keep 7 daily + 4 weekly (Sundays). Verification: read-only open + row 
 nse_bhavcopy on the pre-compression copy; sha256 recorded for restore-integrity checks.
 
 The terminal's settings store (ui-api's data/ui_prefs.sqlite, PREFS_DB overrides; desktop program D3) is
-backed up first, into the same directory and rotation: ui_prefs-YYYYMMDD.sqlite + ui_prefs-YYYYMMDD.meta.json
+backed up first, into the same directory and rotation — as are the alert store (alerts-YYYYMMDD.sqlite), the
+durable job queue (job_queue-YYYYMMDD.sqlite, data/job_queue.sqlite / JOB_QUEUE_DB; F-24/F-31) and ASK's audit
+log (ask_audit-YYYYMMDD.sqlite, data/ask_audit.sqlite / ASK_AUDIT_DB), each quietly skipped while its store does
+not exist yet: ui_prefs-YYYYMMDD.sqlite + ui_prefs-YYYYMMDD.meta.json
 {keys, live_keys, sha256, bytes, user_version}. It is copied with SQLite's online backup API (a consistent
 snapshot while ui-api writes; a plain file copy would miss the -wal), switched to a single-file rollback
 journal, checked with PRAGMA integrity_check and written atomically. An absent store is skipped (fresh
@@ -59,6 +62,8 @@ FAMILIES: tuple[tuple[str, ...], ...] = (
     ("market-*.duckdb", "market-*.duckdb.zst"),
     ("ui_prefs-*.sqlite",),
     ("alerts-*.sqlite",),
+    ("job_queue-*.sqlite",),    # data-service's durable job queue (R2-QUEUE; F-24/F-31)
+    ("ask_audit-*.sqlite",),    # ASK's audit log (questions + SQL, never payloads)
 )
 
 
@@ -294,6 +299,89 @@ def _backup_alerts_safely(alerts_db: Path | None, dest: Path, stamp: str) -> dic
         return {"error": f"{type(exc).__name__}: {exc}"[:300]}
 
 
+def default_job_queue_db() -> Path:
+    """data-service's durable job queue (job_queue.default_db_path: JOB_QUEUE_DB, else data/job_queue.sqlite)."""
+    env = os.environ.get("JOB_QUEUE_DB", "").strip()
+    return Path(env).expanduser() if env else ROOT / "data" / "job_queue.sqlite"
+
+
+def default_ask_audit_db() -> Path:
+    """ASK's audit log (ask_engine._audit_path: ASK_AUDIT_DB, else data/ask_audit.sqlite)."""
+    env = os.environ.get("ASK_AUDIT_DB", "").strip()
+    return Path(env).expanduser() if env else ROOT / "data" / "ask_audit.sqlite"
+
+
+def _backup_sqlite_store(db: Path, dest: Path, stamp: str, prefix: str,
+                         counters: dict[str, str]) -> dict[str, Any]:
+    """Online-backup a small SQLite store into dest/<prefix>-<stamp>.sqlite (+ .meta.json), exactly the way the
+    settings and alert stores are backed up: SQLite's backup API (a consistent snapshot while the owner writes in
+    WAL mode), a single-file rollback journal, PRAGMA integrity_check, an atomic rename. ``counters`` maps a meta
+    key to a table whose row count it records (0 when the table does not exist yet). A missing source file is
+    handled quietly: {"skipped": "absent"} — a fresh install has no store yet and that is not an error. Raises on
+    any real failure (nothing partial is left behind)."""
+    if not db.is_file():
+        return {"skipped": "absent", "src": str(db)}
+    dest.mkdir(parents=True, exist_ok=True)
+    for t in dest.glob(f".{prefix}-*.sqlite.tmp-*"):     # temp copies left by a killed run
+        pid = t.name.rsplit("-", 1)[-1]
+        if pid.isdigit() and not _pid_alive(int(pid)):
+            t.unlink(missing_ok=True)
+    out = dest / f"{prefix}-{stamp}.sqlite"
+    tmp = dest / f".{prefix}-{stamp}.sqlite.tmp-{os.getpid()}"
+    tmp.unlink(missing_ok=True)
+    try:
+        src = _open_source(db)
+        try:
+            dst = sqlite3.connect(str(tmp))
+            try:
+                src.backup(dst)
+                dst.execute("PRAGMA journal_mode=DELETE")
+                check = dst.execute("PRAGMA integrity_check").fetchone()[0]
+                if check != "ok":
+                    raise RuntimeError(f"{prefix} backup failed integrity_check: {check}")
+                names = {r[0] for r in dst.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+                counts = {key: (dst.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+                                if table in names else 0) for key, table in counters.items()}
+            finally:
+                dst.close()
+        finally:
+            src.close()
+        os.replace(tmp, out)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    meta = {**counts, "sha256": _sha256(out), "bytes": out.stat().st_size, "file": out.name,
+            "src": str(db), "created_at": _now().isoformat(timespec="seconds")}
+    (dest / f"{prefix}-{stamp}.meta.json").write_text(json.dumps(meta, indent=1))
+    return meta
+
+
+def backup_job_queue(db: Path, dest: Path, stamp: str) -> dict[str, Any]:
+    """Online-backup the durable job queue (R2-QUEUE) into dest/job_queue-<stamp>.sqlite (+ .meta.json), the
+    alerts way. {"skipped": "absent"} quietly before data-service has created the store."""
+    return _backup_sqlite_store(db, dest, stamp, "job_queue", {"jobs": "jobs"})
+
+
+def _backup_job_queue_safely(job_queue_db: Path | None, dest: Path, stamp: str) -> dict[str, Any]:
+    try:
+        return backup_job_queue(job_queue_db or default_job_queue_db(), dest, stamp)
+    except Exception as exc:  # noqa: BLE001 - reported in the result; main() exits 1
+        return {"error": f"{type(exc).__name__}: {exc}"[:300]}
+
+
+def backup_ask_audit(db: Path, dest: Path, stamp: str) -> dict[str, Any]:
+    """Online-backup ASK's audit log into dest/ask_audit-<stamp>.sqlite (+ .meta.json), the alerts way.
+    {"skipped": "absent"} quietly before the first question has created the store."""
+    return _backup_sqlite_store(db, dest, stamp, "ask_audit", {"questions": "ask_audit"})
+
+
+def _backup_ask_audit_safely(ask_audit_db: Path | None, dest: Path, stamp: str) -> dict[str, Any]:
+    try:
+        return backup_ask_audit(ask_audit_db or default_ask_audit_db(), dest, stamp)
+    except Exception as exc:  # noqa: BLE001 - reported in the result; main() exits 1
+        return {"error": f"{type(exc).__name__}: {exc}"[:300]}
+
+
 def run_prefs(dest: Path = DEST_DEFAULT, prefs_db: Path | None = None) -> dict[str, Any]:
     """Settings-store backup alone (with rotation): `--prefs-only`, e.g. before a migration."""
     meta = _backup_prefs_safely(prefs_db, dest, _now().strftime("%Y%m%d"))
@@ -303,12 +391,15 @@ def run_prefs(dest: Path = DEST_DEFAULT, prefs_db: Path | None = None) -> dict[s
 
 
 def run(db: Path = snap.DB, dest: Path = DEST_DEFAULT, pointer: Path = snap.POINTER,
-        prefs_db: Path | None = None, alerts_db: Path | None = None) -> dict:
+        prefs_db: Path | None = None, alerts_db: Path | None = None,
+        job_queue_db: Path | None = None, ask_audit_db: Path | None = None) -> dict:
     dest.mkdir(parents=True, exist_ok=True)
     stamp = _now().strftime("%Y%m%d")
-    # Settings store first (tiny, seconds): a DuckDB failure below must not cost the night's settings backup.
+    # The small SQLite stores first (tiny, seconds): a DuckDB failure below must not cost the night's copies.
     prefs = _backup_prefs_safely(prefs_db, dest, stamp)
-    alerts = _backup_alerts_safely(alerts_db, dest, stamp)          # the alert store too (tiny), before the DuckDB copy
+    alerts = _backup_alerts_safely(alerts_db, dest, stamp)
+    job_queue = _backup_job_queue_safely(job_queue_db, dest, stamp)     # the durable queue's trail (F-24/F-31)
+    ask_audit = _backup_ask_audit_safely(ask_audit_db, dest, stamp)     # ASK's audit log (no payloads inside)
     stem = dest / f"market-{stamp}"
     with tempfile.TemporaryDirectory(prefix="dbbackup_") as td:
         src_path = snap.current(max_age_h=30, allow_stale=True, pointer=pointer, db=db)
@@ -329,6 +420,8 @@ def run(db: Path = snap.DB, dest: Path = DEST_DEFAULT, pointer: Path = snap.POIN
     meta["rotated"] = rotate(dest)
     meta["prefs"] = prefs
     meta["alerts"] = alerts
+    meta["job_queue"] = job_queue
+    meta["ask_audit"] = ask_audit
     return meta
 
 
@@ -341,12 +434,14 @@ def offsite_target(arg: str | None) -> Path | None:
 
 def copy_offsite(dest: Path, meta: dict[str, Any], target: Path, *, keep_daily: int = KEEP_DAILY,
                  keep_weekly: int = KEEP_WEEKLY) -> dict[str, Any]:
-    """Copy tonight's backup files (the .zst when zstd was available, else the .duckdb; the ui_prefs .sqlite; both
-    .meta.json) to ``target`` and verify the DuckDB copy by sha256 against the recorded hash. Each file lands via a
+    """Copy tonight's backup files (the .zst when zstd was available, else the .duckdb; the ui_prefs / alerts /
+    job_queue / ask_audit .sqlite copies; every .meta.json) to ``target`` and verify the DuckDB copy by sha256
+    against the recorded hash. Each file lands via a
     temp name + rename, so a cut mount never leaves a half file under the real name. The target keeps the same
     rotation (7 daily + 4 Sundays). Raises on any failure; the local backup is already complete by then."""
     files: list[str] = []
-    for name in (meta.get("file"), (meta.get("prefs") or {}).get("file"), (meta.get("alerts") or {}).get("file")):
+    for name in (meta.get("file"), (meta.get("prefs") or {}).get("file"), (meta.get("alerts") or {}).get("file"),
+                 (meta.get("job_queue") or {}).get("file"), (meta.get("ask_audit") or {}).get("file")):
         if name and (dest / name).is_file():
             files.append(name)
             stem_meta = name.split(".")[0] + ".meta.json"
@@ -415,10 +510,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ui_prefs backup FAILED ({prefs['error']}); the DuckDB backup is fine: {meta.get('file')}",
               file=sys.stderr)
         rc = 1
-    alerts = {} if args.prefs_only else meta.get("alerts", {})
-    if "error" in alerts:
-        print(f"alerts backup FAILED ({alerts['error']}); the DuckDB backup is fine: {meta.get('file')}", file=sys.stderr)
-        rc = 1
+    for key in ("alerts", "job_queue", "ask_audit"):
+        part = {} if args.prefs_only else meta.get(key) or {}
+        if "error" in part:
+            print(f"{key} backup FAILED ({part['error']}); the DuckDB backup is fine: {meta.get('file')}",
+                  file=sys.stderr)
+            rc = 1
     offsite = meta.get("offsite") or {}
     if "error" in offsite:
         print(f"off-site copy FAILED ({offsite['error']}); the local backup is fine: {meta.get('file')}", file=sys.stderr)

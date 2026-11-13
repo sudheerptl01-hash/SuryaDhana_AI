@@ -8,7 +8,7 @@
  * Tokens: `T` (components/news/format.ts) and the CSS variables in app/globals.css.
  */
 import { Z } from '@/lib/z'
-import { isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
+import { isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { getFinancialsLatest, getNewsQuotes, getStockHistory, getSurveillance, getSymbols } from '@/lib/api'
 import { useLiveQuotes } from '@/lib/liveQuotes'
@@ -210,9 +210,10 @@ export function Grid({ cols = 4, gap = 10, children, min, style }: {
   )
 }
 
-/** KPI tile. */
-export function Stat({ label, value, sub, color = T.text, accent, big = true }: {
-  label: ReactNode; value: ReactNode; sub?: ReactNode; color?: string; accent?: string; big?: boolean
+/** KPI tile. `wrap` lets a long value line (a value + its Δ words, e.g. the GOLD gauges) wrap instead of
+ *  clipping to an ellipsis (R3-NITS, F2-DESIGN: the Shanghai-premium Δ sub clipped 18 px at 315 px). */
+export function Stat({ label, value, sub, color = T.text, accent, big = true, wrap = false }: {
+  label: ReactNode; value: ReactNode; sub?: ReactNode; color?: string; accent?: string; big?: boolean; wrap?: boolean
 }) {
   return (
     <div className="t-fade-up"
@@ -220,7 +221,8 @@ export function Stat({ label, value, sub, color = T.text, accent, big = true }: 
                padding: '9px 12px', minWidth: 0 }}>
       <Label>{label}</Label>
       <div style={{ fontFamily: T.mono, fontSize: big ? 22 : 16, fontWeight: 600, color, marginTop: 4,
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    ...(wrap ? { whiteSpace: 'normal' as const, overflowWrap: 'anywhere' as const, minWidth: 0 }
+                             : { whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }),
                     fontVariantNumeric: 'tabular-nums' }}>{value}</div>
       {sub && <div style={{ fontSize: 'var(--t-fs-micro)', color: T.muted, marginTop: 3 }}>{sub}</div>}
     </div>
@@ -473,8 +475,23 @@ export function DataTable<R>({ columns, rows, rowKey, onRowClick, maxHeight, emp
       else (tableRef.current?.tBodies[0]?.rows[cursor]?.querySelector('.t-ticker-link') as HTMLElement | null)?.click()
     } else if (k === 'Escape' && cursor != null) { e.stopPropagation(); setCursor(null) }
   }
+  // R3-NITS (F2-DESIGN UI ask: "hover/tap tooltip on every ellipsis-truncated table cell"): measured, not blanket —
+  // on hover of a cell, the first element whose text is actually clipped (text-overflow ellipsis AND scrollWidth
+  // beyond clientWidth) gets a title with its full text. A cell that fits gets no tooltip; an element that already
+  // carries its own title keeps it (the browser shows the innermost title anyway).
+  const onOverCell = (e: MouseEvent<HTMLDivElement>) => {
+    const td = (e.target as HTMLElement).closest('td')
+    if (!td || !tableRef.current?.contains(td)) return
+    for (const el of [td, ...Array.from(td.querySelectorAll<HTMLElement>('span, div'))]) {
+      if (el.title || el.scrollWidth <= el.clientWidth + 1) continue
+      if (getComputedStyle(el).textOverflow !== 'ellipsis') continue
+      const full = (el.innerText || '').trim()
+      if (full) el.title = full
+      break
+    }
+  }
   return (
-    <div className="t-table" style={{ position: 'relative', outline: 'none' }} tabIndex={0} onKeyDown={onKey}
+    <div className="t-table" style={{ position: 'relative', outline: 'none' }} tabIndex={0} onKeyDown={onKey} onMouseOver={onOverCell}
          onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
     {hover && rows.length > 0 && (
       <span role="button" title="Download this table as CSV (what is shown, in the current sort)"

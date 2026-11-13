@@ -13,6 +13,7 @@ import { useActiveSymbol } from '@/lib/activeSymbol'
 import { excessVsIndex, isBrokerNotInsurer, isIndexUnderlying, matchedTransfers, volShare } from '@/components/marketPagesModel'
 import { daysUntil, useCorpEvents } from '@/lib/useCorpEvents'
 import { Chip, DataTable, ErrorBox, EventBadge, Input, Loading, PageHeader, Panel, ResearchNote, Stat, T, TickerLink, type Column, fmtPct, fmtPx, sourceOf } from '@/components/terminal'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 
 const cr = (v: number | null | undefined) => (v == null ? '—' : v >= 1e9 ? `₹${(v / 1e7).toFixed(0)} cr` : v >= 1e7 ? `₹${(v / 1e7).toFixed(1)} cr` : `₹${(v / 1e5).toFixed(1)} L`)
 const pct = (v: number | null) => fmtPct(v, 1)
@@ -24,6 +25,7 @@ import { DEAL_KEY } from '@/lib/pageKeys'
 const readHandoff = (): string | null => { try { return localStorage.getItem(DEAL_KEY) } catch { return null } }
 
 export function DealsMonitor() {
+  const catTone = useCatalogTone()                       // F-27: the nse_deals catalog verdict tones the chips
   // CT-01: 'TCS DEAL' from another page writes the hand-off key before this page mounts. Start on its window
   // (30 days, ≥ ₹10 L) so the first request is the right one, instead of a 10-day ≥ ₹1 cr request racing it.
   const [days, setDays] = useState(() => (readHandoff() ? 30 : 10))
@@ -145,7 +147,7 @@ export function DealsMonitor() {
                   sub={s.buy_value + s.sell_value > 0 ? `${((s.institution_value / (s.buy_value + s.sell_value)) * 100).toFixed(0)}% of deal value` : undefined} />
           </div>
           {clients.length > 0 && (
-            <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE deals' })} badge="context" title="Most active clients" accent={T.cyan} style={{ marginBottom: 12 }}
+            <Panel source={catTone(sourceOf(data?.data_through ?? null, { source: 'NSE deals' }), 'nse_deals')} badge="context" title="Most active clients" accent={T.cyan} style={{ marginBottom: 12 }}
               subtitle={`by gross deal value over ${days} day${days > 1 ? 's' : ''} · click to see their deals`}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '4px 18px', fontSize: 12 }}>
                 {clients.map(c => (
@@ -160,7 +162,7 @@ export function DealsMonitor() {
             </Panel>
           )}
           {s.top_net.length > 0 && (
-            <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE deals' })} badge="arithmetic" title="Biggest net flows" accent={T.amber} subtitle="buy value minus sell value per stock, all clients">
+            <Panel source={catTone(sourceOf(data?.data_through ?? null, { source: 'NSE deals' }), 'nse_deals')} badge="arithmetic" title="Biggest net flows" accent={T.amber} subtitle="buy value minus sell value per stock, all clients">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 12 }}>
                 {s.top_net.map(t => (
                   <span key={t.symbol} style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
@@ -171,7 +173,7 @@ export function DealsMonitor() {
             </Panel>
           )}
           <div style={{ height: 12 }} />
-          <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE deals' })} title={`${rows.length.toLocaleString('en-IN')} deals${data.count > data.rows.length ? ` (newest ${data.rows.length.toLocaleString('en-IN')} of ${data.count.toLocaleString('en-IN')})` : ''}`} pad={0} accent={T.violet}
+          <Panel source={catTone(sourceOf(data?.data_through ?? null, { source: 'NSE deals' }), 'nse_deals')} title={`${rows.length.toLocaleString('en-IN')} deals${data.count > data.rows.length ? ` (newest ${data.rows.length.toLocaleString('en-IN')} of ${data.count.toLocaleString('en-IN')})` : ''}`} pad={0} accent={T.violet}
             subtitle={`click a client to see all their deals · % of day vol ≥ 25% in amber${matched.size ? ` · ${matched.size} MATCHED legs (${cr(matchedValue)}) look like same-group transfers` : ''}`}
             right={<div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               {([['all', 'ALL'], ['buy', 'BUYS'], ['sell', 'SELLS'], ['inst', 'MF/INS']] as [Side, string][]).map(([k, l]) =>
@@ -195,6 +197,7 @@ export function DealsMonitor() {
 /** Institutional short selling (NSE's daily disclosure, Bloomberg SI-style): who is being shorted, how persistently,
  *  and how big that is against all trading in the stock over the window. */
 function ShortSelling() {
+  const catTone = useCatalogTone()                       // F-27: the nse_deals catalog verdict tones the chip
   const [days, setDays] = useState(20)
   const [d, setD] = useState<Awaited<ReturnType<typeof getShortSelling>>['data'] | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -219,7 +222,7 @@ function ShortSelling() {
   // m034: the panel is dated by its newest short-sale row (today's file lands late; the header's date is the deals')
   const newest = d?.rows.reduce<string | null>((m, r) => (r.last && (!m || r.last > m) ? r.last : m), null) ?? null
   return (
-    <Panel source={sourceOf(newest ?? d?.data_through ?? null, { source: 'NSE short sales' })} badge="context" title={`Institutional short selling${d ? ` · ${d.count} stocks` : ''}`} accent={T.red} pad={0}
+    <Panel source={catTone(sourceOf(newest ?? d?.data_through ?? null, { source: 'NSE short sales' }), 'nse_deals')} badge="context" title={`Institutional short selling${d ? ` · ${d.count} stocks` : ''}`} accent={T.red} pad={0}
       subtitle={d ? `NSE short-sale disclosures, ${d.from} → ${newest ?? d.data_through ?? 'latest'}${newest && d.data_through && newest < d.data_through.slice(0, 10) ? ` (the ${d.data_through.slice(0, 10)} file is not in yet)` : ''} · ranked by shares shorted as a share of all trading` : 'NSE short-sale disclosures'}
       right={<div style={{ display: 'flex', gap: 4 }}>{[5, 20, 60].map(n => <Chip key={n} color={T.red} active={days === n} onClick={() => setDays(n)}>{n} SESSIONS</Chip>)}</div>}>
       {err ? <ErrorBox error={err} /> : !d ? <Loading label="short selling" /> :

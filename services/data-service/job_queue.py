@@ -40,6 +40,9 @@ from shared.logging import get_logger
 logger = get_logger(__name__)
 
 _LIST_LIMIT = 50                  # GET /jobs parity with the old in-memory manager
+_RECENT_DEFAULT = 50              # GET /jobs/recent default page
+_RECENT_MAX = 500                 # GET /jobs/recent cap — a full evening's trail (pipeline + catch-up + gold +
+                                  # terminal v2 jobs) fits in one call (F-24/F-31; the store keeps `keep` rows anyway)
 _RESULT_MAX_CHARS = 400_000       # a result bigger than this is summarised, never dropped
 
 _SCHEMA = """
@@ -241,9 +244,11 @@ class DurableJobManager:
             out.setdefault(row[0], self._from_row(row))
         return sorted(out.values(), key=lambda j: j.get("started_at") or j["submitted_at"], reverse=True)[:_LIST_LIMIT]
 
-    def recent(self, n: int = 50) -> List[dict]:
-        """Compact newest-first history for ``GET /jobs/recent`` (no result payloads)."""
-        n = max(1, min(int(n), 200))
+    def recent(self, n: int = _RECENT_DEFAULT) -> List[dict]:
+        """Compact newest-first history for ``GET /jobs/recent`` (no result payloads): every row carries
+        ``attempt`` and ``requeued``. Default ``_RECENT_DEFAULT`` (50), capped at ``_RECENT_MAX`` (500) so one
+        call holds a whole evening's trail."""
+        n = max(1, min(int(n), _RECENT_MAX))
         with self._connect() as con:
             rows = con.execute(
                 "SELECT job_id, kind, status, progress, total, attempt, requeued, submitted_at, started_at,"

@@ -2588,8 +2588,9 @@ def list_jobs() -> dict:
 
 
 @app.get("/jobs/recent")
-def recent_jobs(n: int = Query(50, ge=1, le=200)) -> dict:
-    """Compact newest-first job history from the persisted queue (R2-QUEUE; no result payloads)."""
+def recent_jobs(n: int = Query(50, ge=1, le=500)) -> dict:
+    """Compact newest-first job history from the persisted queue (R2-QUEUE; no result payloads; rows carry
+    attempt + requeued). Cap 500 so an evening's full trail fits in one call (F-24/F-31)."""
     rows = _jobs.recent(n)
     return {"jobs": rows, "count": len(rows)}
 

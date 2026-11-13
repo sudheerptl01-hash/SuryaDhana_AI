@@ -26,7 +26,7 @@ import { LiveMonitorBar } from '@/components/LiveMonitorBar'
 import { MarketCommandHeader, inEodWindow } from '@/components/MarketCommandHeader'
 import { ToastProvider } from '@/context/ToastContext'
 import { ErrorCatcher, UiErrorChip } from '@/components/ErrorCatcher'
-import { AlertSaveToasts, DownloadToasts, UnknownTabToast } from '@/components/shell/ShellToasts'
+import { AlertSaveToasts, DownloadToasts, UnknownTabToast, WorkspaceSaveToasts } from '@/components/shell/ShellToasts'
 import { useDocumentHidden, useOnFocus, usePolling } from '@/components/shell/usePoll'
 import { refreshVerdict } from '@/lib/refreshStatus'
 import { NewsDock } from '@/components/news/NewsDock'
@@ -1283,6 +1283,7 @@ export default function Home() {
           {/* R8: desktop saves ('Saved to … · ⌥⌘L' / why it failed) and failed alert saves (P11) as toasts */}
           <DownloadToasts />
           <AlertSaveToasts />
+          <WorkspaceSaveToasts />
           <UnknownTabToast tabs={TAB_IDS} />
           <HomeContent />
         </ToastProvider>

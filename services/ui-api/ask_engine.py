@@ -36,6 +36,7 @@ import os
 import re
 import sqlite3
 import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -76,6 +77,18 @@ SYSTEM_PROMPT = (
 DEFAULT_TIMEOUT_S = 10.0
 DEFAULT_ROW_CAP = 200
 MAX_QUESTION_LEN = 500
+READY_TIMEOUT_S = 2.0     # R3-ASK: the analyst probe never stalls health — 2 s hard timeout
+READY_TTL_S = 60.0        # R3-ASK: probe result cached per provider+model for 60 s
+DEFAULT_LLM_TIMEOUT_S = 60.0   # R3-ASK eval D1: qwen3.5:9b composes in ~57 s on this box — ASK_LLM_TIMEOUT_S
+                               # lets ops raise the cap instead of the call masquerading as "analyst offline"
+
+
+def llm_timeout_s() -> float:
+    """The chat-call timeout: `ASK_LLM_TIMEOUT_S` (seconds) or the 60 s default; a bad value falls back."""
+    try:
+        return float(os.environ.get("ASK_LLM_TIMEOUT_S", DEFAULT_LLM_TIMEOUT_S))
+    except (TypeError, ValueError):
+        return DEFAULT_LLM_TIMEOUT_S
 AUDIT_SCHEMA = ("CREATE TABLE IF NOT EXISTS ask_audit ("
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, question TEXT NOT NULL, "
                 "sql TEXT, rows_returned INTEGER, model TEXT NOT NULL)")
@@ -268,11 +281,11 @@ def resolve_provider(env: Optional[dict[str, str]] = None) -> Provider:
                     e.get("ASK_MODEL") or "llama3.1:8b", None)
 
 
-def _call_provider(p: Provider, messages: list[dict[str, str]], timeout_s: float = 60.0) -> str:
+def _call_provider(p: Provider, messages: list[dict[str, str]], timeout_s: Optional[float] = None) -> str:
     """One chat call to the configured LLM endpoint — the module's ONLY outbound network path (G2)."""
     system = "\n".join(m["content"] for m in messages if m["role"] == "system")
     chat = [m for m in messages if m["role"] != "system"]
-    with httpx.Client(timeout=timeout_s) as client:
+    with httpx.Client(timeout=llm_timeout_s() if timeout_s is None else timeout_s) as client:
         if p.name == "anthropic":
             assert p.key is not None
             r = client.post(f"{p.base_url}/v1/messages",
@@ -295,16 +308,46 @@ def _call_provider(p: Provider, messages: list[dict[str, str]], timeout_s: float
         return r.json().get("message", {}).get("content", "")
 
 
+def probe_provider(p: Provider, timeout_s: float = READY_TIMEOUT_S) -> bool:
+    """R3-ASK (F2-trader ask): is the configured model actually answerable? Ollama: the model must appear in
+    GET /api/tags (a bare name counts as :latest). Cloud: the provider's model-list endpoint must answer with the
+    key. Any error, including the 2 s timeout, is False — the probe informs `analyst_ready`, never raises. The URL
+    is derived from the same `Provider.base_url` as the chat call: still the one LLM endpoint (G2)."""
+    try:
+        with httpx.Client(timeout=timeout_s) as client:
+            if p.name == "anthropic":
+                assert p.key is not None
+                r = client.get(f"{p.base_url}/v1/models",
+                               headers={"x-api-key": p.key.get_secret_value(), "anthropic-version": "2023-06-01"})
+                r.raise_for_status()
+                return True
+            if p.name == "openai":
+                assert p.key is not None
+                r = client.get(f"{p.base_url}/v1/models",
+                               headers={"Authorization": f"Bearer {p.key.get_secret_value()}"})
+                r.raise_for_status()
+                return True
+            r = client.get(f"{p.base_url}/api/tags")
+            r.raise_for_status()
+            names = {str(m.get("name") or "") for m in r.json().get("models", [])}
+            return p.model in names or (":" not in p.model and f"{p.model}:latest" in names)
+    except Exception:
+        return False
+
+
 # ── the engine ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 class AskEngine:
     """One instance per process (the router holds it). `llm` is injectable so the guardrail tests stub the model:
     the guardrails are the product here, not the model."""
 
-    def __init__(self, llm: Optional[Callable[[list[dict[str, str]]], str]] = None) -> None:
+    def __init__(self, llm: Optional[Callable[[list[dict[str, str]]], str]] = None,
+                 probe: Optional[Callable[[Provider], bool]] = None) -> None:
         self._llm = llm
+        self._probe = probe
         self._catalog_cache: tuple[str, dict[str, list[str]]] | None = None   # (snapshot path, table -> columns)
         self._asof_cache: dict[tuple[str, str], Optional[str]] = {}
+        self._ready_cache: tuple[float, str, bool] | None = None              # (expires_at, provider key, ready)
 
     # ── G1: the snapshot is the only database ───────────────────────────────────────────────────────────────
     def _live_db(self) -> str:
@@ -435,13 +478,49 @@ class AskEngine:
         return [{"ts": r[0], "question": r[1], "sql": r[2], "rows_returned": r[3], "model": r[4]} for r in rows]
 
     # ── the public faces ─────────────────────────────────────────────────────────────────────────────────────
+    def analyst_ready(self, p: Optional[Provider] = None) -> bool:
+        """R3-ASK (F2-trader ask): True when the configured model would actually answer. An injected test stub IS
+        the model, so it is ready by construction. Otherwise the provider is probed (2 s timeout) and the result
+        cached for 60 s per provider+model, so health stays cheap under polling."""
+        if self._llm is not None:
+            return True
+        p = p or resolve_provider()
+        key = f"{p.name}|{p.base_url}|{p.model}"
+        now = time.monotonic()
+        if self._ready_cache and self._ready_cache[1] == key and self._ready_cache[0] > now:
+            return self._ready_cache[2]
+        ready = (self._probe or probe_provider)(p)
+        self._ready_cache = (now + READY_TTL_S, key, bool(ready))
+        return bool(ready)
+
+    def snapshot_age(self, snap: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+        """R3-ASK (F2-trader wart 2): the snapshot vs its own iv_summary_daily. A 19:20 snapshot cut before the
+        20:30 iv_eod carries IV rows ending the PRIOR session while the snapshot itself is dated today — that gap
+        is detectable from the snapshot alone (ASK never opens the live DB), and the panel turns the age line
+        amber on it. Facts only: a max date and a boolean, no judgement word."""
+        if not snap or not snap.get("as_of"):
+            return None
+        try:
+            iv_max = self.table_as_of("iv_summary_daily")
+        except AskError:
+            iv_max = None
+        stale = bool(iv_max and str(iv_max) < str(snap["as_of"]))
+        return {"iv_summary_max": iv_max, "stale": stale,
+                "note": (f"cut before the {snap['as_of']} iv_eod — iv_summary_daily inside it ends {iv_max}"
+                         if stale else None)}
+
     def health(self) -> dict[str, Any]:
         p = resolve_provider()
         snap = self.snapshot_meta()
+        ready = self.analyst_ready(p)
         return {"ok": True, "badge": BADGE, "disclosure": DISCLOSURE, "note": DESCRIBES,
                 "feeds_nothing": FEEDS_NOTHING, "provider": p.name, "model": p.model,
                 "provider_note": p.fallback_note, "snapshot": snap,
                 "snapshot_note": None if snap else NO_SNAPSHOT_LINE,
+                # R3-ASK: `ok` stays about the READS (snapshot SQL works without a model); the analyst's own
+                # availability is this separate flag, so a dead model can never wave the whole endpoint green.
+                "analyst_ready": ready, "analyst_note": None if ready else OFFLINE_LINE,
+                "snapshot_age": self.snapshot_age(snap),
                 "guardrails": ["snapshot-only read-only SQL (SELECT/WITH, 1 statement, timeout, row cap)",
                                "no writes / orders / Telegram / network beyond the LLM endpoint",
                                "forecast refusal", "rows are data (injection isolation)",

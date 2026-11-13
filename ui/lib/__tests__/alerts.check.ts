@@ -95,8 +95,9 @@ function hit(sym: string, side: 'above' | 'below', level: number, price: number)
     /useState<Record<string, AlertLevels>>\(\(\) => lastAlerts\)/.test(alerts) && (alerts.match(/remember\(d\)/g) ?? []).length >= 4)
   const page = src('../../app/page.tsx')
   check('the toasts are mounted INSIDE ToastProvider (useToast would throw outside it)',
-    // terminal v2 PLAN 0.6: the unknown-?tab= toast sits beside them, inside the provider too
-    /<ToastProvider>\s*<ErrorCatcher \/>\s*\{[^}]*\}\s*<DownloadToasts \/>\s*<AlertSaveToasts \/>\s*(?:<UnknownTabToast tabs=\{TAB_IDS\} \/>\s*)?<HomeContent \/>\s*<\/ToastProvider>/.test(page))
+    // terminal v2 PLAN 0.6: the unknown-?tab= toast sits beside them, inside the provider too;
+    // R3-NITS: the LAYOUT SAVE confirmation (WorkspaceSaveToasts) joins them
+    /<ToastProvider>\s*<ErrorCatcher \/>\s*\{[^}]*\}\s*<DownloadToasts \/>\s*<AlertSaveToasts \/>\s*(?:<WorkspaceSaveToasts \/>\s*)?(?:<UnknownTabToast tabs=\{TAB_IDS\} \/>\s*)?<HomeContent \/>\s*<\/ToastProvider>/.test(page))
   const toasts = src('../../components/shell/ShellToasts.tsx')
   check('AlertSaveToasts listens to the save-failed event', /addEventListener\(ALERT_SAVE_FAILED_EVENT, on\)/.test(toasts) && /alertSaveFailedText\(d\)/.test(toasts))
 }

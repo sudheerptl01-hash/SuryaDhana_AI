@@ -120,3 +120,65 @@ def test_the_cockpit_series_ride_the_stored_tape_untouched(monkeypatch):
     # labelling rules: no signal badge, the verdict describes
     assert "signal" not in j["badges"].values()
     assert j["verdict"].endswith("describes, does not predict")
+
+
+# ── R3-NITS (F1-TRADER): the bogus 329-days-before-priced scorecard row is dropped, explicitly ───────────────────────
+
+ROW_OK = {"expiry": "2026-11-03", "priced_on": "2026-11-02", "dte": 1, "forward": 25000.0, "strike": 25000.0,
+          "straddle": 163.0, "implied_move_pct": 0.652, "implied_1sd_pct": 0.5, "settle": 25510.0,
+          "realised_move_pct": 2.042, "ratio": 3.132, "exceeded": True, "naive_move_pct": 0.5,
+          "implied_recorded_at": "2026-11-02T15:40:00+00:00"}
+ROW_LONG_WEEKEND = {**ROW_OK, "expiry": "2026-09-15", "priced_on": "2026-09-11", "dte": 4,
+                    "implied_move_pct": 0.852, "realised_move_pct": -1.401, "ratio": 1.644, "exceeded": True}
+# the live find (13 Nov walk): a store hole paired 2026-06-25 with a session 329 days earlier — unscored, like the store serves it
+ROW_BOGUS = {**ROW_OK, "expiry": "2026-06-25", "priced_on": "2025-07-31", "dte": 329, "straddle": None,
+             "implied_move_pct": None, "implied_1sd_pct": None, "realised_move_pct": -8.103, "ratio": None,
+             "exceeded": None, "naive_move_pct": None}
+
+
+def _with_scorecard(rows, stats):
+    return {**DAY_9NOV, "date": "2026-11-13", "is_expiry_day": False, "live": {"snapshots": 0},
+            "scorecard": {"rows": rows, "stats": stats, "badge": "arithmetic"}}
+
+
+def test_the_bogus_stale_priced_row_is_dropped_and_named(monkeypatch):
+    stats = {"n": 2, "exceeded_pct": 100.0, "fair_exceeded_pct": 42.5, "median_ratio": 2.388, "mean_ratio": 2.388,
+             "mean_abs_miss_pct": 0.97, "naive_mean_abs_miss_pct": 1.221, "implied_closer": 1, "compared": 2}
+    j = _get(monkeypatch, _with_scorecard([ROW_OK, ROW_BOGUS, ROW_LONG_WEEKEND], stats),
+             url="/api/derivatives/expiry-day?symbol=NIFTY&date=2026-11-13")
+    sc = j["scorecard"]
+    assert [r["expiry"] for r in sc["rows"]] == ["2026-11-03", "2026-09-15"]     # the 329d pairing is gone
+    assert sc["excluded"] == 1
+    assert "2026-06-25" in sc["excluded_note"] and "2025-07-31" in sc["excluded_note"] and "329d" in sc["excluded_note"]
+    assert "store hole, not an observation" in sc["excluded_note"]
+    # the bogus row was UNSCORED (implied null, exactly the live shape): the store's stats pass through untouched
+    assert sc["stats"] == stats
+    # a long weekend (dte 4) is a healthy pairing and is kept — the filter is a bound, not a dte==1 rule
+    assert any(r["dte"] == 4 for r in sc["rows"])
+
+
+def test_a_scored_stale_row_rescores_the_stats_over_the_kept_rows(monkeypatch):
+    # negative control for the stats path: if a stale pairing ever arrives SCORED, the served stats are re-derived
+    # from the kept rows (never counting a row the table does not show)
+    bogus_scored = {**ROW_BOGUS, "implied_move_pct": 9.0, "ratio": 0.9, "exceeded": False, "naive_move_pct": 8.0}
+    stats_with_bogus = {"n": 3, "exceeded_pct": 66.7, "fair_exceeded_pct": 42.5, "median_ratio": 1.644,
+                        "mean_ratio": 1.722, "mean_abs_miss_pct": 1.0, "naive_mean_abs_miss_pct": 1.1,
+                        "implied_closer": 1, "compared": 3}
+    j = _get(monkeypatch, _with_scorecard([ROW_OK, bogus_scored, ROW_LONG_WEEKEND], stats_with_bogus),
+             url="/api/derivatives/expiry-day?symbol=NIFTY&date=2026-11-14")
+    sc = j["scorecard"]
+    assert sc["excluded"] == 1 and len(sc["rows"]) == 2
+    s = sc["stats"]
+    assert s["n"] == 2 and s["compared"] == 2                                    # over the KEPT rows only
+    assert s["exceeded_pct"] == 100.0                                            # both kept rows exceeded
+    assert s["median_ratio"] == round((3.132 + 1.644) / 2, 3)
+    assert s["fair_exceeded_pct"] == 42.5                                        # the fair reference is carried over
+
+
+def test_a_clean_scorecard_passes_through_byte_identical(monkeypatch):
+    sc_in = {"rows": [ROW_OK, ROW_LONG_WEEKEND], "stats": {"n": 2}, "badge": "arithmetic"}
+    j = _get(monkeypatch, _with_scorecard(sc_in["rows"], sc_in["stats"]),
+             url="/api/derivatives/expiry-day?symbol=NIFTY&date=2026-11-15")
+    sc = j["scorecard"]
+    assert "excluded" not in sc and "excluded_note" not in sc
+    assert [r["expiry"] for r in sc["rows"]] == ["2026-11-03", "2026-09-15"] and sc["stats"] == {"n": 2}

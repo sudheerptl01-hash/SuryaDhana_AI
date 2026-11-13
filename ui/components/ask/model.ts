@@ -50,6 +50,46 @@ export type ReadPayload = {
 /** The exact withheld line the server uses; the renderer emits the same one for its own refusals. */
 export const WITHHELD_TEXT = '— withheld: a numeric claim without its source table + as-of'
 
+/** The server's standing offline line (ask_engine.OFFLINE_LINE) — shown from health when analyst_ready is false. */
+export const OFFLINE_LINE = 'analyst offline — the data reads still work'
+
+/** R3-ASK: health's snapshot-age block — the snapshot vs its own iv_summary_daily (facts, no judgement). */
+export type SnapshotAge = { iv_summary_max: string | null; stale: boolean; note: string | null }
+
+/**
+ * R3-ASK empty-state examples (F2-design ask). Describe-only by construction: each asks about STORED data,
+ * none carries a direction word or a forecast shape, so none trips the server's G3 refusal.
+ */
+export const EXAMPLE_QUESTIONS: readonly string[] = [
+  'Top 5 stocks by delivery percentage at the last stored session',
+  'How many sessions of IV history are stored for NIFTY?',
+  'Which BANKNIFTY expiries are stored in iv_expiry_daily?',
+  'What was the last stored NIFTY close?',   // last: the live model answered this one with 0 rows in the R3 evaluation, case D3
+]
+
+/**
+ * R3-ASK: the snapshot-age line and its tone. `ok` = the snapshot's iv_summary_daily reaches the snapshot's own
+ * date. `amber` = the snapshot predates the newest iv_summary_daily session (it was cut before that day's
+ * iv_eod), so IV answers describe the PRIOR session. `loud` = the same staleness while the analyst is also
+ * offline (F2-design: louder when degraded) — the panel paints it as a bordered amber strip, not an inline note.
+ */
+export function snapshotAgeLine(snapshot: AskSnapshot | null, age: SnapshotAge | null | undefined,
+                                analystReady: boolean): { text: string; tone: 'ok' | 'amber' | 'loud' } {
+  if (!snapshot) return { text: 'no snapshot yet', tone: 'amber' }
+  const base = `snapshot ${snapshot.as_of ?? snapshot.file}`
+  if (age?.stale) {
+    const text = `${base} — ${age.note ?? `cut before the ${snapshot.as_of} iv_eod; iv_summary_daily inside it ends ${age.iv_summary_max}`}`
+    return { text, tone: analystReady ? 'amber' : 'loud' }
+  }
+  return { text: base, tone: 'ok' }
+}
+
+/** One audit line for the empty state: question · row count · time — never a payload (G5). */
+export function auditLineLabel(r: { ts: string; question: string; rows_returned: number }): string {
+  const ts = (r.ts ?? '').replace('T', ' ').slice(0, 16)
+  return `${r.question} · ${r.rows_returned} row(s) · ${ts}`
+}
+
 const CITE_RE_G = /\[([A-Za-z0-9_]+)(?:\s*·[^\]]*)?\]/g
 const CITE_RE = /\[[A-Za-z0-9_]+(?:\s*·[^\]]*)?\]/
 const NUM_RE = /[\d\p{Nd}]/u  // R2-REDTEAM MINOR-2: Arabic-Indic / fullwidth numerals count too

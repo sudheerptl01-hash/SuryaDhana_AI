@@ -36,6 +36,7 @@ import { Crosshair, axisTicks, useChartInteraction } from '@/components/terminal
 import { ExpandableChart } from '@/components/terminal/ExpandableChart'
 import { InteractiveSeries } from '@/components/terminal/InteractiveSeries'
 import { useInteractionRef, useShellWiring } from '@/components/vol/charts'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 
 const num = fmtNum
 const pct = fmtPct
@@ -176,9 +177,10 @@ function TermPanel({ term, basis, basisNote }: { term: TermStructure; basis: Bas
   const shape = term.legs.length >= 2 && term.legs[0].basis_ann_pct != null && term.legs[term.legs.length - 1].basis_ann_pct != null
     ? (term.legs[term.legs.length - 1].basis_ann_pct! >= term.legs[0].basis_ann_pct! ? 'upward carry curve' : 'inverted carry curve')
     : null
+  const catTone = useCatalogTone()                       // F-27: the nse_fo_daily catalog verdict tones the chip
   return (
     <Panel title={`Futures term structure — ${term.symbol}`} accent={T.amber} pad={0}
-      source={sourceOf(term.as_of, { source: 'NSE F&O bhavcopy' })} badge="arithmetic"
+      source={catTone(sourceOf(term.as_of, { source: 'NSE F&O bhavcopy' }), 'nse_fo_daily')} badge="arithmetic"
       subtitle={`EOD ${term.as_of}${shape ? ` · ${shape}` : ''}`}>
       <DataTable columns={cols} rows={term.legs} rowKey={r => r.expiry} dense empty="No futures" />
       <div style={{ padding: 12, borderTop: `1px solid ${T.border}` }}>
@@ -201,6 +203,7 @@ function TermPanel({ term, basis, basisNote }: { term: TermStructure; basis: Bas
 }
 
 function RolloverPanel({ roll, term }: { roll: Rollover; term: TermStructure }) {
+  const catTone = useCatalogTone()                       // F-27: the nse_fo_daily catalog verdict tones the chip
   const c = roll.current
   const histCols: Column<Rollover['history'][number]>[] = [
     { key: 'expiry', label: 'Expiry', render: r => <span style={{ fontFamily: T.mono }}>{r.expiry}</span> },
@@ -211,7 +214,7 @@ function RolloverPanel({ roll, term }: { roll: Rollover; term: TermStructure }) 
   const vsAvg = c?.roll_pct != null && avgAtDte != null ? c.roll_pct - avgAtDte : null
   return (
     <Panel title={`Rollover tracker — ${roll.symbol}`} accent={T.cyan}
-      source={sourceOf(roll.built_through, { source: 'NSE F&O bhavcopy', hint: roll.error })} badge="context"
+      source={catTone(sourceOf(roll.built_through, { source: 'NSE F&O bhavcopy', hint: roll.error }), 'nse_fo_daily')} badge="context"
       subtitle={`near → next OI migration · panel through ${roll.built_through ?? '—'} · ${roll.note}`}>
       {roll.updating && <Notice color={T.amber}>Building the futures panel from cached F&O bhavcopies (~1 min, incremental afterwards) — this page refreshes itself.</Notice>}
       {roll.error && <Notice color={T.red}>Panel build error: {roll.error}</Notice>}
@@ -249,9 +252,10 @@ function RolloverPanel({ roll, term }: { roll: Rollover; term: TermStructure }) 
 function PcrPanel({ symbol, pcrRows, optHist, maxPain }: {
   symbol: string; pcrRows: PcrRow[]; optHist: OptHistRow[] | null; maxPain: MaxPain | null
 }) {
+  const catTone = useCatalogTone()                       // F-27: the nse_fo_daily catalog verdict tones the chip
   return (
     <Panel title={`PCR & max pain — ${symbol}`} accent={T.violet}
-      source={sourceOf(maxPain?.date ?? pcrRows[pcrRows.length - 1]?.date ?? null, { source: 'NSE F&O bhavcopy' })} badge="context"
+      source={catTone(sourceOf(maxPain?.date ?? pcrRows[pcrRows.length - 1]?.date ?? null, { source: 'NSE F&O bhavcopy' }), 'nse_fo_daily')} badge="context"
       subtitle="aggregate PCR = put÷call OI across ALL strikes and expiries (2019→) · chain PCR / max pain are near-expiry">
       <div style={{ display: 'grid', gap: 12 }}>
         {maxPain && (
@@ -289,9 +293,10 @@ function PcrPanel({ symbol, pcrRows, optHist, maxPain }: {
 }
 
 function VixPanel({ vix }: { vix: Vix }) {
+  const catTone = useCatalogTone()                       // F-27: the vix_daily catalog verdict tones the chip
   return (
     <Panel title="INDIA VIX" accent={T.muted}
-      source={sourceOf(String(vix.as_of).slice(0, 10), { source: vix.source === 'vix_daily' ? 'NSE daily index file' : 'NSE' })} badge="arithmetic"
+      source={catTone(sourceOf(String(vix.as_of).slice(0, 10), { source: vix.source === 'vix_daily' ? 'NSE daily index file' : 'NSE' }), 'vix_daily')} badge="arithmetic"
       subtitle={`vs NIFTY 20-day realised volatility (close-to-close, √252: the IV store's RV20 cc on DERV › VOL) · as of ${String(vix.as_of).slice(0, 10)}`}>
       <div style={{ display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>

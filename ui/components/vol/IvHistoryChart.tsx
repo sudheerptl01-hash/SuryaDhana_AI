@@ -23,6 +23,7 @@ import { percentileOf } from '@/components/terminal/source'
 import { ExpandableChart } from '@/components/terminal/ExpandableChart'
 import { InteractiveSeries, type MarkerSpec, type SeriesSpec } from '@/components/terminal/InteractiveSeries'
 import { getIvHistory, getOptionHistoryLegacy, storeNote, volError, type IvHistory, type OptionHistoryLegacy } from './api'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 
 export interface IvHistoryState { v2: IvHistory | null; legacy: OptionHistoryLegacy | null; error: string | null; loading: boolean }
 
@@ -59,6 +60,7 @@ const PCT_VS_RANK = 'Percentile = the share of days below today; rank = position
 const pctFmt = (v: number) => `${v.toFixed(1)}%`
 
 export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: { symbol: string; state: IvHistoryState; collapsed?: boolean; onToggle?: () => void }) {
+  const catTone = useCatalogTone()                       // F-27: the IV store's catalog verdict tones the chips
   const { v2, legacy, error, loading } = state
   const toggle = onToggle ? <Chip color={T.muted} onClick={onToggle} title={collapsed ? 'show the history chart' : 'collapse the chart to a strip'}>{collapsed ? 'HISTORY ▾' : 'HISTORY ▴'}</Chip> : null
   if (loading) return <Panel source={sourceOf(null, { source: 'iv_summary_daily', hint: 'loading' })} title={`${symbol} implied volatility · history`} accent={T.violet} pad={8} right={toggle} style={{ marginBottom: 12 }}><div style={{ fontSize: 11, color: T.dim }}>Loading the stored IV series…</div></Panel>
@@ -89,7 +91,7 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
     if (collapsed) {
       return (
         <Panel title={`${symbol} implied volatility · history`} accent={T.violet} pad={6} style={{ marginBottom: 12 }}
-          source={sourceOf(v2.as_of, { source: 'NSE F&O bhavcopy' })} badge={v2.badges.iv} right={chips}>
+          source={catTone(sourceOf(v2.as_of, { source: 'NSE F&O bhavcopy' }), 'iv_summary_daily')} badge={v2.badges.iv} right={chips}>
           {/* the strip names the window and the overlay; the IV levels themselves are in the chain header strip (one number,
               one place: PLAN §0.4), so the collapsed chart repeats none of them */}
           <div style={{ fontSize: 11, color: T.muted, fontFamily: T.mono, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
@@ -114,7 +116,7 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
     ]
     return (
       <ExpandableChart title={`${symbol} implied volatility · history`} accent={T.violet} style={{ marginBottom: 12 }} height={276}
-        source={sourceOf(v2.as_of, { source: 'NSE F&O bhavcopy' })}
+        source={catTone(sourceOf(v2.as_of, { source: 'NSE F&O bhavcopy' }), 'iv_summary_daily')}
         badges={[{ label: v2.badges.iv }, ...(hasVix ? [{ label: v2.badges.vix, note: "India VIX from NSE's daily index file (vix_daily)." }] : [])]}
         legend={<span>{since} → {dayLabel(v2.as_of)} · {v2.sessions} sessions</span>}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -157,14 +159,14 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
     if (collapsed) {
       return (
         <Panel title={`${symbol} implied volatility · history`} accent={T.violet} pad={6} style={{ marginBottom: 12 }}
-          source={sourceOf(legacy.rows[legacy.rows.length - 1]?.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic" right={chips}>
+          source={catTone(sourceOf(legacy.rows[legacy.rows.length - 1]?.date, { source: 'NSE F&O bhavcopy' }), 'option_history_json')} badge="arithmetic" right={chips}>
           <div style={{ fontSize: 11, color: T.muted, fontFamily: T.mono }}>near-expiry ATM IV (legacy series) · {legacy.rows[0].date} → {legacy.rows[legacy.rows.length - 1].date}{error ? <span style={{ color: T.amber }}> · IV store: {error} · backfill pending</span> : null}</div>
         </Panel>
       )
     }
     return (
       <ExpandableChart title={`${symbol} implied volatility · history`} accent={T.violet} style={{ marginBottom: 12 }} height={248}
-        source={sourceOf(legacy.rows[legacy.rows.length - 1]?.date, { source: 'NSE F&O bhavcopy' })} badges={[{ label: 'arithmetic' }]}
+        source={catTone(sourceOf(legacy.rows[legacy.rows.length - 1]?.date, { source: 'NSE F&O bhavcopy' }), 'option_history_json')} badges={[{ label: 'arithmetic' }]}
         legend={<span>{legacy.rows[0].date} → {legacy.rows[legacy.rows.length - 1].date} · legacy near-expiry series</span>}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 6 }}>

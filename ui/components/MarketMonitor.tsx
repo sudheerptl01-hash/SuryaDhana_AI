@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getMarketMonitor, getRecentResults, type MarketMonitor as Data, type MarketMover, type MarketSector, type RecentResult } from '@/lib/api'
 import { CHART_BOX, Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, type Column, fmtIdx, fmtPct, fmtNum, fmtSigned, ordinal, tone, useChartSize, sourceOf } from '@/components/terminal'
 import { labelEvery, niceAxis } from '@/components/terminal/chart'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 import { MarketMap } from './MarketMap'
 import { sessionDayLabel, unicodeMinus } from '@/lib/format'
 import { RotationChart } from './RotationChart'
@@ -121,6 +122,7 @@ function MoverTable({ title, rows, onSelect, sortKey, accent, results, day = 'to
   /** the EOD session the lists are from: 'today' or 'on 23 Oct' (P16 MKT wording) */
   day?: string
 }) {
+  const catTone = useCatalogTone()                       // F-27: the market_monitor catalog verdict tones the chip
   const cols: Column<MarketMover>[] = [
     { key: 'symbol', label: 'Stock', render: r => {
       const res = results?.get(r.symbol)
@@ -138,13 +140,14 @@ function MoverTable({ title, rows, onSelect, sortKey, accent, results, day = 'to
     { key: 'from_52w_high_pct', label: 'vs 52w H', align: 'right', render: r => <span style={{ color: T.muted }}>{pct(r.from_52w_high_pct, 1)}</span> },
   ]
   return (
-    <Panel title={title} accent={accent} pad={0} source={sourceOf(asOf, { source: 'NSE EOD' })}>
+    <Panel title={title} accent={accent} pad={0} source={catTone(sourceOf(asOf, { source: 'NSE EOD' }), 'market_monitor')}>
       <DataTable columns={cols} rows={rows} rowKey={r => r.symbol} dense onRowClick={r => onSelect(r.symbol)} empty={`None ${day}`} />
     </Panel>
   )
 }
 
 export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) => void }) {
+  const catTone = useCatalogTone()                       // F-27: the market_monitor catalog verdict tones the chips
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [recent, setRecent] = useState<RecentResult[]>([])
@@ -190,7 +193,7 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
       <div style={{ display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(300px, 1fr) minmax(0, 2.4fr)' }}>
           {/* m023: a short subtitle (the long one wrapped into a narrow four-line column beside the chips) */}
-          <Panel source={sourceOf(data.as_of, { source: 'NSE EOD' })} badge="context" title="Market regime" subtitle="not a signal" accent={T.muted}>
+          <Panel source={catTone(sourceOf(data.as_of, { source: 'NSE EOD' }), 'market_monitor')} badge="context" title="Market regime" subtitle="not a signal" accent={T.muted}>
             <div style={{ fontSize: 10, color: T.dim, marginBottom: 6 }}>Scanner Handbook stage 2 · a health gauge</div>
             <RegimeGauge d={data} />
           </Panel>
@@ -219,7 +222,7 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
 
         <IndexValuation />
         <YieldGapPanel />
-        <Panel source={sourceOf(data.as_of, { source: 'NSE EOD' })} badge="context" title="One year of breadth" accent={T.cyan}
+        <Panel source={catTone(sourceOf(data.as_of, { source: 'NSE EOD' }), 'market_monitor')} badge="context" title="One year of breadth" accent={T.cyan}
           subtitle="amber = index (left axis) · cyan = % above 50-DMA · violet = % above 200-DMA (right axis) · strip = regime score">
           <BreadthChart d={data} />
         </Panel>
@@ -228,7 +231,7 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
         {data.rotation && data.rotation.length > 0 && <RotationChart rows={data.rotation} />}
         <ParticipantPositioning />
 
-        <Panel source={sourceOf(data.as_of, { source: 'NSE EOD' })} badge="arithmetic" title="Industry table" subtitle="equal-weighted returns of liquid stocks in each NSE industry · click an industry for its stocks" accent={T.amber} pad={0}
+        <Panel source={catTone(sourceOf(data.as_of, { source: 'NSE EOD' }), 'market_monitor')} badge="arithmetic" title="Industry table" subtitle="equal-weighted returns of liquid stocks in each NSE industry · click an industry for its stocks" accent={T.amber} pad={0}
           right={<div style={{ display: 'flex', gap: 4 }}>
             {(['ret_1d_pct', 'ret_5d_pct', 'ret_21d_pct', 'ret_63d_pct'] as const).map((k, i) => (
               <Chip key={k} color={T.amber} active={sectorSort === k} onClick={() => setSectorSort(k)}>{['1D', '1W', '1M', '3M'][i]}</Chip>

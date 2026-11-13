@@ -9,11 +9,13 @@
 import { useEffect, useState } from 'react'
 import { BadgeChip, SourceChip, T, fmtNum, sourceOf } from '@/components/terminal'
 import { getIvHistory, storeNote, volError, type IvHistory } from './api'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 
 const pct = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? '—' : `${fmtNum(v, d)}%`)
 const signed = (v: number | null | undefined, d = 2) => (v == null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}`)
 
 export function IvStrip({ symbol, nextResults }: { symbol: string; nextResults?: string | null }) {
+  const catTone = useCatalogTone()                       // F-27: the iv_summary_daily catalog verdict tones the chip
   const [d, setD] = useState<IvHistory | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
@@ -39,7 +41,7 @@ export function IvStrip({ symbol, nextResults }: { symbol: string; nextResults?:
         <span style={{ fontSize: 10, color: T.muted }}>{last ? `${symbol} options · stored ${last.date}` : 'F&O options'}</span>
         <span style={{ flex: 1 }} />
         <BadgeChip badge="context" />
-        <SourceChip info={sourceOf(last?.date ?? null, { source: 'iv_summary_daily', hint: last ? null : (err ?? storeNote(d) ?? 'no stored IV row') })} />
+        <SourceChip info={catTone(sourceOf(last?.date ?? null, { source: 'iv_summary_daily', hint: last ? null : (err ?? storeNote(d) ?? 'no stored IV row') }), 'iv_summary_daily')} />
       </header>
       <div style={{ padding: 10 }}>
         {last ? (

@@ -27,7 +27,17 @@ import { PAGE_HANDOFF_EVENT } from './goAliases'
 
 export const WORKSPACES_KEY = 'suryadhana.workspaces.v1'
 export const WORKSPACES_EVENT = 'suryadhana:workspaces'
+/** R3-NITS (F2-TRADER: "LAYOUT SAVE gives no visible toast — the only confirmation is LAYOUT LIST"): a successful
+ *  save announces itself on this window event; ShellToasts.WorkspaceSaveToasts turns it into the standard toast. */
+export const WORKSPACE_SAVED_EVENT = 'suryadhana:workspace-saved'
 export const MAX_WORKSPACES = 8
+
+export interface WorkspaceSavedDetail { name: string; replaced: boolean; count: number }
+
+/** The LAYOUT SAVE confirmation line (pure, for the toast and the check): what was stored and how to load it. */
+export function workspaceSavedText(d: WorkspaceSavedDetail): string {
+  return `LAYOUT ${d.replaced ? 'UPDATED' : 'SAVED'} · ${d.name} (${d.count}/${MAX_WORKSPACES}) — strip + page + symbol + view · LAYOUT ${d.name} loads it`
+}
 
 export interface Workspace {
   /** Normalized name (upper-case, 1–20 chars), the LAYOUT argument. */
@@ -252,6 +262,8 @@ export function saveCurrentWorkspace(name: string, page: string, known: readonly
   const up = upsertWorkspace(readWorkspaces(shared), ws)
   if (!up.ok) return { ok: false, reason: up.reason }
   writeWorkspaces(up.list, shared)
+  // the visible confirmation (R3-NITS): GO's run() and the menu both land here, so both get the toast
+  emit(WORKSPACE_SAVED_EVENT, { name: ws.name, replaced: up.replaced, count: up.list.length } satisfies WorkspaceSavedDetail)
   return { ok: true, name: ws.name, replaced: up.replaced, count: up.list.length }
 }
 

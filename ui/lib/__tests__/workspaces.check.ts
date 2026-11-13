@@ -111,8 +111,25 @@ eq('describe names the page code, symbol, view', W.describeWorkspace(wsA!, id =>
   const win = fakeStorage()
   // the active symbol as OMON would have written it
   shared.setItem('activeSymbol.v1', JSON.stringify({ symbol: 'NIFTY', expiry: '2026-11-27', strikes: [], at: now.toISOString() }))
+  // R3-NITS (F2-TRADER: no visible LAYOUT SAVE confirmation): a successful save emits WORKSPACE_SAVED_EVENT,
+  // which ShellToasts.WorkspaceSaveToasts turns into the toast. Captured here through a stub window.
+  const emitted: unknown[] = []
+  ;(globalThis as { window?: unknown }).window = { dispatchEvent: (e: { type: string; detail?: unknown }) => { emitted.push([e.type, e.detail]) } }
   const saved = W.saveCurrentWorkspace('expiry desk', 'options', KNOWN, shared, win, now, '?tab=options&sub=vol')
+  delete (globalThis as { window?: unknown }).window
   check('save ok', saved.ok && saved.ok === true && saved.name === 'EXPIRY DESK' && !saved.replaced && saved.count === 1, saved)
+  eq('save emits the confirmation event (name, replaced, count)',
+    emitted.filter(e => Array.isArray(e) && e[0] === W.WORKSPACE_SAVED_EVENT).map(e => (e as [string, unknown])[1]),
+    [{ name: 'EXPIRY DESK', replaced: false, count: 1 }])
+  eq('the toast line names the layout and how to load it',
+    W.workspaceSavedText({ name: 'EXPIRY DESK', replaced: false, count: 1 }),
+    'LAYOUT SAVED · EXPIRY DESK (1/8) — strip + page + symbol + view · LAYOUT EXPIRY DESK loads it')
+  check('a replace says UPDATED', W.workspaceSavedText({ name: 'A', replaced: true, count: 3 }).startsWith('LAYOUT UPDATED · A (3/8)'))
+  {
+    const toasts = read('../../components/shell/ShellToasts.tsx')
+    check('ShellToasts listens on WORKSPACE_SAVED_EVENT and shows workspaceSavedText', /WORKSPACE_SAVED_EVENT, on\)/.test(toasts) && /workspaceSavedText\(d\)/.test(toasts))
+    check('app/page.tsx mounts WorkspaceSaveToasts inside ToastProvider', /<WorkspaceSaveToasts \/>/.test(read('../../app/page.tsx')))
+  }
   // switch away: the owner re-arranges the strip and moves to another symbol
   shared.setItem(S.STRIP_ORDER_KEY, JSON.stringify(['brief', 'gold']))
   shared.setItem('activeSymbol.v1', JSON.stringify({ symbol: 'TCS', expiry: null, strikes: [], at: '2026-11-13T22:00:00.000Z' }))

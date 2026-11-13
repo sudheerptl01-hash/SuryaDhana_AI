@@ -27,7 +27,8 @@ import { BasketRisk } from '@/components/BasketRisk'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { COMP_KEY } from '@/components/Compare'
 import { goToPage } from '@/lib/navigate'
-import { Chip, DataTable, EventBadge, Input, PageHeader, Panel, Spark, Stat, T, TickerLink, type Column, AvoidFlag, fmtFixed, fmtPct, fmtPx, inputSource, sourceOf, tone, type SourceInfo } from '@/components/terminal'
+import { Chip, DataTable, EventBadge, Input, Notice, PageHeader, Panel, Spark, Stat, T, TickerLink, type Column, AvoidFlag, fmtFixed, fmtPct, fmtPx, inputSource, sourceOf, tone, type SourceInfo } from '@/components/terminal'
+import { openSettingsImport } from '@/components/shell/SettingsImport'
 import { sourceChipText } from '@/components/terminal/source'
 import { useMarketOpen } from '@/components/shell/useFeed'
 import { BellGlyph } from '@/components/shell/Glyphs'   // monochrome SVG bell, not the colour emoji (CT-14)
@@ -346,7 +347,19 @@ export function WatchMonitor() {
           {counts.filter(([, n]) => n).map(([s, n]) => <Chip key={s} color={SRC_COLOR[s]} active={filter === s} onClick={() => setFilter(filter === s ? null : s)}>{s} {n}</Chip>)}
         </div>}>
         <DataTable columns={cols} rows={shown} rowKey={r => r.yahoo} dense initialSort={{ key: 'chg', dir: 'desc' }}
-          empty={<div style={{ padding: 20, fontSize: 12, color: T.muted }}>Nothing to watch yet: add a ticker above, ☆ PIN a stock from any chart, or connect ICICI to see your holdings.</div>} />
+          empty={<div style={{ padding: 20, fontSize: 12, color: T.muted, display: 'grid', gap: 12 }}>
+            <div>Nothing to watch yet: add a ticker above, ☆ PIN a stock from any chart, or connect ICICI to see your holdings.</div>
+            {/* R3-NITS (F2-TRADER: "GO IMPORT has still never been run — third report in a row"; WTCH NAMES 0 blocks
+                key-2, GPLN focus and the watch-tier tape): the empty state offers the one-time settings import. */}
+            <Notice>
+              Used the old browser terminal before? Its watchlist and pins can be brought over once:{' '}
+              <span role="button" tabIndex={0} data-wtch-import onClick={() => openSettingsImport()}
+                onKeyDown={e => { if (e.key === 'Enter') openSettingsImport() }}
+                style={{ color: T.cyan, cursor: 'pointer', fontFamily: T.mono, fontWeight: 600 }}>GO IMPORT ›</span>
+              {' '}(type IMPORT in the GO bar, or click here).{' '}
+              <span style={{ color: T.muted }}>RUNBOOK §8 one-liner: open http://localhost:3000 once in the browser you used before — its settings sync to the server store from there.</span>
+            </Notice>
+          </div>} />
       </Panel>
       <div style={{ fontSize: 10, color: T.dim, marginTop: 8 }}>{liveQ.available
         ? `Prices of NSE stocks: live NSE quotes every 3 s (ICICI Breeze websocket; NSE's website about 1 minute behind when a name is not streaming; the last close, labelled CLOSE, after the session). The dot after each price is its source (hover it). Names, 1M sparks and 52-week ranges of NSE stocks: NSE's stored daily closes${nseBase.asOf ? ` (to ${nseBase.asOf})` : ''}, end of day, plus today's live point. Non-NSE pins are Yahoo, about 1 minute delayed. Range markers: green near the high, red near the low.`

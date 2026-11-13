@@ -199,7 +199,9 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
               const basisWords = t.key === 'india_basis' ? basisTileWords(basisClock === 'now' ? (g.basis_label ?? 'live MCX vs duty-paid landed now') : (g.settle_basis_label ?? g.basis_label ?? 'at the settlement'), g.basis_reference) : null
               return (
                 <div key={t.key} data-gold-gauge={t.key} data-badge={g.badge} data-gauge-state={g.state} style={{ minWidth: 0 }}>
-                  <Stat big={false} label={<span title={tooltips[g.key] ?? tooltips[t.key] ?? g.label}>{t.label}</span>}
+                  {/* R3-NITS (F2-DESIGN): the value line wraps — the Shanghai Δ ("vs the median of the previous 5
+                      pairs") clipped 18 px to an ellipsis in a 290–333 px column; nothing on a gauge may be cut off */}
+                  <Stat big={false} wrap label={<span title={tooltips[g.key] ?? tooltips[t.key] ?? g.label}>{t.label}</span>}
                     value={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', minWidth: 0 }}>
                       <span style={offline ? { color: T.muted } : undefined}>{val}</span>
                       {chg && <span style={{ fontSize: 11, color: priceChange && g.change != null ? (g.change > 0 ? T.green : g.change < 0 ? T.red : T.muted) : T.muted, fontWeight: 500 }}>{arrow(g.change ?? g.change_bp)}{chg}</span>}

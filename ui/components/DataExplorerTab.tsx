@@ -6,6 +6,7 @@ import { DataHealthBar } from './DataHealthBar'
 import { SkeletonGrid, FullTabLoader } from './LoadingOverlay'
 import { BadgeChip, SourceChip, sourceOf } from '@/components/terminal'
 import { duplicateColumns, FUNDAMENTAL_FEATURES } from './dexpRules'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 
 /*
  * DEXP (5 Nov 2026 review, M29 / m115): the three data buttons (incremental refresh, full historical, fundamentals)
@@ -57,12 +58,13 @@ function fmtCell(val: any): string {
 // ── Data source note (replaces the Yahoo fetch buttons) ────────────────────────
 
 function DataSourceNote({ asOf }: { asOf: string | null }) {
+  const catTone = useCatalogTone()                       // F-27: the ml_features catalog verdict tones the chip
   return (
     <div className="rounded border border-slate-700 bg-slate-900 px-4 py-3 space-y-1.5">
       <div className="flex items-center gap-2">
         <div className="text-[10px] font-semibold tracking-widest text-amber-400">DATA SOURCE</div>
         <span className="flex-1" />
-        <SourceChip info={sourceOf(asOf, { source: 'ml_features · EOD', maxAgeDays: 4 })} />
+        <SourceChip info={catTone(sourceOf(asOf, { source: 'ml_features · EOD', maxAgeDays: 4 }), 'ml_features')} />
       </div>
       <p className="text-[11px] text-slate-400 leading-relaxed">
         This grid reads the stored <span className="font-mono text-slate-300">ml_features</span> table (data-service): end of day, rebuilt by

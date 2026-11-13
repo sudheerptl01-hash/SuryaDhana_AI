@@ -17,13 +17,31 @@ LEGACY_KEYS = {"job_id", "kind", "status", "progress", "total", "started_at", "f
 
 
 def _wait(mgr: DurableJobManager, job_id: str, timeout: float = 10.0) -> dict:
+    """Wait for a terminal job AND for the worker to leave the live mirror. The worker sets the mirror's status
+    before ``_finish()`` commits the row, so a status-only wait can win the race against the SQLite write (the
+    F2 flake in test_error_is_persisted): once the job is out of ``_running``, the row is committed."""
     t0 = time.time()
     while time.time() - t0 < timeout:
+        with mgr._lock:                                  # noqa: SLF001 - the race under test is internal
+            in_mirror = job_id in mgr._running           # noqa: SLF001
         j = mgr.get(job_id)
-        if j and j["status"] not in ("running", "queued"):
+        if j and j["status"] not in ("running", "queued") and not in_mirror:
             return j
         time.sleep(0.02)
     raise AssertionError("job did not finish")
+
+
+def _wait_row(db: Path, job_id: str, timeout: float = 10.0) -> str:
+    """Poll the PERSISTED row (never the in-memory mirror) to a terminal status — the de-flake asked for by
+    F-RISK F2: assertions about what a restart will see wait on the row itself, not on a sleep."""
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        with sqlite3.connect(db) as con:
+            row = con.execute("SELECT status FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
+        if row and row[0] not in ("running", "queued"):
+            return row[0]
+        time.sleep(0.02)
+    raise AssertionError("job row never reached a terminal status in SQLite")
 
 
 @pytest.fixture
@@ -37,6 +55,7 @@ def test_submit_runs_persists_and_survives_restart(db: Path):
     assert created and job["status"] in ("running", "done") and LEGACY_KEYS <= set(job)
     done = _wait(mgr, job["job_id"])
     assert done["status"] == "done" and done["result"] == {"written": 7} and done["finished_at"]
+    assert _wait_row(db, job["job_id"]) == "done"        # the restart below reads the row, so wait on the row
     mgr.close()
 
     # a fresh manager on the same file (a restart) still serves the row — the queue is the store
@@ -69,6 +88,7 @@ def test_error_is_persisted(db: Path):
     job, _ = mgr.submit("build", boom)
     done = _wait(mgr, job["job_id"])
     assert done["status"] == "error" and "ValueError: nope" in done["error"] and done["result"] is None
+    assert _wait_row(db, job["job_id"]) == "error"       # de-flake: mgr2 reads SQLite, so wait on the row
     mgr.close()
     mgr2 = DurableJobManager(db)
     assert mgr2.get(job["job_id"])["status"] == "error"
@@ -157,6 +177,49 @@ def test_recent_is_compact_and_capped(db: Path):
     assert len(rows) == 3 and all("result" not in r for r in rows)
     assert {"job_id", "kind", "status", "attempt", "requeued", "submitted_at", "finished_at",
             "duration_s"} <= set(rows[0])
+    mgr.close()
+
+
+def test_recent_default_50_and_cap_500(db: Path):
+    """F-24/F-31: an evening's trail fits — recent() defaults to 50 rows and clamps any ask to 500."""
+    mgr = DurableJobManager(db, heartbeat_s=60, keep=600)
+    now = "2026-11-13T18:00:00+00:00"
+    with sqlite3.connect(db) as con:
+        con.executemany(
+            "INSERT INTO jobs (job_id, kind, status, progress, total, attempt, requeued, submitted_at,"
+            " started_at, finished_at) VALUES (?, 'evening', 'done', 1, 1, 1, 0, ?, ?, ?)",
+            [(f"j{i:04d}", f"2026-11-13T18:{i // 60:02d}:{i % 60:02d}+00:00", now, now) for i in range(520)])
+        con.commit()
+    assert len(mgr.recent()) == 50                       # default unchanged (the cheap poll)
+    assert len(mgr.recent(520)) == 500                   # cap raised 200 → 500: the full trail in one call
+    assert len(mgr.recent(500)) == 500
+    assert len(mgr.recent(0)) == 1                       # floor stays 1
+    assert all({"attempt", "requeued"} <= set(r) for r in mgr.recent(5))
+    mgr.close()
+
+
+def test_recent_running_rows_carry_live_progress(db: Path):
+    """A running row in recent() shows the mirror's fresh progress (no heartbeat needed), with attempt/requeued."""
+    mgr = DurableJobManager(db, heartbeat_s=3600)
+    gate = threading.Event()
+
+    def fn(progress):
+        progress(5, 10)
+        gate.wait(10)
+        return {"ok": True}
+
+    job, _ = mgr.submit("tape", fn)
+    deadline = time.time() + 5
+    row = None
+    while time.time() < deadline:                        # wait on the mirror's progress, not a sleep
+        row = next((r for r in mgr.recent() if r["job_id"] == job["job_id"]), None)
+        if row and row["progress"] == 5:
+            break
+        time.sleep(0.02)
+    assert row and row["status"] == "running" and (row["progress"], row["total"]) == (5, 10)
+    assert row["attempt"] == 1 and row["requeued"] is False and "result" not in row
+    gate.set()
+    _wait(mgr, job["job_id"])
     mgr.close()
 
 

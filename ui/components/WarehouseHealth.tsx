@@ -23,6 +23,7 @@ import { goToPage } from '@/lib/navigate'
 import clsx from 'clsx'
 import { QuantKPICard } from './QuantKPICard'
 import { getWarehouseStats, getWarehouseOhlcvMeta, getWarehouseMlStats } from '@/lib/api'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 
 // ── Types (mirror the backend response contracts) ───────────────────────────────
 interface WarehouseStats {
@@ -170,6 +171,7 @@ function Th({
 
 // ── Main component ──────────────────────────────────────────────────────────────
 export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
+  const catTone = useCatalogTone()                       // F-27: the ohlcv catalog verdict tones the coverage chips
   const [stats, setStats] = useState<WarehouseStats | null>(null)
   const [ml, setMl] = useState<MlStats | null>(null)
   const [meta, setMeta] = useState<OhlcvMetaRow[]>([])
@@ -340,7 +342,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
         {/* Coverage panel */}
-        <Panel source={sourceOf(syncedAt ? syncedAt.toISOString() : null, { source: 'data-service' })} title="Warehouse Coverage" hint="enrichment · freshness" accent={JADE}>
+        <Panel source={catTone(sourceOf(syncedAt ? syncedAt.toISOString() : null, { source: 'data-service' }), 'ohlcv')} title="Warehouse Coverage" hint="enrichment · freshness" accent={JADE}>
           <div className="space-y-4 px-5 pb-5 pt-4">
             <CoverageBar label="Fundamentals snapshot (one undated record each)" value={stats?.enrichment?.with_fundamentals ?? 0} total={stats?.total_stocks ?? 0} color={JADE} />
             <p className="-mt-2 text-[10px] leading-snug" style={{ color: MUTED }}>
@@ -449,7 +451,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
       </div>
 
       {/* ── Per-ticker coverage grid ──────────────────────────────────────────── */}
-      <Panel source={sourceOf(syncedAt ? syncedAt.toISOString() : null, { source: 'data-service' })} accent={AMBER}>
+      <Panel source={catTone(sourceOf(syncedAt ? syncedAt.toISOString() : null, { source: 'data-service' }), 'ohlcv')} accent={AMBER}>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 pt-4">
           <div className="flex items-baseline gap-3">
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ fontFamily: "'Chakra Petch', sans-serif", color: AMBER }}>

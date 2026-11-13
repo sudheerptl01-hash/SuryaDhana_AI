@@ -24,6 +24,7 @@ import { InteractiveSeries } from '@/components/terminal/InteractiveSeries'
 import { XYChart } from './charts'
 import { getIvCone, getIvHistory, getIvPaidDelivered, getIvSurface, getVolScreen, storeNote, volError, type IvCone, type IvHistory, type IvSurface, type PaidDelivered, type ScreenRow, type ScreenSort, type VolScreen } from './api'
 import { expectedMoveHitRate, lastYear, nearestTenor, paidSummary, skippedRuns, termWord } from './volModel'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 
 type Load<X> = { data: X | null; error: string | null }
 function useLoad<X>(fn: () => Promise<{ data: X }>, deps: unknown[]): Load<X> {
@@ -46,6 +47,7 @@ function Degraded({ what, note }: { what: string; note: string | null }) {
 }
 
 function SkewPanel({ hist, surf }: { hist: Load<IvHistory>; surf: Load<IvSurface> }) {
+  const catTone = useCatalogTone()                       // F-27: the iv_summary_daily catalog verdict tones the chip
   const rows = hist.data?.ok ? hist.data.rows : []
   const last = rows.length ? rows[rows.length - 1] : null
   const skewPct = percentileOf(lastYear(rows).map(r => r.skew_25d_30), last?.skew_25d_30, 60)
@@ -58,7 +60,7 @@ function SkewPanel({ hist, surf }: { hist: Load<IvHistory>; surf: Load<IvSurface
   const xy = (pts: typeof todaySmile) => pts.map(p => ({ x: p.log_moneyness, y: p.iv, label: `K ${fmtNum(p.strike, 0)}` }))
   return (
     <Panel title="Skew · 25Δ put − call" accent={T.violet} pad={8} badge="context"
-      source={sourceOf(hist.data?.as_of ?? null, { source: 'iv_summary_daily', hint: hist.data && !hist.data.ok ? storeNote(hist.data) : hist.error })}
+      source={catTone(sourceOf(hist.data?.as_of ?? null, { source: 'iv_summary_daily', hint: hist.data && !hist.data.ok ? storeNote(hist.data) : hist.error }), 'iv_summary_daily')}
       subtitle={last ? `${signed(last.skew_25d_30)} pts today${skewPct != null ? ` · ${ordinal(skewPct)} percentile of the past year` : ''} · vol points` : undefined}>
       {!rows.length ? <Degraded what="Skew history" note={hist.error ?? storeNote(hist.data)} /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)', gap: 12 }}>
@@ -82,6 +84,7 @@ function SkewPanel({ hist, surf }: { hist: Load<IvHistory>; surf: Load<IvSurface
 }
 
 function TermPanel({ hist, cone }: { hist: Load<IvHistory>; cone: Load<IvCone> }) {
+  const catTone = useCatalogTone()                       // F-27: the iv_expiry_daily catalog verdict tones the chip
   const rows = hist.data?.ok ? hist.data.rows : []
   const last = rows.length ? rows[rows.length - 1] : null
   const term = cone.data?.ok ? cone.data.term_today.filter(t => t.atm_iv != null) : []
@@ -94,7 +97,7 @@ function TermPanel({ hist, cone }: { hist: Load<IvHistory>; cone: Load<IvCone> }
   const flatMarks = rows.filter(r => (r.quality_flags ?? '').split(',').includes('cm30_flat')).map(r => ({ t: r.date, kind: 'flat' }))
   return (
     <Panel title="Term structure · ATM IV by expiry" accent={T.amber} pad={8} badge="context"
-      source={sourceOf(cone.data?.as_of ?? hist.data?.as_of ?? null, { source: 'iv_expiry_daily', hint: cone.error ?? (cone.data && !cone.data.ok ? storeNote(cone.data) : null) })}
+      source={catTone(sourceOf(cone.data?.as_of ?? hist.data?.as_of ?? null, { source: 'iv_expiry_daily', hint: cone.error ?? (cone.data && !cone.data.ok ? storeNote(cone.data) : null) }), 'iv_expiry_daily')}
       subtitle={last ? `slope 30→90 ${signed(last.term_slope_30_90)} pts · ${termWord(last.term_slope_30_90)}` : undefined}>
       {!rows.length && !term.length ? <Degraded what="Term structure" note={hist.error ?? storeNote(hist.data)} /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)', gap: 12 }}>
@@ -122,11 +125,12 @@ function TermPanel({ hist, cone }: { hist: Load<IvHistory>; cone: Load<IvCone> }
 }
 
 function ConePanel({ cone }: { cone: Load<IvCone> }) {
+  const catTone = useCatalogTone()                       // F-27: the iv_summary_daily catalog verdict tones the chip
   const d = cone.data?.ok ? cone.data : null
   const tenors = ['iv30_cm', 'iv60_cm', 'iv90_cm']
   return (
     <Panel title="IV cone · constant-maturity percentiles" accent={T.cyan} pad={8} badge={d?.badge ?? 'context'}
-      source={sourceOf(d?.as_of ?? null, { source: 'iv_summary_daily', hint: cone.error ?? storeNote(cone.data) })}
+      source={catTone(sourceOf(d?.as_of ?? null, { source: 'iv_summary_daily', hint: cone.error ?? storeNote(cone.data) }), 'iv_summary_daily')}
       subtitle="min / 25 / 50 / 75 / max of stored IV by tenor, over 1 / 3 / 5 years; ● = today">
       {!d ? <Degraded what="IV cone" note={cone.error ?? storeNote(cone.data)} /> : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
@@ -162,6 +166,7 @@ function ConePanel({ cone }: { cone: Load<IvCone> }) {
 }
 
 function PaidPanel({ hist, symbol }: { hist: Load<IvHistory>; symbol: string }) {
+  const catTone = useCatalogTone()                       // F-27: the iv_expiry_daily catalog verdict tones the chip
   const rows = hist.data?.ok ? hist.data.rows : []
   const paid = useLoad<PaidDelivered>(() => getIvPaidDelivered(symbol, 12), [symbol])
   const ledger = paid.data?.ok ? paid.data.rows : []
@@ -171,7 +176,7 @@ function PaidPanel({ hist, symbol }: { hist: Load<IvHistory>; symbol: string }) 
   const note = paid.error ?? storeNote(paid.data)
   return (
     <Panel title={`IV paid vs vol delivered · ${ledger.length ? `last ${ledger.length}` : 'the'} NSE monthly expiries`} accent={T.violet} pad={8} badge="context"
-      source={sourceOf(paid.data?.as_of ?? hist.data?.as_of ?? null, { source: 'iv_expiry_daily + NSE OHLC', hint: note })}
+      source={catTone(sourceOf(paid.data?.as_of ?? hist.data?.as_of ?? null, { source: 'iv_expiry_daily + NSE OHLC', hint: note }), 'iv_expiry_daily')}
       subtitle={sum.closed ? `NSE monthly expiries · ATM IV at ≈ 30 days to expiry vs the realised vol (close-to-close, zero-mean) from that entry to the expiry close · mean ${signed(sum.mean)} pts over ${sum.closed} closed months · ${sum.paid_above} of ${sum.closed} paid above` : undefined}>
       {!ledger.length ? <Degraded what="The monthly ledger" note={note} /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(220px, 1fr)', gap: 12 }}>
@@ -207,6 +212,7 @@ const SORTS: { id: ScreenSort; label: string }[] = [
 ]
 
 export function VolScreener({ onPick }: { onPick?: (sym: string) => void }) {
+  const catTone = useCatalogTone()                       // F-27: the iv_summary_daily catalog verdict tones the chip
   const [sort, setSort] = useState<ScreenSort>('iv_pctile')
   const [within, setWithin] = useState<number | null>(null)
   const [q, setQ] = useState('')
@@ -239,7 +245,7 @@ export function VolScreener({ onPick }: { onPick?: (sym: string) => void }) {
   ], [d, banDay])
   return (
     <Panel title="VOL screener · every F&O underlying" accent={T.cyan} pad={0} badge="context"
-      source={sourceOf(d?.as_of ?? null, { source: 'iv_summary_daily', hint: scr.error ?? storeNote(d) })}
+      source={catTone(sourceOf(d?.as_of ?? null, { source: 'iv_summary_daily', hint: scr.error ?? storeNote(d) }), 'iv_summary_daily')}
       subtitle={d?.ok ? `${rows.length} of ${d.n} names · sorted by ${sort.replace('_', ' ')} · click a column to re-sort · hover the table for ⤓ CSV` : undefined}
       right={<span style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         {SORTS.map(s => <Chip key={s.id} color={T.cyan} active={sort === s.id} onClick={() => setSort(s.id)}>{s.label}</Chip>)}

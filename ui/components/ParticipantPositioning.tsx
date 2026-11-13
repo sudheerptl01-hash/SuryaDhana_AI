@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { getFiiDiiCash, getParticipants, type FiiDiiCash, type ParticipantRow } from '@/lib/api'
 import { CHART_BOX, DataTable, Panel, T, type Column, tone, useChartSize, sourceOf } from '@/components/terminal'
 import { cashCoverage } from '@/components/marketPagesModel'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 
 const LABEL: Record<string, string> = { FII: 'Foreign institutions (FII)', DII: 'Domestic institutions (DII)', PRO: 'Proprietary traders', CLIENT: 'Clients (retail + HNI)' }
 const k = (v: number | null | undefined) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v) >= 1e5 ? `${(Math.abs(v) / 1e5).toFixed(2)} L` : Math.abs(v).toLocaleString('en-IN')}`)
@@ -46,6 +47,7 @@ export function ParticipantPositioning() {
   useEffect(() => { getParticipants(250).then(r => setD(r.data)).catch(() => {}) }, [])
   useEffect(() => { getFiiDiiCash(60).then(r => setCash(r.data)).catch(() => {}) }, [])
   const { ref: chartRef, w: W, h: H } = useChartSize(520, 150)   // CSS px (C1-17)
+  const catTone = useCatalogTone()                       // F-27: the nse_participant_oi catalog verdict tones the chip
   if (!d) return null
   const cols: Column<ParticipantRow>[] = [
     { key: 'ct', label: 'Participant', render: r => <span style={{ color: r.client_type === 'FII' ? T.amber : T.text }}>{LABEL[r.client_type] ?? r.client_type}</span> },
@@ -66,7 +68,7 @@ export function ParticipantPositioning() {
   const y = (v: number) => 8 + (1 - (v - lo) / (hi - lo || 1)) * (H - 28)
   const last = h[h.length - 1]
   return (
-    <Panel source={sourceOf(d.date, { source: 'NSE participant OI' })} badge="context" title="Who holds index futures" accent={T.violet} pad={0}
+    <Panel source={catTone(sourceOf(d.date, { source: 'NSE participant OI' }), 'nse_participant_oi')} badge="context" title="Who holds index futures" accent={T.violet} pad={0}
       subtitle={`NSE participant-wise open interest · ${d.date} · contracts · options = long calls − short calls − (long puts − short puts)`}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(300px, 1fr)' }}>
         <div>

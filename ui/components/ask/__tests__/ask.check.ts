@@ -86,9 +86,9 @@ for (const word of ['bullish', 'bearish', 'buy', 'sell', 'rally', 'crash', 'brea
   check(`no direction word '${word}' in panel copy`, !new RegExp(`\\b${word}\\b`, 'i').test(copyOnly))
 }
 
-// the panel's only endpoints are /api/ask*
+// the panel's only endpoints are /api/ask* (R3-ASK adds the 4th: /api/ask/audit for the empty state)
 const endpoints = [...new Set([...api.matchAll(/['"`](\/api\/[^'"`]*)['"`]/g)].map(m => m[1]))]
-check('api.ts calls /api/ask endpoints only', endpoints.length === 3 && endpoints.every(e => e.startsWith('/api/ask')), endpoints)
+check('api.ts calls /api/ask endpoints only', endpoints.length === 4 && endpoints.every(e => e.startsWith('/api/ask')), endpoints)
 check('the panel itself holds no endpoint strings', !/\/api\//.test(panel.replace(/^\s*\*.*$/gm, '')))
 check('no publisher or data-service URL in the ask UI', !/https?:\/\//.test(panel + model) )
 
@@ -96,6 +96,49 @@ check('no publisher or data-service URL in the ask UI', !/https?:\/\//.test(pane
 check('RSCH mounts AskPanel as the ask sub-view',
   rsch.includes("useSubView(['library', 'ask']") && rsch.includes('<AskPanel />') && rsch.includes("from '@/components/ask/AskPanel'"))
 check('RSCH names the sub-view in its tabs', rsch.includes('ASK · the cited read-only analyst'))
+
+// ── R3-ASK: the empty state (F2-design ask) ─────────────────────────────────────────────────────────────────
+
+check('3-4 describe-only example questions exist', M.EXAMPLE_QUESTIONS.length >= 3 && M.EXAMPLE_QUESTIONS.length <= 4)
+// each example must be describe-only: anchored on stored data, and free of every forecast/advice shape the
+// server refuses (a refused example would teach the user the panel is broken)
+const FORECASTISH = /\bwill\s|\btomorrow\b|\bnext\s+(week|month|session|expiry)\b|\bshould\s+(i|we|one)\b|\bpredict|\bforecast|\btarget\b|\brecommend|\bbest\b|\bcheap\b|\bexpensive\b|\bworth\b|\bgood\s+(entry|exit)|\bstop[-\s]?loss\b/i
+for (const ex of M.EXAMPLE_QUESTIONS) {
+  check(`example is describe-only: ${ex}`, /stored/i.test(ex) && !FORECASTISH.test(ex), ex)
+}
+check('the panel renders the examples and fills the box on click',
+  panel.includes('EXAMPLE_QUESTIONS.map') && panel.includes('onPick={setQ}') && panel.includes('onPick(value)'))
+check('the empty state shows only pre-query', panel.includes('{!res && !busy && <EmptyState'))
+check('recent questions come from the audit tail and show no payloads',
+  panel.includes('askAudit(') && panel.includes('never the row payloads') && !/r\.(rows|columns|answer)\b/.test(panel))
+check('auditLineLabel is question · rows · time only',
+  M.auditLineLabel({ ts: '2026-11-13T22:10:05+00:00', question: 'q', rows_returned: 3 }) === 'q · 3 row(s) · 2026-11-13 22:10')
+check('direct reads are filtered out of the recent list', panel.includes("r.question !== '(direct read)'"))
+
+// ── R3-ASK: the snapshot-age tone (F2-design: louder when degraded) ─────────────────────────────────────────
+
+const SNAP = { file: 'evening-20261113-1920.duckdb', as_of: '2026-11-13' }
+const FRESH = { iv_summary_max: '2026-11-13', stale: false, note: null }
+const STALE = { iv_summary_max: '2026-11-12', stale: true, note: 'cut before the 2026-11-13 iv_eod — iv_summary_daily inside it ends 2026-11-12' }
+check('fresh snapshot: ok tone, plain date line',
+  (() => { const a = M.snapshotAgeLine(SNAP, FRESH, true); return a.tone === 'ok' && a.text === 'snapshot 2026-11-13' })())
+check('snapshot predating the newest iv_summary_daily session: amber',
+  (() => { const a = M.snapshotAgeLine(SNAP, STALE, true); return a.tone === 'amber' && a.text.includes('iv_summary_daily inside it ends 2026-11-12') })())
+check('the same staleness with the analyst offline: loud',
+  M.snapshotAgeLine(SNAP, STALE, false).tone === 'loud')
+check('no snapshot at all is amber, never silent',
+  (() => { const a = M.snapshotAgeLine(null, null, true); return a.tone === 'amber' && a.text === 'no snapshot yet' })())
+check('missing age block degrades to the plain ok line', M.snapshotAgeLine(SNAP, null, true).tone === 'ok')
+check('the panel paints amber inline and loud as a bordered strip',
+  panel.includes("age.tone === 'amber'") && panel.includes("age?.tone === 'loud'") && panel.includes('borderLeft: `3px solid ${T.amber}`'))
+
+// ── R3-ASK: analyst_ready states (F2-trader ask) ────────────────────────────────────────────────────────────
+
+check('the health type carries analyst_ready + analyst_note + snapshot_age',
+  api.includes('analyst_ready: boolean') && api.includes('analyst_note: string | null') && api.includes('snapshot_age: SnapshotAge | null'))
+check('the offline line matches the server constant', M.OFFLINE_LINE === 'analyst offline — the data reads still work')
+check('the panel shows the offline line when the analyst is not ready',
+  panel.includes('!health.analyst_ready') && panel.includes('health.analyst_note ?? OFFLINE_LINE'))
 
 console.log(`ask.check: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)

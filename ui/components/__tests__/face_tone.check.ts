@@ -17,6 +17,10 @@
  *  T  footer DATA-date tone: amber when behind the last NSE session (health last_session first, Mon–Fri calendar
  *     fallback, 21:30 IST cutoff, weekend-safe).
  *  W  wiring scans: the chip no longer vanishes on error (no setN(null)); the footer span carries the tone.
+ *  X  F-27 (ROUND 3): the catalog verdict is WIRED into the SourceChip path — useCatalogTone in dataHealthStore
+ *     (one shared store read per window, no per-panel fetch), the ten catalogued panel files call it with their
+ *     dataset ids, a red fixture tones the chip while the face keeps its own date/as-of, a fresh fixture returns
+ *     the identical SourceInfo (so a fresh live state renders bit-identically), and gold/ stays untouched.
  *
  * Run with plain node ≥ 22.6 (type stripping, no deps):
  *   node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON ui/components/__tests__/face_tone.check.ts
@@ -193,6 +197,70 @@ const OPEN = { state: 'open' as const, session_date: '2026-11-13' }
   const lv = read('lib/liveQuotes.ts')
   check('W3 the quiet policy window is untouched (no new constant, no qualification change)', !/QUIET_LIVE/.test(lv.replace(/\*.*?QUIET_LIVE_S.*/g, ''))
     || /data-service QUIET_LIVE_S/.test(lv))
+}
+
+// ── X. F-27: the catalog verdict wired into the SourceChip path (ROUND 3) ──────────────────────────────────────
+{
+  const now = new Date(NOW)
+  // the end-to-end pure path a wired panel takes: store snapshot → catalogVerdictOf → applyCatalogVerdict → chip text
+  const redSnap = {
+    status: 'ok' as const, lastGoodAt: NOW, error: null,
+    data: {
+      as_of: iso(NOW), last_session: '2026-11-12', catalog_source: 'dataset_catalog', inputs_unavailable: {}, controller_online: true,
+      note: '', summary: { green: 20, amber: 0, red: 1, gaps: 0 },
+      rows: [
+        { id: 'market_monitor', label: 'Market monitor', pages: ['MKT'], publisher: 'derived', published_ist: null, expected_by: '19:00',
+          as_of: '2026-11-09', lag_sessions: 3, state: 'red', unrecoverable: false, job_id: null, last_run: null, next_run: null, catchup_at: null, note: '', dictionary_anchor: null },
+        { id: 'iv_summary_daily', label: 'IV summary', pages: ['OMON'], publisher: 'derived', published_ist: null, expected_by: '21:30',
+          as_of: '2026-11-12', lag_sessions: 0, state: 'fresh', unrecoverable: false, job_id: null, last_run: null, next_run: null, catchup_at: null, note: '', dictionary_anchor: null },
+      ],
+    } as import('../datahealth/healthModel').DataHealth,
+  }
+  const wire = (info: import('../terminal/source').SourceInfo, datasetId: string) => {
+    const v = DH.catalogVerdictOf(redSnap, datasetId)
+    return v ? S.applyCatalogVerdict(info, v.state, v.note) : info
+  }
+  const eod = S.sourceOf('2026-11-12', { source: 'NSE EOD', now, maxAgeDays: 7 })
+  const toned = wire(eod, 'market_monitor')
+  check('X1 a red catalog verdict tones the wired chip STALE while the face keeps its own date', toned.state === 'stale'
+    && S.sourceChipText(toned, now).label === 'STALE · 12 NOV' && /catalog: red — 3 sessions behind \(SYS › DATA\)/.test(toned.hint ?? ''), toned)
+  check('X1 the panel keeps its as-of through the toning (data-sd-asof unchanged)', toned.asOf === eod.asOf && toned.asOf === '2026-11-12', toned)
+  check('X2 a fresh verdict returns the IDENTICAL SourceInfo — a fresh live state renders bit-identically',
+    wire(eod, 'iv_summary_daily') === eod && wire(eod, 'not-in-catalog') === eod)
+
+  // the React half: one shared store read, no per-panel fetch fan-out
+  const store = read('lib/dataHealthStore.ts')
+  check('X3 useCatalogTone exists and rides the shared store (useDataHealthStore + catalogVerdictOf + applyCatalogVerdict)',
+    /export function useCatalogTone\(\)/.test(store) && /const s = useDataHealthStore\(\)/.test(store)
+    && /catalogVerdictOf\(s, datasetId\)/.test(store) && /applyCatalogVerdict\(info, v\.state, v\.note\)/.test(store))
+  check('X3 the store still fetches /api/data/health in exactly one place (no fan-out)',
+    (store.match(/fetch\(/g) ?? []).length === 1 && /fetch\('\/api\/data\/health'/.test(store))
+
+  // the ten wired panel files: each imports the hook and tones with its dataset id (OWNED.txt, r3-tone)
+  const WIRED: [string, string][] = [
+    ['components/MarketMonitor.tsx', 'market_monitor'],
+    ['components/WarehouseHealth.tsx', 'ohlcv'],
+    ['components/DataExplorerTab.tsx', 'ml_features'],
+    ['components/vol/VolView.tsx', 'iv_summary_daily'],
+    ['components/vol/IvStrip.tsx', 'iv_summary_daily'],
+    ['components/vol/IvHistoryChart.tsx', 'iv_summary_daily'],
+    ['components/DerivativesDesk.tsx', 'nse_fo_daily'],
+    ['components/OptionChain.tsx', 'option_chain_eod'],
+    ['components/ParticipantPositioning.tsx', 'nse_participant_oi'],
+    ['components/DealsMonitor.tsx', 'nse_deals'],
+  ]
+  for (const [rel, ds] of WIRED) {
+    const src = read(rel)
+    check(`X4 ${rel} wires catTone(sourceOf(…), '${ds}') through the shared hook`,
+      /import \{ useCatalogTone \} from '@\/lib\/dataHealthStore'/.test(src)
+      && /const catTone = useCatalogTone\(\)/.test(src)
+      && src.includes(`), '${ds}')`) && /catTone\(sourceOf\(/.test(src)
+      && !/fetch\('\/api\/data\/health'/.test(src), rel)
+  }
+  check('X4 VolView also tones its iv_expiry_daily panels', read('components/vol/VolView.tsx').includes(`), 'iv_expiry_daily')`))
+  check('X4 DerivativesDesk also tones the VIX panel by vix_daily', read('components/DerivativesDesk.tsx').includes(`), 'vix_daily')`))
+  check('X5 negative: gold/ is untouched (its catalog already gates rendering)',
+    !fs.readdirSync(path.join(UI, 'components/gold')).some(f => f.endsWith('.tsx') && /useCatalogTone/.test(read(`components/gold/${f}`))))
 }
 
 console.log(`face_tone.check: ${passed} passed, ${failed} failed`)

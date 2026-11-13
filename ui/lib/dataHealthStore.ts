@@ -9,10 +9,10 @@
  * `catalogVerdictOf`) and ui/components/terminal/source.ts (`footerDataTone`, the one shared session-aware helper),
  * both unit-tested under plain node by ui/components/__tests__/face_tone.check.ts.
  */
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 import type { DataHealth } from '../components/datahealth/healthModel'
-import { footerDataTone, type FooterDataTone } from '../components/terminal/source'
-import type { HealthStoreSnap } from './dataHealthCore'
+import { applyCatalogVerdict, footerDataTone, type FooterDataTone, type SourceInfo } from '../components/terminal/source'
+import { catalogVerdictOf, type HealthStoreSnap } from './dataHealthCore'
 
 export { catalogVerdictOf, staleChipFace, type HealthFetchStatus, type HealthStoreSnap, type StaleChipFace } from './dataHealthCore'
 export type { FooterDataTone }
@@ -88,6 +88,24 @@ export function useDataHealthStore(): HealthStoreSnap {
 export function useFooterDataTone(latestDate: string | null | undefined): FooterDataTone {
   const s = useDataHealthStore()
   return footerDataTone(latestDate, s.data?.last_session ?? null)
+}
+
+/**
+ * D-TONE G3 wiring (FINAL ROUND F-27): one store subscription per component — the returned toner hands a
+ * panel's SourceInfo its dataset's `dataset_catalog` verdict (terminal/source.ts `applyCatalogVerdict`:
+ * red/gap → the STALE treatment with the face keeping its own date/age text; amber → the hover names the
+ * verdict; fresh/live rows and live/input/reference chips are untouched). The window still reads
+ * /api/data/health ONCE per TTL: every consumer shares this store's poll — never a per-panel fetch.
+ *
+ *   const tone = useCatalogTone()
+ *   <Panel source={tone(sourceOf(d.as_of, { source: 'NSE EOD' }), 'market_monitor')} …
+ */
+export function useCatalogTone(): (info: SourceInfo, datasetId: string) => SourceInfo {
+  const s = useDataHealthStore()
+  return useCallback((info: SourceInfo, datasetId: string): SourceInfo => {
+    const v = catalogVerdictOf(s, datasetId)
+    return v ? applyCatalogVerdict(info, v.state, v.note) : info
+  }, [s])
 }
 
 /** Tests only: replace the snapshot without a fetch. */

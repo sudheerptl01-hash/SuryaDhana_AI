@@ -41,6 +41,7 @@ import { OptionPricer, type PricerPick } from '@/components/OptionPricer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getSurveillance, getOptionChain, getOptionChainLive, getOptionHistory, type OptionChain as Chain, type OptionHistoryRow } from '@/lib/api'
 import { BadgeChip, CHART_BOX, Chip, ErrorBox, Loading, PageHeader, Panel, SourceChip, Stat, T, fmtNum, setSubInUrl, sourceOf, useChartSize } from '@/components/terminal'
+import { useCatalogTone } from '@/lib/dataHealthStore'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { nseDelayedSource, underlyingLiveSymbol } from '@/components/liveModel'
 import { IvHistoryChart, useIvHistory } from '@/components/vol/IvHistoryChart'
@@ -279,6 +280,7 @@ function OiBars({ data }: { data: Chain }) {
 }
 
 export function OptionChain() {
+  const catTone = useCatalogTone()                       // F-27: the option_chain_eod catalog verdict tones the EOD chip
   // CT-01: 'RELIANCE OMON' from another page writes the hand-off key before this page mounts; start on it, so the
   // first request is RELIANCE's (it used to start on NIFTY and race the RELIANCE request: the later answer won)
   const [symbol, setSymbol] = useState(() => omonInitialSymbol(readHandoff()))
@@ -463,7 +465,7 @@ export function OptionChain() {
   // minute and L-INVENTORY measured it 34–92 s behind — so in session it reads DELAYED · NSE · <age> from its own
   // records.timestamp; otherwise the bhavcopy's date (daily data shows its date, never a clock)
   const chainSource = data?.live ? nseDelayedSource(data.as_of ?? null, { marketOpen: true, now: Date.now(), hint: 'NSE option chain (v3), 30 s cache, NSE refreshes it about once a minute' })
-    : sourceOf(data?.date ?? null, { source: 'NSE F&O bhavcopy', hint: liveNote })
+    : catTone(sourceOf(data?.date ?? null, { source: 'NSE F&O bhavcopy', hint: liveNote }), 'option_chain_eod')
   // the underlying's spot from the live NSE quote service (Breeze websocket index / stock tick) while the chain is live
   const ulSym = underlyingLiveSymbol(data?.symbol ?? symbol)
   const ul = useLiveQuotes(ulSym ? [ulSym] : [], { intervalMs: 3_000, enabled: !!data?.live })
@@ -556,6 +558,10 @@ export function OptionChain() {
           </span>}>
           <div ref={scrollRef} tabIndex={0} onKeyDown={onChainKey} style={{ maxHeight: 640, overflowY: 'auto', position: 'relative', outline: 'none' }} data-omon-chain>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
+              {/* R3-NITS, the F1 trader's volume/OI unit-chip ask — recorded as already satisfied, not duplicated:
+                  every OI / OI CHG / VOLUME header below carries its own per-column unit suffix "(ctr)" / "(sh)"
+                  (fix wave 2 M05), and the panel subtitle states the unit in words; a third per-column chip would
+                  print the same unit a third time (the one-number-once rule). */}
               <thead style={{ position: 'sticky', top: 0, background: '#080b10', zIndex: Z.raised }}>
                 <tr style={{ color: T.muted, fontSize: 10, letterSpacing: .8 }}>
                   {['OI', 'OI CHG', 'VOLUME', 'IV', ...(greeks ? ['Δ', ...(hasNseDelta ? ['NSE Δ'] : []), 'Θ/D'] : []), 'PRICE'].map(h => <th key={`c${h}`} title={h.startsWith('OI') || h === 'VOLUME' ? `${oiUnit}` : h === 'Θ/D' ? unitLabel : undefined} style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>CALL {h}{h.startsWith('OI') || h === 'VOLUME' ? <span style={{ color: T.dim, fontWeight: 400 }}> ({oiUnit === 'contracts' ? 'ctr' : 'sh'})</span> : null}</th>)}
@@ -578,8 +584,10 @@ export function OptionChain() {
                   const gc = greeks ? greeksFor('call', data.forward, r.strike, kIv, tDays) : null
                   const gp = greeks ? greeksFor('put', data.forward, r.strike, kIv, tDays) : null
                   const nd = nseD.get(r.strike)
+                  // R3-NITS (F2-DESIGN: the one half-px leaf left in 15 pages): the UA styles <sup> as font-size
+                  // 'smaller', which computes 8.25px inside this 11px table — pinned to the 9px nano step instead
                   const px = (side: SideV2) => side.traded === false
-                    ? <span style={{ color: T.dim }} title="NSE settlement price: this strike did not trade today (no IV, not a quote)">{num(side.price, 2)}<sup>s</sup></span>
+                    ? <span style={{ color: T.dim }} title="NSE settlement price: this strike did not trade today (no IV, not a quote)">{num(side.price, 2)}<sup style={{ fontSize: 'var(--t-fs-nano)' }}>s</sup></span>
                     : num(side.price, 2)
                   const picked = picks.includes(r.strike), cur = cursor === ri
                   const gcell = (v: string, shade: boolean, align: 'left' | 'right') => <td style={{ padding: '4px 6px', textAlign: align, color: T.cyan, opacity: 0.9, background: shade ? '#0c1018' : undefined }}>{v}</td>

@@ -16,8 +16,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { apiError } from '@/lib/errors'
 import { BadgeChip, Btn, Chip, ErrorBox, Input, Loading, Panel, T, undatedSource } from '@/components/terminal'
-import { askHealth, askQuestion, runRead, type AskHealth } from './api'
-import { cellText, renderableLines, sourceLabel, statusParts, type AskPayload, type ReadPayload } from './model'
+import { askAudit, askHealth, askQuestion, runRead, type AskAuditRow, type AskHealth } from './api'
+import { auditLineLabel, cellText, EXAMPLE_QUESTIONS, OFFLINE_LINE, renderableLines, snapshotAgeLine, sourceLabel,
+         type AskPayload, type ReadPayload } from './model'
 
 const mono = { fontFamily: T.mono } as const
 
@@ -55,9 +56,43 @@ function Sources({ sources }: { sources: { table: string; as_of: string | null }
   )
 }
 
+/** R3-ASK empty state (F2-design ask): describe-only examples + the recent audit questions, each a click-to-fill. */
+function EmptyState({ recent, onPick }: { recent: AskAuditRow[]; onPick: (q: string) => void }) {
+  const pickBtn = (label: string, value: string, key: string) => (
+    <button key={key} onClick={() => onPick(value)}
+      style={{ background: 'transparent', border: `1px solid ${T.border}`, color: T.text, cursor: 'pointer',
+               padding: '5px 10px', fontSize: 11, textAlign: 'left', fontFamily: 'inherit' }}>
+      {label}
+    </button>
+  )
+  return (
+    <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
+      <div>
+        <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 6 }}>
+          TRY ONE — each asks what the stored data already says
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {EXAMPLE_QUESTIONS.map(ex => pickBtn(ex, ex, `ex-${ex}`))}
+        </div>
+      </div>
+      {recent.length > 0 && (
+        <div>
+          <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 6 }}>
+            RECENT QUESTIONS — from the audit log: question · row count · time, never the row payloads
+          </div>
+          <div style={{ display: 'grid', gap: 4 }}>
+            {recent.map((r, i) => pickBtn(auditLineLabel(r), r.question, `rc-${i}`))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function AskPanel() {
   const [health, setHealth] = useState<AskHealth | null>(null)
   const [healthErr, setHealthErr] = useState<string | null>(null)
+  const [recent, setRecent] = useState<AskAuditRow[]>([])
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [res, setRes] = useState<AskPayload | null>(null)
@@ -70,6 +105,8 @@ export function AskPanel() {
   const loadHealth = useCallback(() => {
     askHealth().then(h => { setHealth(h); setHealthErr(null) })
       .catch(e => setHealthErr(apiError(e, 'analyst status unavailable')))
+    askAudit(8).then(rows => setRecent(rows.filter(r => r.question !== '(direct read)')))
+      .catch(() => setRecent([]))   // the empty state simply has no recent list
   }, [])
   useEffect(() => { loadHealth() }, [loadHealth])
 
@@ -90,6 +127,9 @@ export function AskPanel() {
   }, [sql, readBusy])
 
   const painted = res ? renderableLines(res.answer, res.sources) : null
+  // R3-ASK: the snapshot-age line — amber when the snapshot predates its newest iv_summary_daily session,
+  // louder (a bordered strip, not an inline note) when the analyst is also offline (F2-design ask).
+  const age = health ? snapshotAgeLine(health.snapshot, health.snapshot_age, health.analyst_ready) : null
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -98,12 +138,25 @@ export function AskPanel() {
         right={<BadgeChip badge="heuristic" note="an LLM wrote this from the cited rows — verify before acting on it" />}
         subtitle="read-only SQL over the 19:20 evening snapshot · every number cited with its table + as-of · describes, does not predict">
         <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6, marginBottom: 10 }}>
-          {health ? statusParts({ provider: health.provider, model: health.model, snapshot: health.snapshot,
-                                  degraded: !!health.snapshot_note, degraded_reason: health.snapshot_note }).join(' · ')
-            : healthErr ?? 'checking the analyst…'}
-          {health?.provider_note ? <span> · {health.provider_note}</span> : null}
+          {health ? (
+            <>
+              <span>{health.provider} · {health.model}</span>
+              {age && age.tone !== 'loud' && (
+                <span style={age.tone === 'amber' ? { color: T.amber } : undefined}> · {age.text}</span>
+              )}
+              {health.snapshot_note ? <span> · {health.snapshot_note}</span> : null}
+              {health.provider_note ? <span> · {health.provider_note}</span> : null}
+              {!health.analyst_ready && <span style={{ color: T.amber }}> · {health.analyst_note ?? OFFLINE_LINE}</span>}
+            </>
+          ) : (healthErr ?? 'checking the analyst…')}
           <span> · feeds nothing: not the Decision Desk, not the S1 shadow, not an alert, not a ticket price</span>
         </div>
+        {age?.tone === 'loud' && (
+          <div style={{ border: `1px solid ${T.amber}55`, borderLeft: `3px solid ${T.amber}`, color: T.amber,
+                        padding: '6px 12px', marginBottom: 10, fontSize: 12 }}>
+            {age.text}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Input value={q} onChange={setQ} placeholder="Ask about the stored data — e.g. what was the last stored NIFTY close?" />
@@ -112,6 +165,7 @@ export function AskPanel() {
         </div>
         {askErr && <div style={{ marginTop: 10 }}><ErrorBox error={askErr} onRetry={submit} /></div>}
         {busy && <div style={{ marginTop: 10 }}><Loading label="Reading the snapshot" /></div>}
+        {!res && !busy && <EmptyState recent={recent} onPick={setQ} />}
 
         {res && !busy && (
           <div style={{ marginTop: 14 }}>

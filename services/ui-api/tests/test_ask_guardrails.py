@@ -458,3 +458,211 @@ def test_redteam_error_surface_never_echoes_a_path(tmp_path, monkeypatch):
 def test_redteam_advice_baits_are_detected(bait):
     from ask_engine import is_prediction_seeking
     assert is_prediction_seeking(bait), bait
+
+# ── R3-ASK (FINAL ROUND): analyst_ready + snapshot-age — the F2 trader/design asks ──────────────────────────────
+# F2-trader: "/api/ask/health says ok while the model the audit log calls offline isn't installed" -> health now
+# carries `analyst_ready` from a real provider probe (2 s timeout, 60 s cache); `ok` stays about the READS.
+# F2-trader wart 2 / F2-design: the 19:20 snapshot can predate the 20:30 iv_eod -> health's `snapshot_age` says so.
+
+from ask_engine import READY_TIMEOUT_S, READY_TTL_S, Provider, probe_provider
+
+
+def _prov(model: str = "qwen3.5:9b") -> Provider:
+    return Provider("ollama", "http://127.0.0.1:11434", model, None)
+
+
+class _FakeResp:
+    def __init__(self, data: object) -> None:
+        self._data = data
+
+    def raise_for_status(self) -> None:
+        pass
+
+    def json(self) -> object:
+        return self._data
+
+
+class _FakeTagsClient:
+    """Stands in for httpx.Client: answers GET /api/tags with a fixed model list, records the timeout."""
+
+    captured: dict[str, object] = {}
+    models = [{"name": "qwen3.5:9b"}, {"name": "llama3:latest"}, {"name": "gemma4:26b"}]
+
+    def __init__(self, timeout: object = None) -> None:
+        _FakeTagsClient.captured["timeout"] = timeout
+
+    def __enter__(self) -> "_FakeTagsClient":
+        return self
+
+    def __exit__(self, *a: object) -> bool:
+        return False
+
+    def get(self, url: str, headers: object = None) -> _FakeResp:
+        _FakeTagsClient.captured["url"] = url
+        return _FakeResp({"models": list(self.models)})
+
+
+class _DeadClient(_FakeTagsClient):
+    def get(self, url: str, headers: object = None) -> _FakeResp:
+        raise ConnectionError("nobody home")
+
+
+def test_r3_probe_ollama_model_must_be_installed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(ask_engine.httpx, "Client", _FakeTagsClient)
+    assert probe_provider(_prov("qwen3.5:9b")) is True
+    # the exact F2-trader case: a configured model that is NOT among the installed tags is not ready
+    assert probe_provider(_prov("llama3.1:8b")) is False
+    # a bare name counts as :latest, the way ollama resolves it
+    assert probe_provider(_prov("llama3")) is True
+    assert _FakeTagsClient.captured["url"] == "http://127.0.0.1:11434/api/tags"
+
+
+def test_r3_probe_timeout_is_two_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(ask_engine.httpx, "Client", _FakeTagsClient)
+    probe_provider(_prov())
+    assert READY_TIMEOUT_S == 2.0 and _FakeTagsClient.captured["timeout"] == READY_TIMEOUT_S
+
+
+def test_r3_probe_connection_error_is_false_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(ask_engine.httpx, "Client", _DeadClient)
+    assert probe_provider(_prov()) is False
+
+
+def test_r3_analyst_ready_true_with_injected_stub(snap: Path) -> None:
+    """An injected test LLM is the model, so no probe runs — a probe that explodes proves it is never called."""
+    def boom(p: Provider) -> bool:
+        raise AssertionError("the probe must not run when an llm stub is injected")
+    eng = AskEngine(llm=ScriptedLLM(), probe=boom)
+    body = eng.health()
+    assert body["analyst_ready"] is True and body["analyst_note"] is None
+
+
+def test_r3_analyst_offline_keeps_ok_true_about_the_reads(snap: Path) -> None:
+    eng = AskEngine(probe=lambda p: False)
+    body = eng.health()
+    assert body["ok"] is True                                   # the reads still work — ok is about them
+    assert body["analyst_ready"] is False and body["analyst_note"] == OFFLINE_LINE
+    cols, rows, _ = eng.run_query("SELECT count(*) FROM index_ohlc_daily")
+    assert rows[0][0] == 3                                      # and they really do
+
+
+def test_r3_analyst_ready_cached_for_60s(snap: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def probe(p: Provider) -> bool:
+        calls.append(p.model)
+        return True
+
+    eng = AskEngine(probe=probe)
+    assert READY_TTL_S == 60.0
+    eng.health(); eng.health()
+    assert len(calls) == 1                                      # the second health hit the 60 s cache
+    expires, key, val = eng._ready_cache                        # type: ignore[misc]
+    eng._ready_cache = (expires - READY_TTL_S - 1, key, val)    # age the cache past its TTL
+    eng.health()
+    assert len(calls) == 2                                      # expired -> probed again
+    monkeypatch.setenv("ASK_MODEL", "some-other-model")         # a different model is a different cache key
+    eng.health()
+    assert len(calls) == 3 and calls[-1] == "some-other-model"
+
+
+def test_r3_health_via_router_carries_analyst_ready(snap: Path) -> None:
+    body = client(AskEngine(llm=ScriptedLLM())).get("/api/ask/health").json()
+    assert body["analyst_ready"] is True and "snapshot_age" in body
+    assert len(body["guardrails"]) == 8                         # the guardrail contract is unchanged
+
+
+@pytest.fixture()
+def snap_iv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """A snapshot dated 2026-11-13 (cut 19:20) whose iv_summary_daily ends 2026-11-12 — the F2-trader wart."""
+    path = tmp_path / "evening-20261113-1920.duckdb"
+    con = duckdb.connect(str(path))
+    con.execute("CREATE TABLE iv_summary_daily (symbol VARCHAR, date DATE, iv30 DOUBLE)")
+    con.execute("INSERT INTO iv_summary_daily VALUES ('NIFTY', DATE '2026-11-11', 12.1), "
+                "('NIFTY', DATE '2026-11-12', 12.4)")
+    con.close()
+    live = tmp_path / "market.duckdb"
+    duckdb.connect(str(live)).close()
+    monkeypatch.setenv("ASK_SNAPSHOT_DB", str(path))
+    monkeypatch.setenv("ASK_AUDIT_DB", str(tmp_path / "ask_audit.sqlite"))
+    monkeypatch.setenv("DATABASE_URL", str(live))
+    return path
+
+
+def test_r3_snapshot_age_stale_when_snapshot_predates_newest_iv_session(snap_iv: Path) -> None:
+    eng = AskEngine(llm=ScriptedLLM())
+    body = eng.health()
+    age = body["snapshot_age"]
+    assert age["stale"] is True and age["iv_summary_max"] == "2026-11-12"
+    assert "iv_eod" in age["note"] and "2026-11-12" in age["note"]
+
+
+def test_r3_snapshot_age_fresh_when_iv_reaches_the_snapshot_date(snap_iv: Path) -> None:
+    con = duckdb.connect(str(snap_iv))
+    con.execute("INSERT INTO iv_summary_daily VALUES ('NIFTY', DATE '2026-11-13', 12.6)")
+    con.close()
+    eng = AskEngine(llm=ScriptedLLM())
+    age = eng.health()["snapshot_age"]
+    assert age["stale"] is False and age["iv_summary_max"] == "2026-11-13" and age["note"] is None
+
+
+def test_r3_snapshot_age_without_an_iv_table_is_not_stale(snap: Path) -> None:
+    age = AskEngine(llm=ScriptedLLM()).health()["snapshot_age"]
+    assert age["stale"] is False and age["iv_summary_max"] is None
+
+
+def test_r3_snapshot_age_none_without_a_snapshot(snap: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    eng = AskEngine(llm=ScriptedLLM())
+    assert eng.snapshot_age(None) is None
+    monkeypatch.delenv("ASK_SNAPSHOT_DB")
+    body = eng.health()
+    assert body["snapshot"] is None and body["snapshot_age"] is None
+
+
+def test_r3_example_questions_are_describe_only() -> None:
+    """The UI's empty-state examples (ui/components/ask/model.ts) must never trip the server's G3 refusal."""
+    model_ts = Path(__file__).resolve().parents[3] / "ui" / "components" / "ask" / "model.ts"
+    src = model_ts.read_text()
+    block = src.split("EXAMPLE_QUESTIONS", 1)[1].split("= [", 1)[1].split("]", 1)[0]
+    examples = [m for m in __import__("re").findall(r"'([^']+)'", block)]
+    assert 3 <= len(examples) <= 4, examples
+    for ex in examples:
+        assert not is_prediction_seeking(ex), f"example would be refused: {ex}"
+        assert "stored" in ex.lower(), f"example is not anchored on stored data: {ex}"
+
+
+def test_r3_llm_timeout_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """EVAL D1: qwen3.5:9b composes in ~57 s on this box, so the fixed 60 s cap flipped live answers to
+    'analyst offline'. ASK_LLM_TIMEOUT_S now governs the chat-call timeout; a bad value falls back."""
+    from ask_engine import DEFAULT_LLM_TIMEOUT_S, llm_timeout_s
+    monkeypatch.delenv("ASK_LLM_TIMEOUT_S", raising=False)
+    assert llm_timeout_s() == DEFAULT_LLM_TIMEOUT_S == 60.0
+    monkeypatch.setenv("ASK_LLM_TIMEOUT_S", "150")
+    assert llm_timeout_s() == 150.0
+    monkeypatch.setenv("ASK_LLM_TIMEOUT_S", "not-a-number")
+    assert llm_timeout_s() == DEFAULT_LLM_TIMEOUT_S
+
+
+def test_r3_llm_call_honours_the_env_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class _ChatClient:
+        def __init__(self, timeout: object = None) -> None:
+            captured["timeout"] = timeout
+
+        def __enter__(self) -> "_ChatClient":
+            return self
+
+        def __exit__(self, *a: object) -> bool:
+            return False
+
+        def post(self, url: str, headers: object = None, json: object = None) -> _FakeResp:
+            return _FakeResp({"message": {"content": "NO_QUERY"}})
+
+    monkeypatch.setattr(ask_engine.httpx, "Client", _ChatClient)
+    monkeypatch.setenv("ASK_LLM_TIMEOUT_S", "150")
+    from ask_engine import _call_provider
+    out = _call_provider(_prov(), [{"role": "system", "content": "s"}, {"role": "user", "content": "u"}])
+    assert out == "NO_QUERY" and captured["timeout"] == 150.0
+    _call_provider(_prov(), [{"role": "user", "content": "u"}], timeout_s=5.0)   # an explicit value still wins
+    assert captured["timeout"] == 5.0
