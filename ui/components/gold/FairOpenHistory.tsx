@@ -38,7 +38,7 @@ export function FairOpenHistory({ threshold = 300, days = 60 }: { threshold?: nu
   const last = drawable.length ? drawable[drawable.length - 1] : null
 
   return (
-    <GoldPanel id="mcxg.fairopen" title="Fair open vs actual · history" badge="arithmetic" accent={T.green} pad={8}
+    <GoldPanel id="mcxg.fairopen" title="Pre-open baseline vs MCX print · history" badge="arithmetic" accent={T.green} pad={8}
       catalog={catalog} series={['PREOPEN_LOG']}
       freshness={log.data ? { state: 'delayed', source: 'gold_preopen_log', reason: 'one row per trading day' } : null}
       reportDate={last?.date ?? null}
