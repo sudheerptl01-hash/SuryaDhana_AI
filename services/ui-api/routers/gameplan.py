@@ -150,10 +150,14 @@ async def _overnight() -> dict[str, Any]:
                  **({"gift_error": gift_error} if gift_error else {}), **({"gold_error": gold_error} if gold_error else {}))
 
 
+#: the index-close store keys indices by their NSE names, not the F&O underlying codes (F-TRADER's one dead tile)
+_INDEX_NAME = {"NIFTY": "NIFTY 50", "BANKNIFTY": "NIFTY BANK", "FINNIFTY": "NIFTY FINANCIAL SERVICES"}
+
+
 async def _levels(symbol: str) -> dict[str, Any]:
     src = "index_ohlc_daily (NSE index close file)"
     try:
-        body = await get_json(f"{DATA_SVC}/db/index-ohlc/{symbol}", route="read", params={"days": 6})
+        body = await get_json(f"{DATA_SVC}/db/index-ohlc/{_INDEX_NAME.get(symbol, symbol)}", route="read", params={"days": 6})
     except Exception as exc:  # noqa: BLE001
         return _dead("levels", exc, src)
     rows = _rows(body)

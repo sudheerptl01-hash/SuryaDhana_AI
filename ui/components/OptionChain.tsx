@@ -541,7 +541,7 @@ export function OptionChain() {
         {pricer && data.rows.some(r => r.strike === pricer.strike) && <OptionPricer data={data} pick={pricer} onClose={() => setPricer(null)} />}
         <Panel title="Chain" pad={0} accent={T.amber} style={{ marginBottom: 12 }} source={chainSource} badge="arithmetic"
           subtitle={`calls left · puts right · OI, OI change and volume in ${oiUnit} · bars = open interest · IV only for out-of-the-money strikes · a dim price with ˢ is NSE's settlement (no trade today) · click a price for the pricer (OVME) · click a strike (or j / k + space) to pick it for OSTR`}
-          right={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+          right={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', rowGap: 4, justifyContent: 'flex-end' }} data-omon-controls>
             {picks.length > 0 && <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.violet }} data-omon-picks>
               {picks.map(k => num(k, k % 1 ? 1 : 0)).join(' · ')} → {SEED_NAME[Math.min(picks.length, 4)]}</span>}
             {picks.length > 0 && <Chip color={T.muted} onClick={() => setPicks([])} title="clear the picked strikes">CLEAR</Chip>}
