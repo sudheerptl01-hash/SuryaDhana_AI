@@ -9,7 +9,7 @@ import { fmtSigned, sessionDayLabel } from '@/lib/format'   // signed numbers wi
  */
 import { RiskChips } from '@/components/RiskChips'
 import { useSurveillance } from '@/lib/useSurveillance'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import {
   getDashboardSummary, getDeskStatus, getICICIConnectionStatus, getMarketEvents, getMarketMonitor,
   getCrashFilter, getInsiderBuys, getMarketHeadlines, getNewsQuotes, getPreOpen, type PreOpen, getFiiDiiCash, type FiiDiiCash, getOptionChainLive, getSetupStatus, type SetupCheck, getFomc, type FomcMeeting, getRbiMpc, getEcoCalendar, type EcoEvent, getGiftNifty, type GiftNifty, getAnnouncementsCore, type FilingCore, getNewsScan, getOptionChain, getNewsTrackRecord, getOpenPositions, getRecentResults, getResultsReacting, type ReactingResult, getMarketInternals, type MarketInternals, getIndexContribution, type IndexContribution as IndexContributionData, getIndexValuation, type IndexValuationRow, getTelemetryStatus,
@@ -41,6 +41,20 @@ import { trackVerdict, type TrackRecordData } from '@/components/news/TrackRecor
 import { cfCoverage, crashLines, dayMonth, ecoFamily, ecoShortLabel, type DeskLike } from '@/components/marketPagesModel'
 
 type Load<T> = { data: T | null; error: string | null; loading: boolean }
+
+/**
+ * R4-UI (F3-DESIGN §1.3 / UI cheapest fix): the kit's measured tooltip is delegated on `.t-table` cells only;
+ * BRF's news-pick / headline / insider list rows are plain spans, so the same rule rides their own hover —
+ * a title with the full text ONLY when the text is actually clipped (text-overflow ellipsis AND scrollWidth
+ * beyond clientWidth), never overwriting an existing title, no tooltip on a span that fits. Zero copy changes.
+ */
+const titleWhenClipped = (e: ReactMouseEvent<HTMLElement>): void => {
+  const el = e.currentTarget
+  if (el.title || el.scrollWidth <= el.clientWidth + 1) return
+  if (getComputedStyle(el).textOverflow !== 'ellipsis') return
+  const full = (el.innerText || '').trim()
+  if (full) el.title = full
+}
 
 /**
  * Live program (reports/live_nse, defect D5): a panel line fed by an NSE live feed re-polls while the page is open
@@ -656,7 +670,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
               </div>
               {[...(insiders.data?.rows ?? [])].sort((a, b) => b.total_value - a.total_value).slice(0, 4).map(r => (
                 <Line key={r.symbol} k={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><TickerLink symbol={r.symbol} />
-                  <span style={{ color: T.dim, fontSize: 10, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categories}</span></span>}
+                  <span onMouseOver={titleWhenClipped} style={{ color: T.dim, fontSize: 10, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.categories}</span></span>}
                   v={<span style={{ color: T.green }}>₹{(r.total_value / 1e7).toFixed(r.total_value >= 1e9 ? 0 : 1)} cr
                     <span style={{ color: T.dim, fontSize: 10 }}> · {r.buyers} buyer{r.buyers > 1 ? 's' : ''}</span></span>} />
               ))}
@@ -688,7 +702,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
               <Line key={p.symbol?.yahoo ?? p.raw_ticker}
                 k={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
                   {p.symbol?.region === 'IN' ? <TickerLink symbol={p.symbol.base} /> : <span style={{ color: T.amber, fontWeight: 600 }}>{p.symbol?.base ?? p.raw_ticker}</span>}
-                  <span style={{ color: T.muted, fontSize: 11, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.catalyst_category}</span>
+                  <span onMouseOver={titleWhenClipped} style={{ color: T.muted, fontSize: 11, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.catalyst_category}</span>
                 </span>}
                 v={<span style={{ color: (p.conviction_score ?? 0) >= 6 ? T.green : T.muted }}>conv {p.conviction_score}</span>} />
             ))}
@@ -703,7 +717,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                  style={{ display: 'grid', gridTemplateColumns: '64px 1fr auto', gap: 8, padding: '5px 0', borderBottom: `1px solid ${T.border}`,
                           textDecoration: 'none', fontSize: 12 }}>
                 <span style={{ fontFamily: T.mono, fontSize: 9, color: T.cyan, letterSpacing: .6, textTransform: 'uppercase', paddingTop: 2 }}>{h.topic}</span>
-                <span style={{ color: T.text, lineHeight: 1.4 }}>{h.title} <span style={{ color: T.dim, fontSize: 10 }}>· {h.publisher}</span></span>
+                <span onMouseOver={titleWhenClipped} style={{ color: T.text, lineHeight: 1.4 }}>{h.title} <span style={{ color: T.dim, fontSize: 10 }}>· {h.publisher}</span></span>
                 <span style={{ color: T.dim, fontSize: 10, whiteSpace: 'nowrap' }}>{Math.max(1, Math.round((Date.now() - new Date(h.published_at).getTime()) / 3_600_000))}h</span>
               </a>
             ))}

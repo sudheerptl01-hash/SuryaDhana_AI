@@ -111,9 +111,24 @@ check('the panel renders the examples and fills the box on click',
 check('the empty state shows only pre-query', panel.includes('{!res && !busy && <EmptyState'))
 check('recent questions come from the audit tail and show no payloads',
   panel.includes('askAudit(') && panel.includes('never the row payloads') && !/r\.(rows|columns|answer)\b/.test(panel))
-check('auditLineLabel is question · rows · time only',
-  M.auditLineLabel({ ts: '2026-11-13T22:10:05+00:00', question: 'q', rows_returned: 3 }) === 'q · 3 row(s) · 2026-11-13 22:10')
+check('auditLineLabel is question · rows · time only — IST-labelled (R4-ASK, F3-design nit)',
+  M.auditLineLabel({ ts: '2026-11-13T22:10:05+00:00', question: 'q', rows_returned: 3 }) === 'q · 3 row(s) · 2026-11-14 03:40 IST')
 check('direct reads are filtered out of the recent list', panel.includes("r.question !== '(direct read)'"))
+
+// ── R4-ASK: IST audit times + refused rows never become suggestions + the health placeholder ────────────────
+
+check('auditTimeIST converts the server UTC ts (+5:30) and labels it',
+  M.auditTimeIST('2026-11-13T19:01:00+00:00') === '2026-11-14 00:31 IST')     // the F3-design probe case: 00:31 IST
+check('auditTimeIST treats a zoneless ts as UTC', M.auditTimeIST('2026-11-13T19:01:00') === '2026-11-14 00:31 IST')
+check('auditTimeIST handles an explicit Z suffix', M.auditTimeIST('2026-11-13T18:46:05Z') === '2026-11-14 00:16 IST')
+check('auditTimeIST falls back unlabelled on garbage', M.auditTimeIST('not-a-time') === 'not-a-time' && M.auditTimeIST('') === '')
+check('refused audit rows are filtered out of the recent suggestions', panel.includes('!r.refused'))
+check('the audit row type carries refused', api.includes('refused?: boolean'))
+check('a placeholder line holds the status strip while the health fetch is in flight',
+  panel.includes('checking the analyst + snapshot age…'))
+check('the ask POST waits past the server LLM budget (2 × ASK_LLM_TIMEOUT_S + query)',
+  (() => { const m = api.match(/ASK_CLIENT_TIMEOUT_MS = (\d+)_?(\d*)/); if (!m) return false
+           const v = Number(`${m[1]}${m[2]}`); return v >= 310_000 })())
 
 // ── R3-ASK: the snapshot-age tone (F2-design: louder when degraded) ─────────────────────────────────────────
 

@@ -385,7 +385,7 @@ def test_the_contract_fields_are_served_everywhere_the_band_used_to_be(client: T
     assert s["mcx_settle"] == 146_900.0 and s["mcx_settle_source"] == "breeze_vwap30" and s["basis_session_label"] == "Fri 23 Oct settlement"
     assert "at the" not in s["basis_session_label"]                    # the session only: the strip wraps it once
     # /fair runs the desk on the wall clock (gold_preopen is not pinned here): seed ITS latest session too
-    desk_latest = gp.latest_completed_session(datetime.now(IST))
+    desk_latest = gp.latest_completed_session(gp._now_ist())   # the fixture's frozen clock — this test's whole universe is late Oct (052b76d unified the route onto _now_ist)
     gp._settle_cache.set(gp._settle_key("GOLD", DEC26, desk_latest), _ok(146_900.0, desk_latest))
     fair = client.get("/api/gold/fair").json()["baseline"]
     assert fair["value"] == 146_900.0 and fair["settlement_source"] == "breeze_vwap30" and fair["session"] == desk_latest.isoformat()

@@ -105,7 +105,9 @@ export function AskPanel() {
   const loadHealth = useCallback(() => {
     askHealth().then(h => { setHealth(h); setHealthErr(null) })
       .catch(e => setHealthErr(apiError(e, 'analyst status unavailable')))
-    askAudit(8).then(rows => setRecent(rows.filter(r => r.question !== '(direct read)')))
+    // R4-ASK: refused questions (forecast baits, fence refusals) are in the audit now — they never become
+    // click-to-fill suggestions; the empty state offers only questions that were actually answerable.
+    askAudit(8).then(rows => setRecent(rows.filter(r => r.question !== '(direct read)' && !r.refused)))
       .catch(() => setRecent([]))   // the empty state simply has no recent list
   }, [])
   useEffect(() => { loadHealth() }, [loadHealth])
@@ -148,7 +150,13 @@ export function AskPanel() {
               {health.provider_note ? <span> · {health.provider_note}</span> : null}
               {!health.analyst_ready && <span style={{ color: T.amber }}> · {health.analyst_note ?? OFFLINE_LINE}</span>}
             </>
-          ) : (healthErr ?? 'checking the analyst…')}
+          ) : healthErr ? (
+            healthErr
+          ) : (
+            // R4-ASK (F3-design nit): the status + snapshot-age line arrives with the async health fetch —
+            // this placeholder holds its place so the header never renders without a status line.
+            <span style={{ fontStyle: 'italic', color: T.dim }}>checking the analyst + snapshot age…</span>
+          )}
           <span> · feeds nothing: not the Decision Desk, not the S1 shadow, not an alert, not a ticket price</span>
         </div>
         {age?.tone === 'loud' && (

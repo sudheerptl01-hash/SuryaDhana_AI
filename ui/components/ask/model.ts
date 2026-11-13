@@ -59,12 +59,15 @@ export type SnapshotAge = { iv_summary_max: string | null; stale: boolean; note:
 /**
  * R3-ASK empty-state examples (F2-design ask). Describe-only by construction: each asks about STORED data,
  * none carries a direction word or a forecast shape, so none trips the server's G3 refusal.
+ * R4-ASK (F3-design: "the empty state advertises questions the analyst can't answer"): every pill below
+ * produced a cited answer in the live EVAL2 run (r4-ask/EVAL2.md); the two that answered with 0 rows or an
+ * uncomposable 200-row dump (last NIFTY close — symbol-form residue; the expiry list) were demoted.
  */
 export const EXAMPLE_QUESTIONS: readonly string[] = [
   'Top 5 stocks by delivery percentage at the last stored session',
   'How many sessions of IV history are stored for NIFTY?',
-  'Which BANKNIFTY expiries are stored in iv_expiry_daily?',
-  'What was the last stored NIFTY close?',   // last: the live model answered this one with 0 rows in the R3 evaluation, case D3
+  'What was the stored India VIX close at the last stored session?',
+  'Which 5 stocks had the highest stored traded volume at the last stored session?',
 ]
 
 /**
@@ -84,10 +87,26 @@ export function snapshotAgeLine(snapshot: AskSnapshot | null, age: SnapshotAge |
   return { text: base, tone: 'ok' }
 }
 
-/** One audit line for the empty state: question · row count · time — never a payload (G5). */
+/**
+ * R4-ASK (F3-design nit): the server audits in UTC; this panel lives in an IST-everywhere product, so the time
+ * is converted (UTC + 5:30 — IST is a fixed offset, no DST: arithmetic) and LABELLED. A ts without a zone
+ * suffix is treated as the UTC the server writes; an unparseable ts falls back to the raw text, unlabelled.
+ */
+export function auditTimeIST(ts: string): string {
+  const raw = (ts ?? '').trim()
+  if (!raw) return ''
+  const iso = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? raw : `${raw}Z`
+  const ms = Date.parse(iso)
+  if (Number.isNaN(ms)) return raw.replace('T', ' ').slice(0, 16)
+  const t = new Date(ms + 330 * 60_000)                      // +5:30
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${t.getUTCFullYear()}-${p(t.getUTCMonth() + 1)}-${p(t.getUTCDate())} ` +
+         `${p(t.getUTCHours())}:${p(t.getUTCMinutes())} IST`
+}
+
+/** One audit line for the empty state: question · row count · time (IST-labelled) — never a payload (G5). */
 export function auditLineLabel(r: { ts: string; question: string; rows_returned: number }): string {
-  const ts = (r.ts ?? '').replace('T', ' ').slice(0, 16)
-  return `${r.question} · ${r.rows_returned} row(s) · ${ts}`
+  return `${r.question} · ${r.rows_returned} row(s) · ${auditTimeIST(r.ts)}`
 }
 
 const CITE_RE_G = /\[([A-Za-z0-9_]+)(?:\s*·[^\]]*)?\]/g

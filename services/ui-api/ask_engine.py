@@ -14,8 +14,10 @@ Eight guardrails, each enforced here in code and each tested by `tests/test_ask_
       instead — the LLM is never asked to forecast.
   G4  injection isolation: retrieved rows are DATA. The system prompt states it, row content is fenced as data,
       and any SQL that comes back through the LLM passes the same whitelist as a typed query.
-  G5  audit log `data/ask_audit.sqlite` (`ASK_AUDIT_DB`): ts, question, sql, rows_returned, model — never the
-      row payloads, never an answer body.
+  G5  audit log `data/ask_audit.sqlite` (`ASK_AUDIT_DB`): ts, question, sql, rows_returned, model, refused —
+      never the row payloads, never an answer body. R4-ASK (F3-risk): REFUSALS are audited too — a fence-refused
+      direct read or a forecast-refused question writes a row with refused=1; a fence refusal stores NO sql text
+      (the refused statement is attacker-controlled input, not something the log should carry).
   G6  provider switch via env: `OLLAMA_BASE_URL` (default http://127.0.0.1:11434, local, no key);
       `ASK_PROVIDER=anthropic|openai` only when that provider's key env exists. Keys live in `SecretStr`
       (shared/config.py pattern), are read at call time, and are never logged, echoed or audited.
@@ -91,7 +93,18 @@ def llm_timeout_s() -> float:
         return DEFAULT_LLM_TIMEOUT_S
 AUDIT_SCHEMA = ("CREATE TABLE IF NOT EXISTS ask_audit ("
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, question TEXT NOT NULL, "
-                "sql TEXT, rows_returned INTEGER, model TEXT NOT NULL)")
+                "sql TEXT, rows_returned INTEGER, model TEXT NOT NULL, "
+                "refused INTEGER NOT NULL DEFAULT 0)")
+
+
+def _ensure_audit(con: sqlite3.Connection) -> None:
+    """The audit table, migrated in place: an audit DB from before R4-ASK lacks `refused` — add it once.
+    (CREATE IF NOT EXISTS covers a fresh file; the ALTER covers the live data/ask_audit.sqlite.)"""
+    con.execute(AUDIT_SCHEMA)
+    try:
+        con.execute("ALTER TABLE ask_audit ADD COLUMN refused INTEGER NOT NULL DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass   # the column already exists
 
 # G1: the statement whitelist. First keyword must be SELECT or WITH; these words are banned anywhere outside
 # string literals (writes, DDL, transactions, extension/file/system access — duckdb's read_only mode is the
@@ -206,6 +219,73 @@ def tables_in_sql(sql: str, known_tables: set[str]) -> list[str]:
     bare = strip_literals(sql).lower()
     found = [t for t in sorted(known_tables) if re.search(rf"\b{re.escape(t.lower())}\b", bare)]
     return found
+
+
+# R4-ASK RECALL (F3-risk/design: the analyst missed tables that exist — VIX, delivery %, traded volume).
+# A deterministic table-hint step: question keywords are matched against the snapshot catalog (tables + columns,
+# already read by the engine) and the best-matching tables go into the SQL prompt WITH their columns, while the
+# rest appear as names only. No extra LLM call; the 9B model no longer has to find one table in a 78-table wall.
+_HINT_STOPWORDS = frozenset((
+    "a", "an", "and", "are", "as", "at", "by", "for", "from", "had", "has", "have", "how", "in", "is", "it",
+    "its", "last", "many", "me", "most", "of", "on", "or", "our", "per", "show", "stored", "that", "the",
+    "their", "this", "to", "was", "were", "what", "which", "who", "with", "you",
+))
+_HINT_SYNONYMS: dict[str, tuple[str, ...]] = {
+    # question word -> catalog name parts it should also match (deterministic, lowercase)
+    "delivery": ("deliv",), "delivered": ("deliv",), "percentage": ("pct",), "percent": ("pct",),
+    "volume": ("volume", "qty", "qnty", "trd"), "traded": ("trd", "qty", "qnty", "volume"),
+    "turnover": ("turnover", "val", "traded"),
+    "expiries": ("expiry",), "expiration": ("expiry",), "strikes": ("strike",),
+    "oi": ("oi",), "openinterest": ("oi",),
+    "nifty": ("index",), "banknifty": ("index",), "finnifty": ("index",), "sensex": ("index",),
+    "stocks": ("symbol", "bhavcopy"), "stock": ("symbol", "bhavcopy"),
+    "price": ("close", "price"), "prices": ("close", "price"),
+    "session": ("date", "session"), "sessions": ("date", "session"), "day": ("date", "day"),
+    "volatility": ("iv", "vix", "volt"), "implied": ("iv",),
+    "gold": ("gold",), "mcx": ("mcx", "gold"), "results": ("results",), "deals": ("deals",),
+    "fii": ("fii",), "dii": ("dii",), "participant": ("participant",),
+}
+
+
+def table_hints(question: str, catalog: dict[str, list[str]], top_n: int = 5) -> list[str]:
+    """The 3–5 catalog tables that best match the question's keywords (pure, deterministic, no LLM).
+
+    Per distinct question token, the best match against a table, summed: a table named verbatim 8, a direct
+    token on a table-name part 4, a synonym on a name part 2, a direct token on a column-name part 2, a synonym
+    on a column part 1, a substring hit (tokens of 4+ chars only — 'iv' must never match 'diVidends') 2/1.
+    Direct words outweigh synonym-derived ones so 'iv history' ranks iv_* above what 'NIFTY'→index drags in.
+    Ties break alphabetically; only tables that scored at all are returned (EVAL2 run 1 tuned these weights)."""
+    tokens: dict[str, bool] = {}                    # token -> direct (a question word, not a synonym)
+    for w in re.findall(r"[a-z0-9_]+", (question or "").lower()):
+        if len(w) < 2 or w in _HINT_STOPWORDS:
+            continue
+        tokens[w] = True
+        for syn in _HINT_SYNONYMS.get(w, ()):
+            tokens.setdefault(syn, False)
+    if not tokens:
+        return []
+    scores: list[tuple[int, str]] = []
+    for table, cols in catalog.items():
+        t_lower = table.lower()
+        name_parts = set(t_lower.split("_"))
+        col_lower = [c.lower() for c in cols]
+        col_parts = {p for c in col_lower for p in c.split("_")}
+        score = 0
+        for tok, direct in tokens.items():
+            if tok == t_lower:
+                score += 8 if direct else 4
+            elif tok in name_parts:
+                score += 4 if direct else 2
+            elif len(tok) >= 4 and tok in t_lower:
+                score += 2 if direct else 1
+            elif tok in col_parts:
+                score += 2 if direct else 1
+            elif len(tok) >= 4 and any(tok in c for c in col_lower):
+                score += 1
+        if score > 0:
+            scores.append((score, table))
+    scores.sort(key=lambda s: (-s[0], s[1]))
+    return [t for _, t in scores[:top_n]]
 
 
 def extract_sql(llm_text: str) -> Optional[str]:
@@ -411,6 +491,11 @@ class AskEngine:
         except duckdb.Error as exc:
             first = str(exc).splitlines()[0][:300]
             first = re.sub(r"'[^']*'", "'…'", first)   # R2-REDTEAM MINOR-3: no path/oracle echo
+            # R4-ASK (F3-risk nit): identifier paths are masked too — FROM "/Users/…/.zshrc" used to reflect
+            # the attacker's own path back. A double-quoted identifier containing '/' and any bare
+            # multi-segment / or ~ path in the error text become '…'.
+            first = re.sub(r'"[^"]*/[^"]*"', '"…"', first)
+            first = re.sub(r"(?<![\w])(?:~|/)(?:[\w.\-]+/)+[\w.\-]*", "…", first)
             raise AskError(f"query failed: {first}") from None
         finally:
             done.set()
@@ -461,13 +546,15 @@ class AskEngine:
     def _audit_path(self) -> str:
         return os.environ.get("ASK_AUDIT_DB", str(_ROOT / "data" / "ask_audit.sqlite"))
 
-    def _audit(self, question: str, sql: Optional[str], rows_returned: int, model: str) -> None:
+    def _audit(self, question: str, sql: Optional[str], rows_returned: int, model: str,
+               refused: bool = False) -> None:
         con = sqlite3.connect(self._audit_path())
         try:
-            con.execute(AUDIT_SCHEMA)
-            con.execute("INSERT INTO ask_audit (ts, question, sql, rows_returned, model) VALUES (?, ?, ?, ?, ?)",
+            _ensure_audit(con)
+            con.execute("INSERT INTO ask_audit (ts, question, sql, rows_returned, model, refused) "
+                        "VALUES (?, ?, ?, ?, ?, ?)",
                         (datetime.now(timezone.utc).isoformat(timespec="seconds"), question[:MAX_QUESTION_LEN],
-                         sql, rows_returned, model))
+                         sql, rows_returned, model, 1 if refused else 0))
             con.commit()
         finally:
             con.close()
@@ -478,12 +565,13 @@ class AskEngine:
         except sqlite3.Error:
             return []
         try:
-            con.execute(AUDIT_SCHEMA)
-            rows = con.execute("SELECT ts, question, sql, rows_returned, model FROM ask_audit "
+            _ensure_audit(con)
+            rows = con.execute("SELECT ts, question, sql, rows_returned, model, refused FROM ask_audit "
                                "ORDER BY id DESC LIMIT ?", (max(1, min(int(limit), 200)),)).fetchall()
         finally:
             con.close()
-        return [{"ts": r[0], "question": r[1], "sql": r[2], "rows_returned": r[3], "model": r[4]} for r in rows]
+        return [{"ts": r[0], "question": r[1], "sql": r[2], "rows_returned": r[3], "model": r[4],
+                 "refused": bool(r[5])} for r in rows]
 
     # ── the public faces ─────────────────────────────────────────────────────────────────────────────────────
     def analyst_ready(self, p: Optional[Provider] = None) -> bool:
@@ -532,12 +620,19 @@ class AskEngine:
                 "guardrails": ["snapshot-only read-only SQL (SELECT/WITH, 1 statement, timeout, row cap)",
                                "no writes / orders / Telegram / network beyond the LLM endpoint",
                                "forecast refusal", "rows are data (injection isolation)",
-                               "audit log without payloads", "env provider switch, keys never logged",
+                               "audit log without payloads (refusals audited too)",
+                               "env provider switch, keys never logged",
                                "every number cited with table + as-of", "pytest eval set (12 cases)"]}
 
     def read(self, sql: str, question: str = "(direct read)") -> dict[str, Any]:
-        """The direct data read the panel offers — no LLM involved, so it works when the analyst is offline."""
-        cols, rows, truncated = self.run_query(sql)
+        """The direct data read the panel offers — no LLM involved, so it works when the analyst is offline.
+        R4-ASK (F3-risk): a refused read is audited too — refused=1 and NO sql text (the refused statement is
+        the caller's own input; the log never carries it)."""
+        try:
+            cols, rows, truncated = self.run_query(sql)
+        except AskError:
+            self._audit(question, None, 0, "direct-read", refused=True)
+            raise
         sources = self._sources(sql)
         self._audit(question, sql, len(rows), "direct-read")
         return {"ok": True, "badge": "arithmetic", "note": DESCRIBES, "sql": sql, "columns": cols, "rows": rows,
@@ -566,14 +661,24 @@ class AskEngine:
 
         llm = self._llm or (lambda messages: _call_provider(p, messages))
         describe_q = q if not refused else f"Describe the stored data most relevant to: {q}"
-        schema_lines = "\n".join(f"- {t}({', '.join(cols[:24])})" for t, cols in sorted(cat.items()))
+        # R4-ASK RECALL: the keyword-matched tables carry their full columns; everything else is a name only,
+        # so the model picks from a short, relevant list instead of a 78-table wall (no extra LLM call).
+        hints = table_hints(describe_q, cat)
+        if hints:
+            hint_set = set(hints)
+            hint_lines = "\n".join(f"- {t}({', '.join(cat[t][:40])})" for t in hints)
+            other_names = ", ".join(t for t in sorted(cat) if t not in hint_set)
+            schema_block = ("Most relevant tables (keyword-matched — prefer one of these):\n" + hint_lines
+                            + (f"\n\nOther tables (names only): {other_names}" if other_names else ""))
+        else:
+            schema_block = "Tables:\n" + "\n".join(f"- {t}({', '.join(cols[:24])})" for t, cols in sorted(cat.items()))
         try:
             plan = llm([
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content":
                     "Write ONE DuckDB SELECT (or WITH…SELECT) answering the question from these tables, in a "
                     "```sql fence. No writes, no DDL, no file functions. If no table fits, reply NO_QUERY.\n\n"
-                    f"Tables:\n{schema_lines}\n\nQuestion: {describe_q}"},
+                    f"{schema_block}\n\nQuestion: {describe_q}"},
             ])
         except Exception:
             base.update(degraded=True, degraded_reason=OFFLINE_LINE,
@@ -584,14 +689,15 @@ class AskEngine:
         sql = extract_sql(plan)
         if sql is None:
             base["answer"] = [{"text": "no stored table answers that question — nothing was queried", "cited": False}]
-            self._audit(q, None, 0, p.model)
+            self._audit(q, None, 0, p.model, refused=refused)
             return base
         try:
             checked = validate_sql(sql)          # G4: LLM-written SQL passes the same fence as typed SQL
             cols, rows, truncated = self.run_query(checked)
         except AskError as exc:
             base.update(sql=sql, answer=[{"text": f"query refused: {exc}", "cited": False}])
-            self._audit(q, sql, 0, p.model)
+            # F3-risk: a fence refusal is audited as refused — and stores NO sql (it is refused input, not a run)
+            self._audit(q, None, 0, p.model, refused=True)
             return base
         sources = self._sources(checked)
         base.update(sql=checked, columns=cols, rows=rows, truncated=truncated, sources=sources)
@@ -614,7 +720,7 @@ class AskEngine:
             return base
         answer, withheld = cited_lines(composed.splitlines(), {s["table"] for s in sources})
         base.update(answer=answer, withheld=withheld)
-        self._audit(q, checked, len(rows), p.model)
+        self._audit(q, checked, len(rows), p.model, refused=refused)   # refused=1 marks a G3 forecast refusal
         return base
 
     def _sources(self, sql: str) -> list[dict[str, Any]]:

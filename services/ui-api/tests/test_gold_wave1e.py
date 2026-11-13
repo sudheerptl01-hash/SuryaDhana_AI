@@ -135,6 +135,7 @@ def _snapshot_setup(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str) 
     monkeypatch.setattr(gp, "_breeze_mcx_open", lambda expiry, day: None)
     monkeypatch.setattr(gp, "_refresh_treasury_in_background", lambda: None)
     monkeypatch.setattr(gp, "datetime", _Frozen)
+    monkeypatch.setattr(gp, "_now_ist", lambda: _Frozen.now(IST))   # the canonical clock seam (052b76d unified _gold_preopen onto it)
     transport = gp.httpx.MockTransport(tgp._Upstream())
     monkeypatch.setattr(gp.httpx, "AsyncClient", lambda *a, **k: real_client(*a, **{**k, "transport": transport}))
 

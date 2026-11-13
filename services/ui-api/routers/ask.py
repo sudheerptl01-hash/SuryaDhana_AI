@@ -10,7 +10,8 @@ directional alert, not a ticket price. Engine work runs off the event loop (asyn
   GET  /api/ask/health   provider, model, snapshot as-of, the guardrail list (the panel's status strip)
   POST /api/ask          {question} -> the cited answer payload (or the standing refusal / degraded shape)
   POST /api/ask/query    {sql}     -> the direct data read (no LLM; "the data reads still work")
-  GET  /api/ask/audit    the last N audit lines (ts, question, sql, rows_returned, model — never row payloads)
+  GET  /api/ask/audit    the last N audit lines (ts, question, sql, rows_returned, model, refused — never row
+                         payloads; R4-ASK: refusals are audited too, with refused=true and no sql text)
 """
 from __future__ import annotations
 
@@ -65,4 +66,5 @@ async def ask_query(req: ReadRequest) -> dict[str, Any]:
 @router.get("/audit")
 async def ask_audit(limit: int = Query(default=50, ge=1, le=200)) -> dict[str, Any]:
     rows = await asyncio.to_thread(engine().audit_tail, limit)
-    return {"ok": True, "rows": rows, "note": "ts · question · sql · rows_returned · model — payloads are never stored"}
+    return {"ok": True, "rows": rows,
+            "note": "ts · question · sql · rows_returned · model · refused — payloads are never stored"}

@@ -231,7 +231,8 @@ def test_g5_audit_rows_without_payloads(snap: Path) -> None:
     raw = Path(db).read_bytes()
     assert b"INJECTME-7731" not in raw and b"26050.4" not in raw              # never the row payloads
     tail = eng.audit_tail()
-    assert tail and set(tail[0]) == {"ts", "question", "sql", "rows_returned", "model"}
+    assert tail and set(tail[0]) == {"ts", "question", "sql", "rows_returned", "model", "refused"}
+    assert all(t["refused"] is False for t in tail)                            # neither call was a refusal
 
 
 # ── G6: provider switch via env; keys never logged or echoed ────────────────────────────────────────────────────
@@ -666,6 +667,117 @@ def test_r3_llm_call_honours_the_env_timeout(monkeypatch: pytest.MonkeyPatch) ->
     assert out == "NO_QUERY" and captured["timeout"] == 150.0
     _call_provider(_prov(), [{"role": "user", "content": "u"}], timeout_s=5.0)   # an explicit value still wins
     assert captured["timeout"] == 5.0
+
+
+# ── R4-ASK (FINAL ROUND): table-hint recall + the F3 risk nits ──────────────────────────────────────────────────
+# F3-risk: "cheapest: … then try gemma4:26b or a table-hint step for recall"; "the identifier path echo …
+# and refusals are still unaudited (my fence-refused probes left no audit rows)".
+
+from ask_engine import table_hints
+
+_HINT_CAT = {
+    "nse_bhavcopy": ["symbol", "series", "date", "close_price", "deliv_pct", "ttl_trd_qnty", "turnover_lacs"],
+    "iv_expiry_daily": ["symbol", "date", "expiry", "iv_atm", "oi"],
+    "iv_summary_daily": ["symbol", "date", "iv30_cm", "iv_rank"],
+    "vix_daily": ["date", "close", "high", "low"],
+    "index_ohlc_daily": ["symbol", "date", "open", "high", "low", "close"],
+    "notes": ["symbol", "date", "note"],
+    "gold_mcx_daily": ["contract", "date", "close", "oi"],
+}
+
+
+def test_r4_table_hints_find_the_f3_miss_classes() -> None:
+    """The three F3 misses (delivery %, last close, expiry list) plus the two eval NO_QUERY misses (VIX,
+    traded volume) must each rank their table into the hints — deterministically, no LLM involved."""
+    assert table_hints("Top 5 stocks by delivery percentage at the last stored session", _HINT_CAT)[0] == "nse_bhavcopy"
+    assert "index_ohlc_daily" in table_hints("What was the last stored NIFTY close?", _HINT_CAT)[:3]
+    assert table_hints("Which BANKNIFTY expiries are stored in iv_expiry_daily?", _HINT_CAT)[0] == "iv_expiry_daily"
+    assert table_hints("What was the stored India VIX close at the last stored session?", _HINT_CAT)[0] == "vix_daily"
+    assert "nse_bhavcopy" in table_hints(
+        "Which 5 stocks had the highest stored traded volume at the last stored session?", _HINT_CAT)[:3]
+
+
+def test_r4_table_hints_shape_and_determinism() -> None:
+    hints = table_hints("iv history for NIFTY", _HINT_CAT)
+    assert 1 <= len(hints) <= 5 and hints == table_hints("iv history for NIFTY", _HINT_CAT)  # stable
+    assert table_hints("", _HINT_CAT) == [] and table_hints("the of and", _HINT_CAT) == []
+    assert table_hints("zzzz qqqq", _HINT_CAT) == []                        # nothing matches -> no hints
+
+
+def test_r4_prompt_carries_hinted_columns_and_other_names_only(snap: Path) -> None:
+    """The SQL prompt now leads with the keyword-matched tables WITH columns; the rest are names only."""
+    eng, llm = scripted_engine(PLAN_OHLC, CITED_LINE)
+    eng.ask("What was the last stored NIFTY close?")
+    prompt = "\n".join(m["content"] for m in llm.calls[0] if m["role"] == "user")
+    assert "Most relevant tables" in prompt
+    assert "index_ohlc_daily(symbol, date, close)" in prompt                 # the hinted table, with columns
+    assert "Other tables (names only)" in prompt and "big" in prompt        # the rest stay findable by name
+
+
+def test_r4_no_hint_match_falls_back_to_the_full_catalog(snap: Path) -> None:
+    eng, llm = scripted_engine("NO_QUERY")
+    eng.ask("zzzz qqqq xxxx")
+    prompt = "\n".join(m["content"] for m in llm.calls[0] if m["role"] == "user")
+    assert "Tables:" in prompt and "index_ohlc_daily(" in prompt            # the pre-R4 full schema block
+
+
+def test_r4_error_echo_masks_identifier_paths(snap: Path) -> None:
+    """F3-risk nit: FROM "/Users/…/.zshrc" used to reflect the path in the refusal. No path survives now."""
+    eng = AskEngine(llm=ScriptedLLM())
+    with pytest.raises(AskError) as ei:
+        eng.run_query('SELECT * FROM "/Users/nobody/.zshrc"')
+    msg = str(ei.value)
+    assert "/Users" not in msg and ".zshrc" not in msg and "nobody" not in msg
+    with pytest.raises(AskError) as ei2:
+        eng.run_query('SELECT * FROM "~/secret/dir/file"')
+    assert "secret" not in str(ei2.value)
+
+
+def test_r4_refused_direct_read_writes_an_audit_row_without_sql(snap: Path) -> None:
+    """F3-risk nit: fence-refused probes left no audit rows. Now: refused=true, sql NULL (never the refused text)."""
+    eng = AskEngine(llm=ScriptedLLM())
+    with pytest.raises(AskError):
+        eng.read("INSERT INTO index_ohlc_daily VALUES ('X', DATE '2026-01-01', 1)")
+    rows = sqlite3.connect(os.environ["ASK_AUDIT_DB"]).execute(
+        "SELECT question, sql, rows_returned, model, refused FROM ask_audit").fetchall()
+    assert len(rows) == 1 and rows[0][4] == 1 and rows[0][1] is None and rows[0][2] == 0
+    assert "INSERT" not in (rows[0][0] or "")                               # the refused statement is not stored
+    tail = eng.audit_tail()
+    assert tail[0]["refused"] is True and tail[0]["sql"] is None
+
+
+def test_r4_fence_refused_llm_sql_is_audited_refused_without_sql(snap: Path) -> None:
+    eng, _ = scripted_engine("```sql\nDROP TABLE index_ohlc_daily\n```")
+    eng.ask("What does the notes table hold?")
+    row = sqlite3.connect(os.environ["ASK_AUDIT_DB"]).execute(
+        "SELECT sql, refused FROM ask_audit ORDER BY id DESC LIMIT 1").fetchone()
+    assert row == (None, 1)
+
+
+def test_r4_forecast_refusal_is_marked_refused_in_the_audit(snap: Path) -> None:
+    eng, _ = scripted_engine(PLAN_OHLC, CITED_LINE)
+    eng.ask("Will NIFTY rally tomorrow?")
+    eng.ask("What was the last NIFTY close?")
+    rows = sqlite3.connect(os.environ["ASK_AUDIT_DB"]).execute(
+        "SELECT question, refused FROM ask_audit ORDER BY id").fetchall()
+    assert rows[0][1] == 1 and rows[1][1] == 0                              # the bait is marked; the legit one isn't
+
+
+def test_r4_audit_schema_migrates_in_place(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, snap: Path) -> None:
+    """A pre-R4 audit DB (no `refused` column — the live data/ask_audit.sqlite tonight) gains it on first write."""
+    old = tmp_path / "old_audit.sqlite"
+    con = sqlite3.connect(old)
+    con.execute("CREATE TABLE ask_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, "
+                "question TEXT NOT NULL, sql TEXT, rows_returned INTEGER, model TEXT NOT NULL)")
+    con.execute("INSERT INTO ask_audit (ts, question, sql, rows_returned, model) "
+                "VALUES ('2026-11-13T19:00:00+00:00', 'old row', NULL, 0, 'qwen3.5:9b')")
+    con.commit(); con.close()
+    monkeypatch.setenv("ASK_AUDIT_DB", str(old))
+    eng = AskEngine(llm=ScriptedLLM())
+    with pytest.raises(AskError):
+        eng.read("DELETE FROM notes")
+    tail = eng.audit_tail()
+    assert tail[0]["refused"] is True and tail[1]["question"] == "old row" and tail[1]["refused"] is False
 
 
 def test_f3_citation_tag_inside_the_sql_fence_is_stripped():
