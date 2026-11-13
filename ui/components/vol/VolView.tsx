@@ -19,7 +19,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BadgeChip, Chip, DataTable, Panel, T, TickerLink, fmtNum, ordinal, sourceOf, type Column } from '@/components/terminal'
 import { percentileOf } from '@/components/terminal/source'
-import { LineChart, XYChart } from './charts'
+import { ExpandableChart } from '@/components/terminal/ExpandableChart'
+import { InteractiveSeries } from '@/components/terminal/InteractiveSeries'
+import { XYChart } from './charts'
 import { getIvCone, getIvHistory, getIvPaidDelivered, getIvSurface, getVolScreen, storeNote, volError, type IvCone, type IvHistory, type IvSurface, type PaidDelivered, type ScreenRow, type ScreenSort, type VolScreen } from './api'
 import { expectedMoveHitRate, lastYear, nearestTenor, paidSummary, skippedRuns, termWord } from './volModel'
 
@@ -53,25 +55,26 @@ function SkewPanel({ hist, surf }: { hist: Load<IvHistory>; surf: Load<IvSurface
   const ghost = surf.data?.compare ? nearestTenor(surf.data.compare.expiries, 30) : null
   const smile = (e: typeof near) => (e ? [...e.smile].sort((a, b) => a.log_moneyness - b.log_moneyness) : [])
   const todaySmile = smile(near), ghostSmile = smile(ghost)
-  const xy = (pts: typeof todaySmile) => pts.map(p => ({ x: p.log_moneyness, y: p.iv }))
+  const xy = (pts: typeof todaySmile) => pts.map(p => ({ x: p.log_moneyness, y: p.iv, label: `K ${fmtNum(p.strike, 0)}` }))
   return (
     <Panel title="Skew · 25Δ put − call" accent={T.violet} pad={8} badge="context"
       source={sourceOf(hist.data?.as_of ?? null, { source: 'iv_summary_daily', hint: hist.data && !hist.data.ok ? storeNote(hist.data) : hist.error })}
       subtitle={last ? `${signed(last.skew_25d_30)} pts today${skewPct != null ? ` · ${ordinal(skewPct)} percentile of the past year` : ''} · vol points` : undefined}>
       {!rows.length ? <Degraded what="Skew history" note={hist.error ?? storeNote(hist.data)} /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>violet = 25Δ skew on the 30-day surface · {rows[0].date} → {last!.date}</div>
-            <LineChart dates={rows.map(r => r.date)} height={170} zero lUnit="" ariaLabel="25-delta skew history"
-              series={[{ label: '25Δ skew', color: T.violet, values: rows.map(r => r.skew_25d_30), w: 1.5 }]} />
-          </div>
-          <div>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>smile ≈ 30 d: today{near ? ` (${near.expiry}, ${near.dte} d)` : ''} vs {ghost ? `${surf.data?.compare?.as_of ?? 'a month ago'} (${ghost.expiry}, ${ghost.dte} d, dashed)` : 'a month ago (no like-tenor smile stored)'} · x = log-moneyness</div>
+          <ExpandableChart title="Skew history" height={170}
+            legend={<span style={{ color: T.dim }}>violet = 25Δ skew on the 30-day surface · {rows[0].date} → {last!.date}</span>}>
+            <InteractiveSeries height={170} ariaLabel="25-delta skew history"
+              series={[{ id: 'skew', label: '25Δ skew', color: T.violet, w: 2, format: v => signed(v, 1),
+                         points: rows.map(r => ({ t: r.date, v: r.skew_25d_30 })) }]} />
+          </ExpandableChart>
+          <ExpandableChart title="Smile ≈ 30 d" height={170}
+            legend={<span style={{ color: T.dim }}>today{near ? ` (${near.expiry}, ${near.dte} d)` : ''} vs {ghost ? `${surf.data?.compare?.as_of ?? 'a month ago'} (${ghost.expiry}, ${ghost.dte} d, dashed)` : 'a month ago (no like-tenor smile stored)'} · x = log-moneyness</span>}>
             {todaySmile.length >= 3 ? (
               <XYChart height={170} yUnit="%" xLabel="log(K / F)" markX={0} ariaLabel="smile today vs one month ago"
                 series={[{ label: 'today', color: T.violet, points: xy(todaySmile), w: 1.6 }, { label: 'ghost', color: T.muted, points: xy(ghostSmile), w: 1.1, dash: '4 3' }]} />
             ) : <div style={{ fontSize: 11, color: T.muted }}>{surf.error ?? storeNote(surf.data) ?? 'the stored surface has too few traded strikes for a smile'}</div>}
-          </div>
+          </ExpandableChart>
         </div>
       )}
     </Panel>
@@ -82,6 +85,13 @@ function TermPanel({ hist, cone }: { hist: Load<IvHistory>; cone: Load<IvCone> }
   const rows = hist.data?.ok ? hist.data.rows : []
   const last = rows.length ? rows[rows.length - 1] : null
   const term = cone.data?.ok ? cone.data.term_today.filter(t => t.atm_iv != null) : []
+  // the IV cone's 1-year p25–p75 for IV30 as a shaded band on the history (chart plan B10: cone band = area-pair)
+  const cone1y = cone.data?.ok ? cone.data.years.find(y => y.years === 1)?.tenors['iv30_cm'] ?? null : null
+  const band = cone1y && rows.length
+    ? { lo: rows.map(r => ({ t: r.date, v: cone1y.p25 })), hi: rows.map(r => ({ t: r.date, v: cone1y.p75 })) }
+    : null
+  // M43 honesty carried onto the chart (orders B-VOL.2): sessions whose IV30 was flat-filled from one expiry are marked
+  const flatMarks = rows.filter(r => (r.quality_flags ?? '').split(',').includes('cm30_flat')).map(r => ({ t: r.date, kind: 'flat' }))
   return (
     <Panel title="Term structure · ATM IV by expiry" accent={T.amber} pad={8} badge="context"
       source={sourceOf(cone.data?.as_of ?? hist.data?.as_of ?? null, { source: 'iv_expiry_daily', hint: cone.error ?? (cone.data && !cone.data.ok ? storeNote(cone.data) : null) })}
@@ -97,12 +107,14 @@ function TermPanel({ hist, cone }: { hist: Load<IvHistory>; cone: Load<IvCone> }
               </table>
             ) : <div style={{ fontSize: 11, color: T.muted }}>no per-expiry rows stored for today</div>}
           </div>
-          <div>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>violet = IV30 · amber = IV60 · cyan = IV90 (constant maturity) · dashed = slope 30→90 (right, pts)</div>
-            <LineChart dates={rows.map(r => r.date)} height={170} lUnit="%" ariaLabel="term structure history"
-              series={[{ label: 'IV30', color: T.violet, values: rows.map(r => r.iv30_cm), w: 1.4 }, { label: 'IV60', color: T.amber, values: rows.map(r => r.iv60_cm), w: 1 },
-                       { label: 'IV90', color: T.cyan, values: rows.map(r => r.iv90_cm), w: 1 }, { label: 'slope', color: T.muted, values: rows.map(r => r.term_slope_30_90), axis: 'R', w: 1, dash: '3 3' }]} />
-          </div>
+          <ExpandableChart title="Term history" height={170}
+            legend={<span style={{ color: T.dim }}>violet = IV30 · amber = IV60 · cyan = IV90 (constant maturity) · dashed = slope 30→90 (left, pts){band ? ' · band = IV30 p25–p75 (1 y cone)' : ''}{flatMarks.length ? ' · ○ = IV30 flat-filled (one expiry 10–60 d)' : ''}</span>}>
+            <InteractiveSeries height={170} ariaLabel="term structure history" band={band} markers={flatMarks}
+              series={[{ id: 'iv30', label: 'IV30', color: T.violet, w: 2, points: rows.map(r => ({ t: r.date, v: r.iv30_cm })), format: v => `${fmtNum(v, 1)}%` },
+                       { id: 'iv60', label: 'IV60', color: T.amber, points: rows.map(r => ({ t: r.date, v: r.iv60_cm })), format: v => `${fmtNum(v, 1)}%` },
+                       { id: 'iv90', label: 'IV90', color: T.cyan, points: rows.map(r => ({ t: r.date, v: r.iv90_cm })), format: v => `${fmtNum(v, 1)}%` },
+                       { id: 'slope', label: 'slope 30→90', color: T.muted, axis: 'L', dashed: true, points: rows.map(r => ({ t: r.date, v: r.term_slope_30_90 })), format: v => signed(v, 1) }]} />
+          </ExpandableChart>
         </div>
       )}
     </Panel>

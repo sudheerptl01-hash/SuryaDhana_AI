@@ -132,12 +132,27 @@ def shape_tape(body: dict[str, Any] | None, symbol: str, err: str | None, now: d
     return out
 
 
+def curve_honesty(curve: dict[str, Any], last_expiry: Any) -> dict[str, Any]:
+    """The replay curve with an honest as-of (FINAL ROUND B-XPRY): ``as_of`` = the latest REPLAYED expiry, and
+    ``replay_pending`` naming the lag when ``iv_expiry_daily`` holds newer expiries than ``iv_expiry_replay`` does
+    (the store, not this read, is behind: the after-close replay job, O-T16 — the PM runs it, never this service)."""
+    exps = curve.get("expiries") or []
+    as_of = str(exps[-1]) if exps else None
+    curve["as_of"] = as_of
+    last = str(last_expiry) if last_expiry else None
+    if as_of and last and last > as_of:
+        curve["replay_pending"] = (f"latest replayed expiry {as_of}; expiries stored up to {last} are not replayed yet "
+                                   "(the after-close replay job, O-T16)")
+    return curve
+
+
 def shape_expiry(body: dict[str, Any] | None, symbol: str, err: str | None, now: datetime | None = None) -> dict[str, Any]:
     b = body or {}
     live = b.get("live") or {"snapshots": 0}
     sc = b.get("scorecard") or {"rows": [], "stats": {"n": 0}}
+    curve = curve_honesty(dict(b.get("curve") or {"n": 0, "points": []}), b.get("last_expiry"))
     out = {"symbol": symbol, "date": b.get("date"), "is_expiry_day": bool(b.get("is_expiry_day")), "next_expiry": b.get("next_expiry"),
-           "last_expiry": b.get("last_expiry"), "live": live, "curve": b.get("curve") or {"n": 0, "points": []}, "scorecard": sc,
+           "last_expiry": b.get("last_expiry"), "live": live, "curve": curve, "scorecard": sc,
            "chip": chip({"source": live.get("source"), "date": b.get("date")}, live.get("last_ts"), int(live.get("snapshots") or 0), now),
            "badges": BADGES, "precedent": PRECEDENT_XPRY,
            "verdict": f"Expiry-day view: OI unwind, max-pain drift, straddle decay, pin risk and the implied-vs-realised record; {DESCRIBES}",

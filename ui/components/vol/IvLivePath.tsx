@@ -5,6 +5,10 @@
  * Breeze chain pilot — ATM IV (ours, from bid/ask mids) with NSE's own IV beside it, the ATM straddle and the PCR per
  * snapshot — with the SourceChip LIVE · BREEZE / LIVE · NSE / OFFLINE the route reports. `context`; nothing here feeds
  * a trade. Shown only while OMON is in LIVE mode and the pilot has stored a snapshot for the day.
+ *
+ * @deprecated RETIRED (FINAL ROUND B-OMON, charts/PLAN.md B11): nothing mounts this panel any more — expiry/OiTape
+ * supersedes it on OMON's LIVE mode (the 2-minute tape with straddle, PCR and the OI lapse scrubber). The component is
+ * kept as a working shim because live.check.ts L13 pins its DELAYED / coverage behaviour; do not mount it on new pages.
  */
 import { useEffect, useState } from 'react'
 import { Panel, T, fmtNum, type SourceInfo } from '@/components/terminal'

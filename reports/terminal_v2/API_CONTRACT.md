@@ -923,6 +923,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `note` | string |
 | `order_value` | number |
 | `paper_only` | bool |
+| `served_from_cache` | bool |
 | `source` | string |
 | `source_chip` | string |
 | `span_margin_required` | number |
@@ -982,6 +983,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `note` | string |
 | `order_value` | null |
 | `paper_only` | bool |
+| `served_from_cache` | bool |
 | `source` | string |
 | `source_chip` | string |
 | `span_margin_required` | number |
@@ -1020,6 +1022,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `note` | string |
 | `order_value` | null |
 | `paper_only` | bool |
+| `served_from_cache` | bool |
 | `source` | string |
 | `source_chip` | string |
 | `span_margin_required` | number |

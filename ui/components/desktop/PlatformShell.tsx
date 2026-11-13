@@ -49,6 +49,7 @@ import { ShellStateContext, type ShellState } from '@/components/shell/ShellStat
 import { preloadTab } from '@/components/shell/tabModules'
 import { TitleStrip, clampZoom, stripHeightCss, useMinuteWhile } from './TitleStrip'
 import { BANNER_HEIGHT, BootGate, BuildPill, ConnectionBanner, MigrationNotice, type BannerPhase } from './ShellNotices'
+import { StandDownBanner, useStandDownState } from '@/components/risk/StandDownBanner'
 import { FindBar } from './FindBar'
 import { isStatusStale, statusFreshAt, STATUS_PULL_MS } from './status'
 import { HealthMonitor, type HealthSnapshot } from './health'
@@ -241,10 +242,15 @@ export function PlatformShell({ children }: { children: ReactNode }) {
     return undefined
   }, [down, phase, downSince, useShellSignal, health?.since])
 
+  // ── risk cockpit (O-F3, SPEC §3): the STAND DOWN banner is a ConnectionBanner sibling with the same
+  // geometry, with precedence BELOW the outage messages (LINK DOWN / recovered outrank a discipline message).
+  const standDown = useStandDownState()
+  const showStandDown = ready && standDown.banner && phase === 'hidden'
+
   // ── layout offset: strip + banner (the single writer of --shell-top; before paint, so no shift) ─────────
   // The strip is window chrome: 32 SCREEN px at every page zoom (K3), i.e. 32 / zoom CSS px of the page.
   const stripTop = desktop ? stripHeightCss(zoom) : 0
-  const shellTop = stripTop + (phase !== 'hidden' ? BANNER_HEIGHT : 0)
+  const shellTop = stripTop + (phase !== 'hidden' || showStandDown ? BANNER_HEIGHT : 0)
   useLayoutEffect(() => { setShellTop(shellTop, desktop ? 'desktop' : 'browser') }, [shellTop, desktop])
 
   // ── desktop: current page for the strip + native window title ──────────────────────────────────────────
@@ -341,6 +347,7 @@ export function PlatformShell({ children }: { children: ReactNode }) {
       <ConnectionBanner phase={phase} top={stripTop} downSince={downSince} outageMs={outageMs}
         nextProbeAt={health?.nextProbeAt ?? null} desktop={useShellSignal}
         onRetry={useShellSignal ? undefined : retry} />
+      {showStandDown && <StandDownBanner top={stripTop} />}
       {!desktop && newBuild && newBuild !== dismissed && (
         <BuildPill build={newBuild} onReload={reload} onDismiss={() => setDismissed(newBuild)} />
       )}

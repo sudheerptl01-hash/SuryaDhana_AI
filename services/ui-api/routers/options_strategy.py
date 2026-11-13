@@ -45,6 +45,7 @@ import os
 import re
 import sys
 import threading
+import time
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -80,6 +81,52 @@ SPAN_DIR_ENV = "SPAN_ARCHIVE_DIR"
 SPAN_FILE_RE = re.compile(r"^nsccl\.(\d{8})\.s\.zip$")
 _SPAN_PARSE_LOCK = threading.Lock()
 _SPAN_CACHE: dict[tuple[str, str], Any] = {}        # (file path, pfCode) → SpanProduct (one parse per product per file)
+
+# FINAL ROUND P0-8 ("40 s of nothing is forbidden"): the last successful BREEZE margin answer per
+# (underlying, exchange, legs shape — premiums excluded: SPAN is about the contracts, and the age is always shown).
+# Served instantly to `cached_only` probes and, with `stale_ok`, when Breeze fails or times out. In-process only;
+# every cached serve carries `served_from_cache: true`, `cache_age_s` and the ORIGINAL `as_of` — never re-stamped.
+_MARGIN_ANSWER_LOCK = threading.Lock()
+_MARGIN_ANSWER_CACHE: dict[tuple[Any, ...], dict[str, Any]] = {}     # key → {"at": epoch s, "answer": response dict}
+MARGIN_ANSWER_CACHE_MAX = 64
+
+
+def margin_cache_key(body: "MarginIn") -> tuple[Any, ...]:
+    legs = tuple(sorted((lg.side, lg.kind, float(lg.strike or 0.0), lg.expiry.isoformat(), lg.lots, lg.lot_size)
+                        for lg in body.legs))
+    return (body.symbol.upper(), body.exchange_code, legs)
+
+
+def _margin_cache_get(key: tuple[Any, ...]) -> dict[str, Any] | None:
+    with _MARGIN_ANSWER_LOCK:
+        entry = _MARGIN_ANSWER_CACHE.get(key)
+        return dict(entry) if entry else None
+
+
+def _margin_cache_put(key: tuple[Any, ...], answer: dict[str, Any]) -> None:
+    with _MARGIN_ANSWER_LOCK:
+        if key not in _MARGIN_ANSWER_CACHE and len(_MARGIN_ANSWER_CACHE) >= MARGIN_ANSWER_CACHE_MAX:
+            oldest = min(_MARGIN_ANSWER_CACHE, key=lambda k: _MARGIN_ANSWER_CACHE[k]["at"])
+            _MARGIN_ANSWER_CACHE.pop(oldest, None)
+        _MARGIN_ANSWER_CACHE[key] = {"at": time.time(), "answer": answer}
+
+
+def reset_margin_answer_cache() -> None:
+    """Tests only."""
+    with _MARGIN_ANSWER_LOCK:
+        _MARGIN_ANSWER_CACHE.clear()
+
+
+def _cached_margin_answer(entry: dict[str, Any], attempts: list[dict[str, Any]]) -> dict[str, Any]:
+    """The cached answer re-served honestly: original as_of kept, age in seconds on the face of the payload."""
+    age = max(0, int(time.time() - float(entry["at"])))
+    ans = dict(entry["answer"])
+    ans["served_from_cache"] = True
+    ans["cache_age_s"] = age
+    ans["attempts"] = attempts
+    ans["note"] = (str(entry["answer"].get("note", ""))
+                   + " · served from this ui-api's cache of the last Breeze answer for these legs (age shown) — not re-asked")
+    return ans
 
 
 # ── OSTR v2 constants ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -391,6 +438,13 @@ def analyze(body: AnalyzeIn) -> dict:
     costs["equity"] = equity_costs(vlegs)
     pop = prob_of_profit(vlegs, body.forward, body.pop_iv or iv, t_near, body.r) if any(v.leg.kind != "FUT" for v in vlegs) else None
 
+    # T-07b: breakevens net of the computed cost split — the underlying levels at expiry where the P&L equals the
+    # round-trip costs (itemised F&O round trip + the bid–ask input; exercise STT shown separately, not included).
+    cost_total = round(float(costs["round_trip"].get("total", 0.0)) + spread, 2)
+    lo_x, hi_x = float(grid[0]["s"]), float(grid[-1]["s"])
+    bes_net = (find_roots(lambda x: book_pnl(vlegs, x, t_near, 0.0, body.r) - cost_total, lo_x, hi_x)
+               if cost_total > 0 else list(bes))
+
     out: dict[str, Any] = {
         "symbol": body.symbol.upper(),
         "forward": body.forward,
@@ -403,6 +457,14 @@ def analyze(body: AnalyzeIn) -> dict:
         "entry_cashflow": round(cash, 2),               # + credit · − debit, option premiums only
         "net_label": "CREDIT" if cash > 0 else "DEBIT" if cash < 0 else "FLAT",
         "breakevens": [round(b, 2) for b in bes],
+        "breakevens_net_of_costs": {
+            "values": [round(b, 2) for b in bes_net],
+            "costs_inr": cost_total,
+            "badge": BADGE_ARITH,
+            "note": "underlying levels at expiry where the P&L equals the round-trip costs shown (itemised round trip "
+                    "+ your bid–ask input; the exercise STT is listed separately and not included) — arithmetic on the "
+                    "same payoff curve within the plotted range",
+        },
         "max_profit": {"value": profit.value, "unbounded": profit.unbounded, "at": profit.at},
         "max_loss": {"value": loss.value, "unbounded": loss.unbounded, "at": loss.at},
         "extremes_basis": ("the nearest-expiry curve on the plotted range (later legs by Black-76); the upside tail from "
@@ -512,6 +574,12 @@ class MarginIn(BaseModel):
     forward: float | None = Field(None, gt=0, description="for the heuristic and the exposure estimate (default: the file's settlement price)")
     stock_code: str | None = Field(None, max_length=20, description="ICICI stock code when it differs from the NSE symbol (INFTEC for INFY)")
     sources: str = Field("breeze,span_file,heuristic", max_length=60, description="comma list to restrict the fallback chain (tests)")
+    cached_only: bool = Field(False, description="serve the cached last successful Breeze answer for this (symbol, legs shape) "
+                                                 "instantly and call NOTHING; {'hit': false} when none exists (P0-8 fast probe)")
+    stale_ok: bool = Field(False, description="when Breeze fails or times out, serve the cached last Breeze answer with its age "
+                                              "before falling to the SPAN file / heuristic (P0-8; the UI sends true)")
+    breeze_timeout_s: float = Field(8.0, ge=1, le=30, description="give up waiting on the Breeze call after this long; the "
+                                                                  "ladder (cache / SPAN file / heuristic) answers instead")
 
 
 @dataclass
@@ -847,13 +915,41 @@ async def margin(body: MarginIn) -> dict:
     chain = [s.strip().lower() for s in body.sources.split(",") if s.strip()]
     attempts: list[dict[str, Any]] = []
     symbol = body.symbol.upper()
+    cache_key = margin_cache_key(body)
+    if body.cached_only:
+        # the P0-8 fast probe: the UI renders this instantly while the full ask runs behind — never a Breeze call
+        entry = _margin_cache_get(cache_key)
+        if entry is None:
+            return {"hit": False, "served_from_cache": False, "paper_only": True,
+                    "note": "no cached Breeze answer for these legs on this ui-api yet"}
+        age = max(0, int(time.time() - float(entry["at"])))
+        out = _cached_margin_answer(entry, [{"source": "CACHE", "ok": True,
+                                             "reason": f"the Breeze answer cached {age} s ago; the full ask refreshes it"}])
+        out["hit"] = True
+        return out
     source, span_req, non_span, order_value, detail = "HEURISTIC", None, None, None, {}
     product: SpanProduct | None = None
     if "breeze" in chain:
-        parsed, reason = await asyncio.to_thread(_breeze_margin_sync, body)
+        # asyncio.wait (not wait_for): a worker thread cannot be cancelled, so a timeout ABANDONS the wait instead
+        # of blocking on the cancellation; the SDK call finishes on its thread and is discarded
+        task = asyncio.ensure_future(asyncio.to_thread(_breeze_margin_sync, body))
+        done, _pending = await asyncio.wait({task}, timeout=body.breeze_timeout_s)
+        if done:
+            parsed, reason = task.result()
+        else:
+            task.add_done_callback(lambda t: t.cancelled() or t.exception())   # retrieve, never warn
+            parsed, reason = None, f"Breeze did not answer within {body.breeze_timeout_s:g} s"
         attempts.append({"source": "BREEZE", "ok": parsed is not None, "reason": reason})
         if parsed is not None:
             source, span_req, non_span, order_value, detail = "BREEZE", parsed["span_margin_required"], parsed["non_span_margin_required"], parsed["order_value"], parsed
+    if source == "HEURISTIC" and body.stale_ok:
+        # Breeze failed or timed out: the last successful Breeze answer for these legs, age on its face (P0-8)
+        entry = _margin_cache_get(cache_key)
+        if entry is not None:
+            age = max(0, int(time.time() - float(entry["at"])))
+            attempts.append({"source": "CACHED_BREEZE", "ok": True,
+                             "reason": f"the last successful Breeze answer for these legs, {age} s old"})
+            return _cached_margin_answer(entry, attempts)
     if source == "HEURISTIC" and "span_file" in chain:
         res, reason, product = await asyncio.to_thread(_span_file_sync, body)
         attempts.append({"source": "NSE_SPAN_FILE", "ok": res is not None, "reason": reason})
@@ -868,9 +964,18 @@ async def margin(body: MarginIn) -> dict:
         span_req, non_span = heuristic["total"], 0.0
     total = (span_req or 0.0) + (non_span or 0.0)
     chip = {"BREEZE": "BREEZE", "NSE_SPAN_FILE": "NSE SPAN FILE", "HEURISTIC": "HEURISTIC"}[source]
+    resp = _margin_response(body, symbol, source, chip, span_req, non_span, order_value, total, detail, heuristic, attempts)
+    if source == "BREEZE":
+        _margin_cache_put(cache_key, resp)
+    return resp
+
+
+def _margin_response(body: MarginIn, symbol: str, source: str, chip: str, span_req: float | None, non_span: float | None,
+                     order_value: float | None, total: float, detail: dict[str, Any], heuristic: dict[str, Any],
+                     attempts: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "symbol": symbol, "exchange_code": body.exchange_code, "legs": len(body.legs),
-        "source": source, "source_chip": chip,
+        "source": source, "source_chip": chip, "served_from_cache": False,
         "span_margin_required": span_req, "non_span_margin_required": non_span, "total_margin": round(total, 2),
         "order_value": order_value,
         "as_of": (detail.get("file_date") and f"{detail['file_date'][:4]}-{detail['file_date'][4:6]}-{detail['file_date'][6:8]}")

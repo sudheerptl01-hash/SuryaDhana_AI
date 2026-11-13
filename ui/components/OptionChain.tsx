@@ -30,6 +30,12 @@ import { apiError } from '@/lib/errors'
  * read as buy / sell), an external active symbol adopted only when it is an F&O underlying (volModel.fnoVerdict: a DEAL
  * pick of a cash-only name no longer moves OMON), the GO expiry hand-off, and the IV-percentile alert chip defined
  * against the IV rank on hover (G9.1).
+ *
+ * FINAL ROUND (B-OMON, 14 Nov 2026): chain-first order — the chain (ladder + header strip + table) sits at the top of
+ * the page, then the intraday tape (OiTape), the IV history, the smile / OI-by-strike pair, and the summary tiles
+ * COLLAPSED at the bottom (open on demand; each number still appears once per page). The smile and OI-by-strike are
+ * SVG kit v2 (terminal/chart.ts useChartInteraction): wheel + pinch zoom, drag pan, double-click reset, nearest-point
+ * crosshair printing strike + value in the ExpandableChart legend. j / k + space and OPEN IN OSTR are untouched.
  */
 import { OptionPricer, type PricerPick } from '@/components/OptionPricer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -46,7 +52,8 @@ import { readActiveSymbol } from '@/lib/activeSymbol'
 import { useActiveSymbol } from '@/lib/activeSymbol'
 import { goToPage } from '@/lib/navigate'
 import { draftAlert } from '@/lib/alerts'
-import { niceAxis, niceTicks, pickRoundLabels, staggerRows, textWidth } from '@/components/terminal/chart'
+import { Crosshair, nearestIndex, niceAxis, niceTicks, pickRoundLabels, staggerRows, textWidth, useChartInteraction } from '@/components/terminal/chart'
+import { ExpandableChart, useChartShell } from '@/components/terminal/ExpandableChart'
 import { atmIndex, edgeLabel, omonInitialSymbol, wallMarks } from '@/components/omonModel'
 import { useRequestSeq } from '@/components/useRequestSeq'
 
@@ -80,7 +87,11 @@ const inContracts = (side: SideV2, key: 'oi' | 'oi_chg', lot: number | null | un
 }
 
 function Smile({ data }: { data: Chain }) {
-  const { ref, w: W, h: H } = useChartSize(420, 150)   // CSS px: 9 px axis text at any width (C1-17)
+  const shell = useChartShell()
+  const expanded = shell?.expanded ?? false
+  const { ref, w: W, h: H } = useChartSize(420, expanded ? 380 : 150, { maxRatio: 1.25 })   // CSS px: 9 px axis text at any width (C1-17)
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const clipId = useRef(`omon-smile-${Math.random().toString(36).slice(2, 8)}`)
   // out-of-the-money IV: puts below the forward, calls above (where prices are informative)
   const all = data.rows.map(r => {
     const putSide = data.forward != null && r.strike < data.forward
@@ -94,19 +105,43 @@ function Smile({ data }: { data: Chain }) {
   const thin = (vols[Math.floor(vols.length / 2)] ?? 0) * 0.02
   const pts = all.filter(p => p.vol >= thin)
   const hollow = all.filter(p => p.vol < thin)
+  // SVG kit v2 (FINAL ROUND W3): wheel + pinch x-zoom, drag pan, double-click reset, nearest-strike crosshair
+  const kLo = pts.length ? pts[0].k : 0
+  const kHi = pts.length ? pts[pts.length - 1].k : 1
+  const full = useMemo(() => ({ min: kLo, max: kHi > kLo ? kHi : kLo + 1 }), [kLo, kHi])
+  const ia = useChartInteraction(svgRef, full, { points: pts.map(p => p.k) })
+  const iaRef = useRef(ia)
+  iaRef.current = ia
+  useEffect(() => shell?.registerActions({ fit: () => iaRef.current.reset() }), [shell])
+  const curI = ia.cursor?.i ?? null
+  const cur = curI != null ? pts[curI] ?? null : null
+  // the snapped strike's values go to the shell legend — readable in the header, never tooltip-only
+  useEffect(() => {
+    if (!shell) return
+    shell.setLegend(cur ? <span>strike <b style={{ color: T.bright, fontWeight: 400 }}>{cur.k.toLocaleString('en-IN')}</b> · IV <b style={{ color: T.bright, fontWeight: 400 }}>{cur.iv.toFixed(2)}%</b></span> : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shell, cur?.k, cur?.iv])
+  useEffect(() => () => { shell?.setLegend(null) }, [shell])
   if (pts.length < 3) return <div ref={ref} style={{ fontSize: 11, color: T.dim, padding: 10 }}>Not enough traded strikes for a smile.</div>
   const P = 30
-  const kLo = pts[0].k, kHi = pts[pts.length - 1].k
-  const vLo = Math.min(...pts.map(p => p.iv)) * 0.95, vHi = Math.max(...pts.map(p => p.iv)) * 1.05
-  const x = (k: number) => P + ((k - kLo) / (kHi - kLo || 1)) * (W - 2 * P)
+  const view = ia.view
+  ia.setPlot(P, W - 2 * P)
+  const vis = pts.filter(p => p.k >= view.min && p.k <= view.max)
+  const yPts = vis.length >= 2 ? vis : pts            // the y-range follows the zoom window (never empty)
+  const vLo = Math.min(...yPts.map(p => p.iv)) * 0.95, vHi = Math.max(...yPts.map(p => p.iv)) * 1.05
+  const x = (k: number) => P + ((k - view.min) / (view.max - view.min || 1)) * (W - 2 * P)
   const y = (v: number) => 8 + (1 - (v - vLo) / (vHi - vLo || 1)) * (H - 30)
   const iv = niceAxis(vLo, vHi, 3)
+  const kFirst = yPts[0].k, kLast = yPts[yPts.length - 1].k
   // strike ticks: round strikes, thinned to ≥ 56 px apart, kept clear of the first/last labels and 'fwd'
-  const kTicks = niceTicks(kLo, kHi, Math.max(2, Math.floor((W - 2 * P) / 70)))
-    .filter(k => x(k) - x(kLo) > 44 && x(kHi) - x(k) > 44 && (data.forward == null || Math.abs(x(k) - x(data.forward)) > 30))
+  const kTicks = niceTicks(view.min, view.max, Math.max(2, Math.floor((W - 2 * P) / 70)))
+    .filter(k => x(k) - x(kFirst) > 44 && x(kLast) - x(k) > 44 && (data.forward == null || Math.abs(x(k) - x(data.forward)) > 30))
+  const fwdIn = data.forward != null && data.forward >= view.min && data.forward <= view.max
   return (
     <div ref={ref} style={CHART_BOX}>
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }} role="img" aria-label="Implied volatility smile">
+    <svg ref={svgRef} width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block', touchAction: 'none', cursor: 'crosshair' }} role="img"
+         aria-label="Implied volatility smile (wheel zoom, drag pan, double-click resets)">
+      <defs><clipPath id={clipId.current}><rect x={P} y={0} width={Math.max(W - 2 * P, 1)} height={Math.max(H - 20, 1)} /></clipPath></defs>
       {iv.ticks.map(v => (
         <g key={v}>
           <line x1={P} x2={W - P} y1={y(v)} y2={y(v)} stroke={T.border} strokeDasharray="2 4" />
@@ -114,22 +149,51 @@ function Smile({ data }: { data: Chain }) {
         </g>
       ))}
       {kTicks.map(k => <text key={k} x={x(k)} y={H - 6} textAnchor="middle" fontSize={9} fill={T.dim} fontFamily={T.mono}>{k.toLocaleString('en-IN')}</text>)}
-      {data.forward != null && <line x1={x(data.forward)} x2={x(data.forward)} y1={6} y2={H - 22} stroke={T.amber} strokeDasharray="3 3" />}
-      <path d={pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.k).toFixed(1)},${y(p.iv).toFixed(1)}`).join('')} fill="none" stroke={T.violet} strokeWidth={1.8} />
-      {pts.map(p => <circle key={p.k} cx={x(p.k)} cy={y(p.iv)} r={1.8} fill={T.violet} />)}
-      {hollow.map(p => <circle key={`h${p.k}`} cx={x(p.k)} cy={y(p.iv)} r={2.4} fill="none" stroke={T.muted} data-thin-strike><title>{`${p.k}: ${p.vol} contracts traded — a thin print, off the line`}</title></circle>)}
-      <text x={P} y={H - 6} fontSize={9} fill={T.dim} fontFamily={T.mono}>{kLo.toLocaleString('en-IN')}</text>
-      <text x={W - P} y={H - 6} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>{kHi.toLocaleString('en-IN')}</text>
-      {data.forward != null && <text x={x(data.forward)} y={H - 6} textAnchor="middle" fontSize={9} fill={T.amber} fontFamily={T.mono}>fwd</text>}
+      {fwdIn && data.forward != null && <line x1={x(data.forward)} x2={x(data.forward)} y1={6} y2={H - 22} stroke={T.amber} strokeDasharray="3 3" />}
+      <g clipPath={`url(#${clipId.current})`}>
+        <path d={pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.k).toFixed(1)},${y(p.iv).toFixed(1)}`).join('')} fill="none" stroke={T.violet} strokeWidth={1.8} />
+        {pts.map(p => <circle key={p.k} cx={x(p.k)} cy={y(p.iv)} r={1.8} fill={T.violet} />)}
+        {hollow.map(p => <circle key={`h${p.k}`} cx={x(p.k)} cy={y(p.iv)} r={2.4} fill="none" stroke={T.muted} data-thin-strike><title>{`${p.k}: ${p.vol} contracts traded — a thin print, off the line`}</title></circle>)}
+      </g>
+      <text x={P} y={H - 6} fontSize={9} fill={T.dim} fontFamily={T.mono}>{kFirst.toLocaleString('en-IN')}</text>
+      <text x={W - P} y={H - 6} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>{kLast.toLocaleString('en-IN')}</text>
+      {fwdIn && data.forward != null && <text x={x(data.forward)} y={H - 6} textAnchor="middle" fontSize={9} fill={T.amber} fontFamily={T.mono}>fwd</text>}
+      {cur && <Crosshair x={x(cur.k)} y={y(cur.iv)} top={8} height={H - 30} left={P} width={W - 2 * P} />}
+      {ia.zoomed && <text x={W - P} y={12} textAnchor="end" fontSize={8.5} fill={T.dim} fontFamily={T.mono}>zoomed · double-click resets</text>}
     </svg>
     </div>
   )
 }
 
 function OiBars({ data }: { data: Chain }) {
-  const { ref, w: W, h: H } = useChartSize(420, 150)   // CSS px (C1-17)
-  const rows = data.rows.filter(r => (r.ce.oi ?? 0) + (r.pe.oi ?? 0) > 0)
-  if (!rows.length) return <div ref={ref} />
+  const shell = useChartShell()
+  const expanded = shell?.expanded ?? false
+  const { ref, w: W, h: H } = useChartSize(420, expanded ? 380 : 150, { maxRatio: 1.25 })   // CSS px (C1-17)
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const allRows = data.rows.filter(r => (r.ce.oi ?? 0) + (r.pe.oi ?? 0) > 0)
+  // SVG kit v2 (FINAL ROUND W3): wheel + pinch x-zoom on the strike domain, drag pan, double-click reset,
+  // nearest-strike crosshair reporting call / put OI to the shell legend
+  const sLo = allRows.length ? allRows[0].strike : 0
+  const sHi = allRows.length ? allRows[allRows.length - 1].strike : 1
+  const full = useMemo(() => ({ min: sLo, max: sHi > sLo ? sHi : sLo + 1 }), [sLo, sHi])
+  const ia = useChartInteraction(svgRef, full, { points: allRows.map(r => r.strike), minSpanFrac: 0.06 })
+  const iaRef = useRef(ia)
+  iaRef.current = ia
+  useEffect(() => shell?.registerActions({ fit: () => iaRef.current.reset() }), [shell])
+  const curI = ia.cursor?.i ?? null
+  const curRow = curI != null ? allRows[curI] ?? null : null
+  useEffect(() => {
+    if (!shell) return
+    shell.setLegend(curRow ? <span>strike <b style={{ color: T.bright, fontWeight: 400 }}>{curRow.strike.toLocaleString('en-IN')}</b> · calls <b style={{ color: CALL_C, fontWeight: 400 }}>{(curRow.ce.oi ?? 0).toLocaleString('en-IN')}</b> · puts <b style={{ color: PUT_C, fontWeight: 400 }}>{(curRow.pe.oi ?? 0).toLocaleString('en-IN')}</b></span> : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shell, curRow])
+  useEffect(() => () => { shell?.setLegend(null) }, [shell])
+  if (!allRows.length) return <div ref={ref} />
+  // the bars inside the zoom window (the view can never be empty: it falls back to the nearest strike)
+  const view = ia.view
+  ia.setPlot(30, W - 60)
+  const inView = allRows.filter(r => r.strike >= view.min && r.strike <= view.max)
+  const rows = inView.length ? inView : [allRows[Math.max(0, nearestIndex(allRows.map(r => r.strike), (view.min + view.max) / 2))]]
   const P = 30, n = rows.length, TOP = 14
   const m = Math.max(...rows.flatMap(r => [r.ce.oi ?? 0, r.pe.oi ?? 0]), 1)
   const bw = (W - 2 * P) / n
@@ -177,9 +241,11 @@ function OiBars({ data }: { data: Chain }) {
     wallLabels.push({ side: wm.side, text, x, y: rowY(row), x0, x1, anchor, color, edge: wm.at,
       tip: `${wm.side === 'call' ? 'Call' : 'Put'} wall ${fmtK(wm.strike)}: the strike with the most ${wm.side} open interest of the expiry, outside the plotted strike window` })
   }
+  const curVis = curRow ? rows.findIndex(r => r.strike === curRow.strike) : -1
   return (
     <div ref={ref} style={CHART_BOX}>
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }} role="img" aria-label="Open interest by strike">
+    <svg ref={svgRef} width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block', touchAction: 'none', cursor: 'crosshair' }} role="img"
+         aria-label="Open interest by strike (wheel zoom, drag pan, double-click resets)">
       {rows.map((r, i) => (
         <g key={r.strike}>
           <rect x={P + i * bw} y={AXIS - y(r.ce.oi ?? 0)} width={Math.max(bw / 2 - 0.5, 0.5)} height={y(r.ce.oi ?? 0)} fill={CALL_C} opacity={0.75}>
@@ -205,6 +271,8 @@ function OiBars({ data }: { data: Chain }) {
         <text key={l.side} x={l.x} y={l.y} textAnchor={l.anchor} fontSize={8.5} fill={l.color} fontFamily={T.mono} letterSpacing={0.5}
               data-wall={l.side} data-wall-edge={l.edge}>{l.tip && <title>{l.tip}</title>}{l.text}</text>
       ))}
+      {curVis >= 0 && <Crosshair x={cx(curVis)} top={TOP} height={AXIS - TOP} left={P} width={W - 2 * P} />}
+      {ia.zoomed && <text x={W - P} y={10} textAnchor="end" fontSize={8.5} fill={T.dim} fontFamily={T.mono}>zoomed · double-click resets</text>}
     </svg>
     </div>
   )
@@ -234,6 +302,7 @@ export function OptionChain() {
   const [greeks, setGreeks] = useState(true)
   const [perLot, setPerLot] = useState(false)                    // Greeks per unit (default) or per lot — labelled either way
   const [histOpen, setHistOpen] = useState(true)                 // m050: the IV history is the owner's main ask — open by default
+  const [tilesOpen, setTilesOpen] = useState(false)              // FINAL ROUND B-OMON: chain-first — the summary tiles sit collapsed at the bottom
   const [surface, setSurface] = useState<IvSurface | null>(null)
   const [screenRow, setScreenRow] = useState<ScreenRow | null>(null)
   const [nearSkew, setNearSkew] = useState<NearSkew | null>(null)
@@ -466,28 +535,9 @@ export function OptionChain() {
             </span>
           )}
         </div>
-        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', marginBottom: 12 }}>
-          <Stat big={false} label="Spot / forward" value={num(ulPriced ? ulRow!.price : data.spot, 2)}
-                sub={<span>forward {num(data.forward, 2)} ({data.forward_source})
-                  {ulPriced && ul.source ? <> · <SourceChip info={ul.source} style={{ fontSize: 8.5 }} /></>
-                    : data.live ? <span style={{ color: T.dim }}> · spot as NSE's chain prints it</span> : <span style={{ color: T.dim }}> · EOD {data.date}</span>}</span>} />
-          <Stat big={false} label="ATM implied vol" value={data.atm_iv != null ? `${data.atm_iv.toFixed(2)}%` : '—'} accent={T.violet}
-                sub={data.expected_move_pct != null ? `priced move by expiry ±${data.expected_move_pct}% · T ${fmtNum(tDays, tDays != null && tDays % 1 ? 2 : 0)} d ÷ 365` : ''} />
-          <Stat big={false} label="Expected range" accent={T.cyan}
-                value={data.expected_move_pct != null && data.forward ? `${num(data.forward * (1 - data.expected_move_pct / 100))} – ${num(data.forward * (1 + data.expected_move_pct / 100))}` : '—'}
-                sub="±1 standard deviation at expiry" />
-          {/* PLAN 0.6 (R-OPTIONS §3.4): a put/call ratio is context — no green above 1, no red below */}
-          <Stat big={false} label="Put / call OI" value={data.pcr_oi ?? '—'} color={T.text}
-                sub={`calls ${lakh(cv?.call_oi_total_contracts ?? ctr(data.call_oi_total))} · puts ${lakh(cv?.put_oi_total_contracts ?? ctr(data.put_oi_total))} ${oiUnit} · context`} />
-          <Stat big={false} label="Max pain" value={num(data.max_pain)} accent={T.amber} sub="where option buyers collect least" />
-          <Stat big={false} label="OI walls · call / put" value={<span><span style={{ color: CALL_C }}>{num(data.resistance[0])}</span> / <span style={{ color: PUT_C }}>{num(data.support[0])}</span></span>}
-                sub={data.resistance[0] === data.atm || data.support[0] === data.atm
-                  ? 'most open interest per side · a wall AT the money is where writers are, not a level · context'
-                  : 'the strikes holding the most call / put open interest (where writers sit) · context'} />
-        </div>
+        {/* chain-first (FINAL ROUND B-OMON): the header strip sits directly above the chain; the tiles moved to the
+            collapsed Summary panel at the bottom of the page */}
         <ChainStrip chain={data} history={ivHist.v2} surface={surface} nearSkew={nearSkew} />
-        <IvHistoryChart symbol={data.symbol} state={ivHist} collapsed={!histOpen} onToggle={() => setHistOpen(o => !o)} />
-        <OiTape symbol={data.symbol} enabled={live} expiry={data.expiry} />
         {pricer && data.rows.some(r => r.strike === pricer.strike) && <OptionPricer data={data} pick={pricer} onClose={() => setPricer(null)} />}
         <Panel title="Chain" pad={0} accent={T.amber} style={{ marginBottom: 12 }} source={chainSource} badge="arithmetic"
           subtitle={`calls left · puts right · OI, OI change and volume in ${oiUnit} · bars = open interest · IV only for out-of-the-money strikes · a dim price with ˢ is NSE's settlement (no trade today) · click a price for the pricer (OVME) · click a strike (or j / k + space) to pick it for OSTR`}
@@ -576,15 +626,46 @@ export function OptionChain() {
             {hasNseDelta ? ` · NSE Δ: NSE Clearing's Contract_Delta for ${nseDelta?.as_of ?? data.date} (context, the exchange's own vol)` : data.live ? " · NSE Δ: the exchange's file is end of day (switch to EOD)" : " · NSE Δ: no Contract_Delta stored for this session and expiry"} · arithmetic
           </div>}
         </Panel>
+        <OiTape symbol={data.symbol} enabled={live} expiry={data.expiry} />
+        <IvHistoryChart symbol={data.symbol} state={ivHist} collapsed={!histOpen} onToggle={() => setHistOpen(o => !o)} />
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', marginBottom: 12 }}>
-          <Panel title="Volatility smile" accent={T.violet} pad={8} source={chainSource} badge="arithmetic"
-            subtitle="out-of-the-money IV by strike · higher on the left = traders pay more for downside protection">
+          <ExpandableChart title="Volatility smile" accent={T.violet} source={chainSource} badges={[{ label: 'arithmetic' }]} height={200}
+            legend={<span>out-of-the-money IV by strike · higher on the left = traders pay more for downside protection · wheel zoom · drag pan · double-click resets</span>}>
             <Smile data={data} />
-          </Panel>
-          <Panel title="Open interest by strike" accent={T.amber} pad={8} source={chainSource} badge="context" subtitle="cyan = calls · violet = puts (a side, not a direction) · walls = most open interest over every strike of the expiry · describes where writers sit, does not predict">
+          </ExpandableChart>
+          <ExpandableChart title="Open interest by strike" accent={T.amber} source={chainSource} badges={[{ label: 'context' }]} height={200}
+            legend={<span>cyan = calls · violet = puts (a side, not a direction) · walls = most open interest over every strike of the expiry · describes where writers sit, does not predict</span>}>
             <OiBars data={data} />
-          </Panel>
+          </ExpandableChart>
         </div>
+        <Panel title="Summary tiles" accent={T.muted} pad={tilesOpen ? 12 : 8} style={{ marginBottom: 12 }} source={chainSource}
+          subtitle="spot / forward · ATM IV · expected range · put/call OI · max pain · OI walls"
+          right={<Chip color={T.muted} active={tilesOpen} onClick={() => setTilesOpen(o => !o)} aria-label="toggle summary tiles"
+            title={tilesOpen ? 'collapse the summary tiles' : 'open the summary tiles'}>{tilesOpen ? 'TILES ▴' : 'TILES ▾'}</Chip>}>
+          {tilesOpen ? (
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
+              <Stat big={false} label="Spot / forward" value={num(ulPriced ? ulRow!.price : data.spot, 2)}
+                    sub={<span>forward {num(data.forward, 2)} ({data.forward_source})
+                      {ulPriced && ul.source ? <> · <SourceChip info={ul.source} style={{ fontSize: 8.5 }} /></>
+                        : data.live ? <span style={{ color: T.dim }}> · spot as NSE's chain prints it</span> : <span style={{ color: T.dim }}> · EOD {data.date}</span>}</span>} />
+              <Stat big={false} label="ATM implied vol" value={data.atm_iv != null ? `${data.atm_iv.toFixed(2)}%` : '—'} accent={T.violet}
+                    sub={data.expected_move_pct != null ? `priced move by expiry ±${data.expected_move_pct}% · T ${fmtNum(tDays, tDays != null && tDays % 1 ? 2 : 0)} d ÷ 365` : ''} />
+              <Stat big={false} label="Expected range" accent={T.cyan}
+                    value={data.expected_move_pct != null && data.forward ? `${num(data.forward * (1 - data.expected_move_pct / 100))} – ${num(data.forward * (1 + data.expected_move_pct / 100))}` : '—'}
+                    sub="±1 standard deviation at expiry" />
+              {/* PLAN 0.6 (R-OPTIONS §3.4): a put/call ratio is context — no green above 1, no red below */}
+              <Stat big={false} label="Put / call OI" value={data.pcr_oi ?? '—'} color={T.text}
+                    sub={`calls ${lakh(cv?.call_oi_total_contracts ?? ctr(data.call_oi_total))} · puts ${lakh(cv?.put_oi_total_contracts ?? ctr(data.put_oi_total))} ${oiUnit} · context`} />
+              <Stat big={false} label="Max pain" value={num(data.max_pain)} accent={T.amber} sub="where option buyers collect least" />
+              <Stat big={false} label="OI walls · call / put" value={<span><span style={{ color: CALL_C }}>{num(data.resistance[0])}</span> / <span style={{ color: PUT_C }}>{num(data.support[0])}</span></span>}
+                    sub={data.resistance[0] === data.atm || data.support[0] === data.atm
+                      ? 'most open interest per side · a wall AT the money is where writers are, not a level · context'
+                      : 'the strikes holding the most call / put open interest (where writers sit) · context'} />
+            </div>
+          ) : (
+            <div style={{ fontSize: 10.5, color: T.dim }}>Collapsed (chain-first) — open for the levels. The ladder above carries each expiry&apos;s ATM IV and the header strip the comparisons; each number appears once per page.</div>
+          )}
+        </Panel>
         <div style={{ fontSize: 10, color: T.dim, marginTop: 8, lineHeight: 1.6 }}>
           Source: NSE F&O bhavcopy (UDiFF), cached nightly by the EOD pipeline. IV = Black-76 on the put–call-parity forward (the IV
           store&apos;s method: one forward and one ATM IV per expiry on every page), r 6.5 %; {cv?.time_convention_note ?? 'T = calendar time to 15:30 IST on expiry ÷ 365'}.

@@ -320,10 +320,16 @@ def test_series_drops_a_future_dated_point_and_reports_it(store):
 
 
 def test_bars_does_not_serve_a_future_dated_bar(store):
+    # bars() has no asof parameter — it clamps on the READER'S OWN clock — so the fixture's "future" row must be
+    # future relative to the real today (the fixed NEXT_MON row rotted into the past on 10 Nov 2026 and the test
+    # went red while the behaviour it guards stayed right).
     _seed_fx(store)
+    real_future = date.today() + timedelta(days=7)
+    db.upsert(store, "gold_daily_bars", pd.DataFrame([
+        _bar("INR=X", real_future, 94.0, 94.1, 93.9, 94.0, datetime(2026, 11, 8, 4, 47))]))
     out = reads.bars(store, symbol="INR=X", start=MON)
-    assert [r["trade_date"] for r in out["rows"]] == ["2026-11-04", "2026-11-05", "2026-11-06"]
-    assert out["future_rows_dropped"] == 1
+    assert real_future.isoformat() not in [r["trade_date"] for r in out["rows"]]
+    assert out["rows"][0]["trade_date"] == "2026-11-04" and out["future_rows_dropped"] == 1
     # negative control: a futures symbol with no future row reports none and serves every bar
     db.upsert(store, "gold_daily_bars", pd.DataFrame([
         _bar("GC=F", FRI, 4098.5, 4116.2, 4035.1, 4074.9, datetime(2026, 11, 8, 4, 47))]))

@@ -7,7 +7,8 @@
  * (arithmetic), intensity its size against the largest cell of the date shown.
  */
 import { useMemo, useState } from 'react'
-import { BadgeChip, Chip, Label, T } from '@/components/terminal'
+import { Chip, Label, T } from '@/components/terminal'
+import { ExpandableChart } from '@/components/terminal/ExpandableChart'
 import { gridMaxAbs, heatColor } from './ostrModel'
 
 export interface PnlGridData {
@@ -25,7 +26,17 @@ const compact = (v: number) => {
 /** ±0 is every leg at ITS OWN IV (the chain's IV per strike / expiry), not the ATM IV the page header already prints. */
 export const IV_ZERO_HEADER = "±0 (each leg's IV)"
 
+/** FINAL ROUND B-OSTR (chart plan B7): the grid in the ExpandableChart SHELL only — it stays a grid, it gains ⛶ EXPAND. */
 export function PnlGrid({ grid }: { grid: PnlGridData }) {
+  return (
+    <ExpandableChart title="P&L grid · spot × IV × date" badges={[{ label: grid.badge, note: grid.note }]}
+      height={156 + grid.spot_pct.length * 22}>
+      <div style={{ height: '100%', overflowY: 'auto' }}><PnlGridBody grid={grid} /></div>
+    </ExpandableChart>
+  )
+}
+
+function PnlGridBody({ grid }: { grid: PnlGridData }) {
   const [di, setDi] = useState(0)
   const d = Math.min(di, grid.days.length - 1)
   const slice = grid.pnl[d] ?? []
@@ -38,8 +49,6 @@ export function PnlGrid({ grid }: { grid: PnlGridData }) {
         {grid.days.map((x, i) => (
           <Chip key={x} color={T.cyan} active={i === d} onClick={() => setDi(i)}>{i === 0 ? 'today' : i === grid.days.length - 1 ? `expiry (+${x}d)` : `+${x}d`}</Chip>
         ))}
-        <span style={{ flex: 1 }} />
-        <BadgeChip badge={grid.badge} note={grid.note} />
       </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 10, width: '100%', minWidth: 520 }}>

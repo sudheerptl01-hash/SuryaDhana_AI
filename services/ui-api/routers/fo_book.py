@@ -11,6 +11,8 @@ Routes (mounted at ``/api/options/book``):
   POST /mark                   store today's EOD marks (idempotent; for the evening scheduler)
   GET  /greeks                 net Δ Γ Θ ν per underlying and total, in units, lots, ₹ per 1 % and ₹ per vol point
   GET  /journal                the append-only action log
+  GET  /day                    one IST session day aggregated in the store (realised net of costs, open MTM change,
+                               bookings/closes, loss streak, the day's trades) — the risk cockpit's TODAY read (SPEC M1)
 The RSK F&O section reads ``risk_payload`` through ``GET /api/risk/fo`` (routers/riskdash.py).
 
 PAPER ONLY (PLAN §0.9 — binding): nothing in this module, in ``fo_book_store`` or in the OSTR router names a broker order
@@ -80,7 +82,7 @@ TIME_CONVENTION = (f"{om.TIME_CONVENTION}: calendar time from the mark to the ex
                    "(review M04: the app-wide rule of the IV store, the OMON chain and OSTR)")
 VAR_LOOKBACK = 750
 IV_SHOCKS = (-5.0, -2.0, 2.0, 5.0, 10.0)
-GAPS = (-10.0, -5.0, -3.0, -2.0, 2.0, 3.0, 5.0)
+GAPS = (-10.0, -5.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 5.0)     # ±1 % added for the cockpit's scenario strip (SPEC M2)
 COMBINED = ((-5.0, 5.0), (-10.0, 10.0), (5.0, -2.0))      # (spot %, IV pts): a gap with the vol move that usually comes with it
 INDEX_HISTORY = {"NIFTY": ("NIFTY 50", "NIFTY50"), "BANKNIFTY": ("NIFTY BANK", "NIFTYBANK"),
                  "FINNIFTY": ("NIFTY FINANCIAL SERVICES", None), "MIDCPNIFTY": ("NIFTY MIDCAP SELECT", None),
@@ -877,6 +879,29 @@ async def journal(limit: int = Query(50, ge=1, le=500)) -> dict:
     return {"rows": rows, "paper_only": True}
 
 
+@router.get("/day")
+async def book_day(day: str | None = Query(None, alias="date", description="IST session date YYYY-MM-DD; default today IST")) -> dict:
+    """One IST session day of the PAPER book, aggregated in the store (SPEC M1): realised ₹ net of the recorded costs,
+    open MTM change against the prior EOD mark, bookings / closes, the current loss streak and the day's trades. The
+    risk cockpit's TODAY card reads this; for today the open marks are freshened first (throttled, point-in-time in the
+    store) so the MTM figure is current. Counts the PAPER book only."""
+    d = (day or now_ist().date().isoformat()).strip()[:10]
+    try:
+        date.fromisoformat(d)
+    except ValueError:
+        fail(422, "invalid", f"{d!r} is not a date (YYYY-MM-DD)")
+    store = fbs.get_store()
+    meta: dict[str, Any] | None = None
+    if d == now_ist().date().isoformat():
+        open_pos = await asyncio.to_thread(store.positions, status="open")
+        if open_pos:
+            _, meta = await marks_with_fallback(open_pos, "auto")
+    summary = await asyncio.to_thread(store.day_summary, d)
+    return {**summary, "as_of": now_ist().isoformat(timespec="seconds"), "badge": BADGE_ARITH,
+            "marks_meta": meta, "mark_source": mark_source_chip(meta) if meta else None,
+            "paper_only": True, "note": PAPER_NOTE}
+
+
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 # risk (RSK › F&O): Greeks exposure, delta-gamma VaR, vega, IV shocks, gaps, SPAN margin utilisation
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1051,11 +1076,13 @@ async def risk_payload(mode: str = "auto", with_margin: bool = True, now: dateti
     elif syms:
         notes.append("no common return history for the book's underlyings: VaR not computed")
     zero = {s: 0.0 for s in syms}
+    theta_1d = round(revalue(rows, zero, 0.0, 1.0), 0)
     scenarios = {
         "iv_shock": [{"iv_shift": sh, "pnl_inr": round(revalue(rows, zero, sh), 0)} for sh in IV_SHOCKS],
         "gap": [{"spot_pct": g, "pnl_inr": round(revalue(rows, {s: g / 100.0 for s in syms}), 0)} for g in GAPS],
         "combined": [{"spot_pct": g, "iv_shift": sh, "pnl_inr": round(revalue(rows, {s: g / 100.0 for s in syms}, sh), 0)} for g, sh in COMBINED],
-        "theta_1d_inr": round(revalue(rows, zero, 0.0, 1.0), 0),
+        "theta": [{"days_fwd": 1, "pnl_inr": theta_1d}],         # SPEC M2: the T−1d tile (same figure as theta_1d_inr, kept below)
+        "theta_1d_inr": theta_1d,
         "badge": BADGE_ARITH,
         "note": "instant full revaluation (every underlying gaps by the same %, IV parallel): what-if arithmetic, " + DESCRIBES,
     }

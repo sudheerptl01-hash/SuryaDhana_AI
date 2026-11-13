@@ -54,6 +54,10 @@ _DIR_KIND: dict[str, tuple[str, str, str]] = {
                                       "no research verdict.")
     for d in ("bloomberg_program", "desktop_app", "worldclass_program", "production_review", "resilience_review", "live_nse")
 }
+_DIR_KIND["terminal_final"] = ("Terminal FINAL", "ENGINEERING",
+    "The FINAL round program (13 Nov 2026): every rating area to 9+ for one index-options trader — owner decisions "
+    "O-F1..O-F5 (index options first, refined dark, risk cockpit with defaults, orders manual at ICICI), the "
+    "workstreams W1-W7, the wave plan and the seed backlog. PLAN.md is binding for every wave builder.")
 _DIR_KIND["journal"] = ("Journal", "REFERENCE",
                         "Weekly decision journal: what the Desk and the paper shadow did that week. A record, not a study.")
 

@@ -37,7 +37,7 @@
  * `NIFTY OSTR IC` hand-off (lib/goAliases.ts OSTR_TEMPLATE_KEY) is read once on mount and on its event, then removed.
  */
 import axios from 'axios'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { getOptionChain, getOptionChainLive, type OptionChain as Chain } from '@/lib/api'
 import { apiError } from '@/lib/errors'
 import { useRequestSeq } from '@/components/useRequestSeq'
@@ -46,12 +46,15 @@ import { useMarketOpen } from '@/components/shell/useFeed'
 import { isStaleEod, useLiveQuotes } from '@/lib/liveQuotes'
 import { underlyingLiveSymbol } from '@/components/liveModel'
 import { chainSeedSource, seedMode, seedPhrase, spotDriftPct, stampClock, type SeedMode } from '@/components/strategySeed'
-import { postMargin, type MarginAnswer, type MarginLeg } from '@/components/vol/api'
+import type { MarginAnswer, MarginLeg } from '@/components/vol/api'
 import { legsFromStrikes } from '@/components/vol/volModel'
 import { readActiveSymbol, useActiveSymbol, type ActiveSymbol } from '@/lib/activeSymbol'
 import { draftAlert } from '@/lib/alerts'
 import { OSTR_TEMPLATE_EVENT, OSTR_TEMPLATE_KEY, parseOstrTemplate } from '@/lib/goAliases'
-import { fmtAxisRupees, niceAxis, niceStep, rupeeAxisUnit, staggerRows, textWidth } from '@/components/terminal/chart'
+import { Crosshair, fmtAxisRupees, niceAxis, niceStep, rupeeAxisUnit, staggerRows, textWidth, useChartInteraction } from '@/components/terminal/chart'
+import { ExpandableChart, useChartShell } from '@/components/terminal/ExpandableChart'
+import { SymbolTypeahead } from '@/components/SymbolTypeahead'
+import { PreTradeChecklist } from '@/components/risk/PreTradeChecklist'
 import { DELTA_RULE, TEMPLATES, bookLegs, defaultName, deltaUnits, futSeed, legDays, marginLegs, marginView, monthlyExpiries, pickTemplate, templateSpecs, type FutBasis, type Template } from '@/components/fobook/ostrModel'
 import { PnlGrid, type PnlGridData } from '@/components/fobook/PnlGrid'
 import { PaperBook } from '@/components/fobook/PaperBook'
@@ -76,6 +79,8 @@ interface Analysis {
   payoff: { s: number; expiry: number; now: number; scenario: number }[]
   scenario: { days_forward: number; iv_shift: number; note: string }
   pop: { value: number; iv_used: number; horizon_days: number; badge: string; method: string; note: string } | null
+  /** T-07b: levels where the expiry P&L equals the round-trip costs (badge arithmetic) */
+  breakevens_net_of_costs?: { values: number[]; costs_inr: number; badge: string; note: string }
   grid?: PnlGridData
   margin: { estimate: boolean; total: number; per_leg: number[]; premium_outflow: number
             defined_risk_floor: number | null; fut_margin_pct: number; note: string; excludes_shares?: boolean }
@@ -136,17 +141,55 @@ function seedFromStrikes(strikes: readonly number[], chain: Chain): UiLeg[] {
   })
 }
 
+/**
+ * The pre-trade checklist payload (B-COCKPIT's component, SPEC §5) → the booking's journal note (≤ 300 chars server-side).
+ * Defensive on shape: the component's own note string wins; else "checklist: t/n"; an unticked checklist still books —
+ * the checklist never gates the Book button (O-F3: the cockpit blocks nothing).
+ */
+function checklistNote(p: unknown): string | undefined {
+  if (!p || typeof p !== 'object') return undefined
+  const o = p as Record<string, unknown>
+  for (const k of ['journal_note', 'note']) {
+    if (typeof o[k] === 'string' && (o[k] as string).trim()) return (o[k] as string).slice(0, 280)
+  }
+  const t = typeof o.ticked === 'number' ? o.ticked : typeof o.done === 'number' ? o.done : null
+  const n = typeof o.total === 'number' ? o.total : null
+  if (t != null && n != null) return `checklist: ${t}/${n}`
+  return undefined
+}
+
 /** An OMON pick younger than 30 minutes seeds the legs; an older one only names the symbol / expiry. */
 const SEED_FRESH_MS = 30 * 60_000
 function freshSeed(a: ActiveSymbol | null, now = Date.now()): ActiveSymbol | null {
   return a && a.strikes.length > 0 && now - Date.parse(a.at) < SEED_FRESH_MS ? a : null
 }
 
+/** P0-8: the margin answer plus the server cache's honesty fields (vol/api's MarginAnswer is not this builder's file). */
+type MarginAnswerX = MarginAnswer & { served_from_cache?: boolean; cache_age_s?: number | null; hit?: boolean }
+
+/** The full margin ask — vol/api's call plus `stale_ok` (a dead/slow Breeze degrades to the cached answer, age shown). */
+const postMargin = (symbol: string, legs: MarginLeg[], forward?: number | null) =>
+  axios.post<MarginAnswerX>('/api/options/margin',
+    { symbol, legs, exchange_code: 'NFO', forward: forward ?? undefined, stale_ok: true }, { timeout: 25_000 })
+
+/** The instant cache probe (`cached_only`): the server's last Breeze answer for these legs, or `{hit:false}` — no SDK call. */
+const probeMarginCache = (symbol: string, legs: MarginLeg[], forward?: number | null) =>
+  axios.post<MarginAnswerX>('/api/options/margin',
+    { symbol, legs, exchange_code: 'NFO', forward: forward ?? undefined, cached_only: true }, { timeout: 4_000 })
+
+const cacheAge = (s: number | null | undefined): string =>
+  s == null ? 'age unknown' : s < 90 ? `${s}s old` : s < 5400 ? `${Math.round(s / 60)}m old` : `${(s / 3600).toFixed(1)}h old`
+
 /** The margin answer's chip: BREEZE (live) / NSE SPAN FILE (its file date) / HEURISTIC (no feed: your legs). */
-function marginSource(m: MarginAnswer | null, err: string | null,
+function marginSource(m: MarginAnswerX | null, err: string | null,
                       market: { state?: string | null; session_date?: string | null } | null = null): SourceInfo {
   if (!m) return err ? sourceOf(null, { source: 'margin route', hint: err }) : inputSource('your legs (margin not asked yet)')
   const chip = String(m.source_chip ?? '').toUpperCase()
+  if (m.served_from_cache) {
+    // the cached last Breeze answer: never LIVE, the ORIGINAL time on the face, the age in the hint (P0-8 honesty)
+    return sourceOf(m.as_of, { source: 'BREEZE · CACHED', maxAgeDays: 4,
+      hint: `the last successful ICICI SPAN answer for these legs (${cacheAge(m.cache_age_s)}), served instantly from the ui-api cache — a fresh ask replaces it` })
+  }
   if (chip === 'BREEZE') {
     // ICICI's margin API answers on demand: LIVE while NSE trades; after the close (or before the open) the answer is
     // priced off the session's close, so CLOSE · <session> (5 Nov closed-market audit: it read LIVE · BREEZE at 17:02)
@@ -165,19 +208,55 @@ function marginSource(m: MarginAnswer | null, err: string | null,
   return inputSource('the 12 %-of-notional heuristic on your legs')
 }
 
-// ── payoff chart (repo SVG pattern — no chart lib) ──────────────────────────────
+// ── payoff chart (SVG kit v2, chart plan B6: wheel zoom · drag pan · double-click reset · crosshair → shell legend) ──
 
-function PayoffChart({ a, forward, lotNote, showScenario }: { a: Analysis; forward: number; lotNote: string; showScenario: boolean }) {
+function PayoffSvg({ a, forward, showScenario, width: W, height: H }: {
+  a: Analysis; forward: number; showScenario: boolean; width: number; height: number
+}) {
   // drawn in CSS px (C1-17): 9.5 px labels at any width; round ticks; one ₹ unit per axis; BE labels never overlap
-  const { ref, w: W, h: H } = useChartSize(680, 300, { maxRatio: 1.3 })
+  const shell = useChartShell()
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const clipId = useId()
   const padL = 64, padR = 14, padT = 14, padB = 34
+  const plotW = Math.max(1, W - padL - padR)
+  const plotH = Math.max(1, H - padT - padB)
   const g = a.payoff
-  const xs = g.map(p => p.s), ys = g.flatMap(p => showScenario ? [p.expiry, p.now, p.scenario] : [p.expiry, p.now])
-  const xmin = xs[0], xmax = xs[xs.length - 1]
-  let ymin = Math.min(...ys, 0), ymax = Math.max(...ys, 0)
-  const span = (ymax - ymin) || 1; ymin -= span * 0.06; ymax += span * 0.06
-  const x = (s: number) => padL + (s - xmin) / (xmax - xmin || 1) * (W - padL - padR)
-  const y = (v: number) => padT + (ymax - v) / (ymax - ymin) * (H - padT - padB)
+  const xs = useMemo(() => g.map(p => p.s), [g])
+  const full = useMemo(() => ({ min: xs[0] ?? 0, max: xs[xs.length - 1] ?? 1 }), [xs])
+  // crosshair values go to the panel legend (ExpandableChart slot) — readable in the header, never tooltip-only
+  const onCrosshair = useCallback((i: number | null) => {
+    if (!shell) return
+    const p = i != null ? g[i] ?? null : null
+    shell.setLegend(p ? (
+      <span>
+        <span style={{ color: T.text }}>spot {p.s.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+        {' · '}<span style={{ color: p.expiry >= 0 ? T.green : T.red }}>expiry {fmtInr(p.expiry, 0)}</span>
+        {' · '}<span style={{ color: T.cyan }}>today {fmtInr(p.now, 0)}</span>
+        {showScenario && <> · <span style={{ color: T.violet }}>scenario {fmtInr(p.scenario, 0)}</span></>}
+      </span>
+    ) : null)
+  }, [shell, g, showScenario])
+  const ia = useChartInteraction(svgRef, full, { points: xs, onCrosshair })
+  ia.setPlot(padL, plotW)                                 // every render: events map px → data through the plot box
+  // FIT in the shell header = back to the full x-domain
+  const resetRef = useRef(ia.reset)
+  resetRef.current = ia.reset
+  useEffect(() => {
+    if (!shell) return
+    return shell.registerActions({ fit: () => resetRef.current() })
+  }, [shell])
+  const view = ia.view
+  const xmin = view.min, xmax = view.max
+  const x = (s: number) => padL + (s - xmin) / (xmax - xmin || 1) * plotW
+  // B6 jitter fix: the y-domain comes from the EXPIRY + TODAY curves only — the same numbers on every slider frame,
+  // so the baseline is frozen unless the legs / chain change; the scenario curve is CLIPPED, never re-measures the axis
+  const { ymin, ymax } = useMemo(() => {
+    const ys = g.flatMap(p => [p.expiry, p.now])
+    const lo = Math.min(...ys, 0), hi = Math.max(...ys, 0)
+    const pad = ((hi - lo) || 1) * 0.06
+    return { ymin: lo - pad, ymax: hi + pad }
+  }, [g])
+  const y = (v: number) => padT + (ymax - v) / (ymax - ymin) * plotH
   // expiry curve split at its zero crossings (breakevens ARE grid points, so the cut is
   // exact for single-expiry books) → green above zero, red below
   const segs: { d: string; pos: boolean }[] = []
@@ -207,21 +286,22 @@ function PayoffChart({ a, forward, lotNote, showScenario }: { a: Analysis; forwa
   // breakeven labels: stagger overlapping ones onto a second row (BE 22,324.9 / BE 22,875.1 used to collide)
   const beText = (b: number) => `BE ${b.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`
   const beRows = staggerRows(a.breakevens.map(b => ({ x: x(b), w: textWidth(beText(b), 9.5) })), 6)
-  const expiryLabel = a.multi_expiry ? 'P&L at the nearest expiry (later legs by Black-76)' : 'P&L at expiry'
+  const cur = ia.cursor != null ? g[ia.cursor.i] ?? null : null   // a stale index after new data never crashes
   return (
-    <div>
-      <div ref={ref} style={CHART_BOX}>
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }} role="img"
-           aria-label="Strategy payoff at expiry and today">
-        {yAxis.ticks.map(v => (
-          <g key={v}>
-            <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke={T.border} strokeWidth={Math.abs(v) < 1e-9 ? 1.4 : 0.6} />
-            <text x={padL - 6} y={y(v) + 3} fontSize={9.5} fill={T.dim} textAnchor="end" fontFamily={T.mono}>{fmtAxisRupees(v, yAxis.unit, yAxis.step)}</text>
-          </g>
-        ))}
-        {xTicks.map(s => (
-          <text key={s} x={x(s)} y={H - padB + 14} fontSize={9.5} fill={T.dim} textAnchor="middle" fontFamily={T.mono}>{s.toLocaleString('en-IN')}</text>
-        ))}
+    <svg ref={svgRef} width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img"
+         aria-label="Strategy payoff at expiry and today (wheel zooms, drag pans, double-click resets)"
+         style={{ display: 'block', touchAction: 'none', cursor: 'crosshair' }}>
+      <clipPath id={clipId}><rect x={padL} y={padT} width={plotW} height={plotH} /></clipPath>
+      {yAxis.ticks.map(v => (
+        <g key={v}>
+          <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke={T.border} strokeWidth={Math.abs(v) < 1e-9 ? 1.4 : 0.6} />
+          <text x={padL - 6} y={y(v) + 3} fontSize={9.5} fill={T.dim} textAnchor="end" fontFamily={T.mono}>{fmtAxisRupees(v, yAxis.unit, yAxis.step)}</text>
+        </g>
+      ))}
+      {xTicks.filter(s => s >= xmin && s <= xmax).map(s => (
+        <text key={s} x={x(s)} y={H - padB + 14} fontSize={9.5} fill={T.dim} textAnchor="middle" fontFamily={T.mono}>{s.toLocaleString('en-IN')}</text>
+      ))}
+      <g clipPath={`url(#${clipId})`}>
         {/* forward */}
         <line x1={x(forward)} x2={x(forward)} y1={padT} y2={H - padB} stroke={T.amber} strokeDasharray="3 3" opacity={0.8} />
         <text x={x(forward) + 4} y={padT + 10} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>fwd {forward.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</text>
@@ -237,8 +317,28 @@ function PayoffChart({ a, forward, lotNote, showScenario }: { a: Analysis; forwa
         <path d={nowPath} fill="none" stroke={T.cyan} strokeWidth={1.3} opacity={0.85} />
         {showScenario && <path d={scenPath} fill="none" stroke={T.violet} strokeWidth={1.5} strokeDasharray="6 3" data-ostr-scenario-curve />}
         {segs.map((s, i) => <path key={i} d={s.d} fill="none" stroke={s.pos ? T.green : T.red} strokeWidth={2} />)}
-      </svg>
-      </div>
+      </g>
+      <Crosshair x={cur ? x(cur.s) : null} y={cur ? y(cur.expiry) : null} top={padT} height={plotH} left={padL} width={plotW} />
+      {ia.zoomed && <text x={W - padR} y={padT + 10} fontSize={9} fill={T.dim} textAnchor="end" fontFamily={T.mono}>zoomed · double-click or FIT resets</text>}
+    </svg>
+  )
+}
+
+/** The payoff in the ExpandableChart shell (FIT · ⛶ EXPAND · crosshair legend); the colour key stays below the chart;
+ *  the seed's SourceChip sits on the surrounding "Payoff" Panel header (one chip, not two). */
+function PayoffChart({ a, forward, lotNote, showScenario }: {
+  a: Analysis; forward: number; lotNote: string; showScenario: boolean
+}) {
+  const { ref, h: H } = useChartSize(680, 300, { maxRatio: 1.3 })   // responsive collapsed height, as the old chart sized itself
+  const expiryLabel = a.multi_expiry ? 'P&L at the nearest expiry (later legs by Black-76)' : 'P&L at expiry'
+  return (
+    <div ref={ref} style={CHART_BOX}>
+      <ExpandableChart title="Payoff to scale" accent={T.green}
+        badges={[{ label: 'arithmetic', note: a.extremes_basis }]}
+        legend={<span style={{ color: T.dim }}>wheel zoom · drag pan · double-click reset · hover for values</span>}
+        height={H}>
+        {({ width, height }) => <PayoffSvg a={a} forward={forward} showScenario={showScenario} width={width} height={height} />}
+      </ExpandableChart>
       <div style={{ fontSize: 10.5, color: T.muted, marginTop: 4 }}>
         <span style={{ color: T.green }}>— {expiryLabel}</span> (red where losing) ·{' '}
         <span style={{ color: T.cyan }}>— today (Black-76)</span>
@@ -259,8 +359,9 @@ export function StrategyBuilder() {
   const [active, writeActive] = useActiveSymbol()
   const handledAt = useRef<string | null>(readActiveSymbol()?.at ?? null)
   const [seededFrom, setSeededFrom] = useState<string | null>(null)
-  const [margin, setMargin] = useState<MarginAnswer | null>(null)
+  const [margin, setMargin] = useState<MarginAnswerX | null>(null)
   const [marginErr, setMarginErr] = useState<string | null>(null)
+  const [marginRefreshing, setMarginRefreshing] = useState(false)
   const [chain, setChain] = useState<Chain | null>(null)
   const [underlyings, setUnderlyings] = useState<string[]>([])
   const [chainErr, setChainErr] = useState<unknown>(null)
@@ -282,6 +383,7 @@ export function StrategyBuilder() {
   const [bookAsk, setBookAsk] = useState(false)
   const [bookMsg, setBookMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [bookKey, setBookKey] = useState(0)
+  const checklistPayload = useRef<unknown>(null)          // B-COCKPIT's PreTradeChecklist hands its payload up here
   const chainRef = useRef<Chain | null>(null)            // the chain on screen, for the GO hand-off (a stable callback)
   const keepLegs = useRef(false)                         // a base-expiry chip on a custom book keeps its legs
 
@@ -493,21 +595,30 @@ export function StrategyBuilder() {
     return () => { if (timer.current) clearTimeout(timer.current) }
   }, [legs, chain, forward, symbol, lot, anSeq, chainFor, extraErr, scenDays, ivShift, slippage, lotOf, legForward])
 
-  // ── real margin (PLAN 1.3): Breeze → NSE SPAN file → heuristic; the answer says which (debounced, latest wins) ──
-  // every leg on ITS contract (a calendar is margined per leg); shares are not margined here
+  // ── real margin (PLAN 1.3 + FINAL ROUND P0-8): the block never blanks — the server's cached last Breeze answer is
+  // probed INSTANTLY (`cached_only`, no SDK call) and shown with its age while the full ask (Breeze through the budget
+  // ledger → cached-on-failure via `stale_ok` → NSE SPAN file → labelled heuristic) refreshes behind, debounced, latest
+  // wins. Every leg on ITS contract (a calendar is margined per leg); shares are not margined here.
   const marginSeq = useRequestSeq()
   const mTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const marginFullFor = useRef(-1)                        // the seq whose FULL answer landed (the cached probe never overwrites it)
   useEffect(() => {
-    if (!chain || legs.length === 0 || !legs.some(l => l.kind !== 'EQ')) { marginSeq.cancel(); setMargin(null); setMarginErr(null); return }
+    if (!chain || legs.length === 0 || !legs.some(l => l.kind !== 'EQ')) { marginSeq.cancel(); setMargin(null); setMarginErr(null); setMarginRefreshing(false); return }
     const bad = legs.find(l => (l.kind !== 'FUT' && l.kind !== 'EQ' && l.strike == null) || !(Number(l.premium) >= 0) || !(Number(l.lots) >= 1))
     if (bad) { marginSeq.cancel(); return }
+    const mine = marginSeq.begin(), current = () => marginSeq.isCurrent(mine)
+    const body: MarginLeg[] = marginLegs(legs, lotOf)
+    setMarginRefreshing(true)
+    probeMarginCache(symbol, body, forward)
+      .then(r => { if (current() && marginFullFor.current !== mine && r.data.hit) { setMargin(r.data); setMarginErr(null) } })
+      .catch(() => { /* the probe is best-effort; the full ask below answers */ })
     if (mTimer.current) clearTimeout(mTimer.current)
     mTimer.current = setTimeout(() => {
-      const mine = marginSeq.begin(), current = () => marginSeq.isCurrent(mine)
-      const body: MarginLeg[] = marginLegs(legs, lotOf)
+      if (!current()) return
       postMargin(symbol, body, forward)
-        .then(r => { if (current()) { setMargin(r.data); setMarginErr(null) } })
-        .catch(e => { if (current()) { setMargin(null); setMarginErr(e?.response?.status === 404 ? 'margin route not deployed on this ui-api' : String(e?.response?.data?.detail ?? e?.message ?? 'margin unavailable')) } })
+        .then(r => { if (current()) { marginFullFor.current = mine; setMargin(r.data); setMarginErr(null); setMarginRefreshing(false) } })
+        .catch(e => { if (current()) { marginFullFor.current = mine; setMargin(null); setMarginRefreshing(false)
+          setMarginErr(e?.response?.status === 404 ? 'margin route not deployed on this ui-api' : String(e?.response?.data?.detail ?? e?.message ?? 'margin unavailable')) } })
     }, 600)
     return () => { if (mTimer.current) clearTimeout(mTimer.current) }
   }, [legs, chain, forward, symbol, lot, marginSeq, lotOf])
@@ -607,7 +718,7 @@ export function StrategyBuilder() {
   const bookNow = async () => {
     setBookAsk(false)
     try {
-      const r = await postBook(symbol, structName(), bookLegs(legs, lotOf, legForward, priceSource))
+      const r = await postBook(symbol, structName(), bookLegs(legs, lotOf, legForward, priceSource), checklistNote(checklistPayload.current))
       setBookMsg({ ok: true, text: `booked #${r.data.structure.id} "${r.data.structure.name}" to the PAPER F&O book (below) — no order was sent` })
       setBookKey(k => k + 1)
     } catch (e) { setBookMsg({ ok: false, text: `book failed: ${apiError(e)}` }) }
@@ -635,8 +746,9 @@ export function StrategyBuilder() {
         subtitle={chain ? `${chain.symbol} · ${chain.live ? `NSE option chain in session (≈1 min behind) as of ${stampClock(chain.as_of) || chain.as_of || '—'} IST` : `NSE F&O bhavcopy ${chain.date}`} · expiry ${chain.expiry} (${chain.days_to_expiry}d) · lot ${chain.lot ?? '?'} · fwd ${n2(forward, 2)} (${chain.forward_source}) · ATM IV ${chain.atm_iv ?? '—'}%` : 'payoffs · Greeks · breakevens'}
         status={<Chip color={T.violet}>PRICES ONLY · NO ORDERS</Chip>}
         right={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <Select value={symbol} onChange={s => { keepLegs.current = false; setExpiry(null); setSymbol(s); writeActive({ symbol: s }) }}
-            options={[...new Set(['NIFTY', 'BANKNIFTY', 'FINNIFTY', symbol, ...underlyings])].map(u => ({ value: u, label: u }))} />
+          {/* T-15: filter-as-you-type over the full F&O underlying list (recents first, Enter selects) — no chip wall */}
+          <SymbolTypeahead value={symbol} options={[...new Set(['NIFTY', 'BANKNIFTY', 'FINNIFTY', symbol, ...underlyings])]}
+            onPick={s => { keepLegs.current = false; setExpiry(null); setSymbol(s); writeActive({ symbol: s }) }} />
           <Btn size="sm" onClick={() => { keepLegs.current = false; loadChain() }}>↻ CHAIN</Btn>
         </div>} />
 
@@ -734,6 +846,15 @@ export function StrategyBuilder() {
                     title="write the F&O legs to the PAPER book at the prices shown; no order is sent anywhere">BOOK PAPER</Btn>
                 </div>
               )}
+              {/* B-COCKPIT's pre-trade checklist (risk/SPEC.md §5) beside Book paper: auto-states from the IV / events /
+                  margin reads + the typed max loss; its payload rides into the booking's journal note. It NEVER gates
+                  the BOOK PAPER button (O-F3: the cockpit blocks nothing). */}
+              {fnoLegs.length > 0 && (
+                <div style={{ marginTop: 8 }} data-ostr-checklist>
+                  <PreTradeChecklist symbol={symbol} onPayload={(p: unknown) => { checklistPayload.current = p }}
+                    margin={margin ? { total: margin.total_margin, source: `${margin.source_chip ?? ''}${margin.served_from_cache ? ' (cached)' : ''}`, asOf: margin.as_of } : null} />
+                </div>
+              )}
               {bookAsk && (
                 <Notice color={T.violet}>
                   <div style={{ display: 'grid', gap: 6 }} data-ostr-book-confirm>
@@ -748,8 +869,9 @@ export function StrategyBuilder() {
               )}
               {bookMsg && <div style={{ fontSize: 10.5, color: bookMsg.ok ? T.cyan : T.red, marginTop: 6 }} data-ostr-book-msg>{bookMsg.text}</div>}
 
-              {analysis && (
+              {(analysis != null || fnoLegs.length > 0) && (
                 <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                  {analysis && (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Chip color={analysis.net_label === 'CREDIT' ? T.green : T.red}>
                       NET {analysis.net_label} {fmtInr(Math.abs(analysis.entry_cashflow), 0)}
@@ -758,6 +880,14 @@ export function StrategyBuilder() {
                       onClick={() => { if (chain) draftAlert({ series: `price:${chain.symbol}`, op: forward != null && b < forward ? 'cross_down' : 'cross_up',
                                                               value: Math.round(b * 100) / 100, repeat: 'repeat', cooldown_min: 30, note: 'strategy breakeven' }) }}>
                       BE {n2(b, 1)} ＋ALERT</Chip>)}
+                    {/* T-07b: the same breakevens with the round-trip costs on top — arithmetic, same payoff curve */}
+                    {analysis.breakevens_net_of_costs && analysis.breakevens_net_of_costs.values.length > 0 && (
+                      <span data-ostr-be-costs title={analysis.breakevens_net_of_costs.note}
+                        style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>
+                        breakeven incl. {fmtInr(analysis.breakevens_net_of_costs.costs_inr, 0)} costs: {analysis.breakevens_net_of_costs.values.map(b => n2(b, 1)).join(' / ')}
+                        <BadgeChip badge="arithmetic" note={analysis.breakevens_net_of_costs.note} />
+                      </span>
+                    )}
                     <Chip color={T.green} title={analysis.extremes_basis}>
                       MAX PROFIT {analysis.max_profit.unbounded ? 'UNLIMITED ↑' : fmtInr(analysis.max_profit.value, 0)}
                     </Chip>
@@ -771,8 +901,10 @@ export function StrategyBuilder() {
                       </span>
                     )}
                   </div>
+                  )}
+                  {/* P0-8: the margin block renders the moment F&O legs exist — cached / asking BREEZE… — never a blank */}
                   <Panel title="Margin & costs" accent={T.violet} pad={10} source={marginSource(margin, marginErr, ul.market)} badge={margin?.badge ?? 'heuristic'}
-                    subtitle={margin ? `answered by ${margin.source_chip}` : marginErr ? 'heuristic only' : 'asking…'}>
+                    subtitle={margin ? `answered by ${margin.source_chip}${margin.served_from_cache ? ' (cached, age shown)' : ''}${marginRefreshing ? ' · refreshing' : ''}` : marginErr ? 'heuristic only' : 'asking BREEZE…'}>
                     <div style={{ fontFamily: T.mono, fontSize: 11, display: 'grid', gap: 3 }} data-ostr-margin={margin?.source_chip ?? 'HEURISTIC'}>
                       {mView === 'real' && margin ? (
                         <div>
@@ -782,6 +914,9 @@ export function StrategyBuilder() {
                           SPAN <span style={{ color: T.amber }}>{fmtInr(margin.span_margin_required, 0)}</span>
                           <span style={{ color: T.muted }}> · exposure / non-SPAN {fmtInr(margin.non_span_margin_required, 0)} · total </span>
                           <span style={{ color: T.amber, fontWeight: 600 }}>{fmtInr(margin.total_margin, 0)}</span>
+                          {/* P0-8 honesty: a cached SPAN never poses as fresh — the original time and the age are on the face */}
+                          {margin.served_from_cache && <span style={{ color: T.cyan }} data-ostr-margin-cached> · as of {String(margin.as_of ?? '').slice(11, 16) || '—'} · cached {cacheAge(margin.cache_age_s)}</span>}
+                          {marginRefreshing && <span style={{ color: T.dim }}> · asking BREEZE…</span>}
                           {expiriesInBook.length > 1 && <span style={{ color: T.muted }}> · {expiriesInBook.length} expiries, each leg on its own contract</span>}
                         </div>
                       ) : mView === 'heuristic' ? (
@@ -792,9 +927,9 @@ export function StrategyBuilder() {
                             {margin?.attempts?.filter(a => !a.ok).map(a => <span key={a.source} style={{ color: T.dim }}>{a.source}: {a.reason} · </span>)}
                           </div>
                           {/* review m059: the heuristic line and its measured error print ONLY when the heuristic is the answer */}
-                          <div>Heuristic est. <span style={{ color: T.violet }}>{fmtInr(margin?.heuristic?.total ?? analysis.margin.total, 0)}</span>
-                            {analysis.margin.premium_outflow > 0 && <span style={{ color: T.muted }}> (incl. {fmtInr(analysis.margin.premium_outflow, 0)} premium paid)</span>}
-                            {analysis.margin.defined_risk_floor != null &&
+                          <div>Heuristic est. <span style={{ color: T.violet }}>{fmtInr(margin?.heuristic?.total ?? analysis?.margin.total ?? null, 0)}</span>
+                            {analysis != null && analysis.margin.premium_outflow > 0 && <span style={{ color: T.muted }}> (incl. {fmtInr(analysis.margin.premium_outflow, 0)} premium paid)</span>}
+                            {analysis?.margin.defined_risk_floor != null &&
                               <span style={{ color: T.muted }}> · defined-risk floor {fmtInr(analysis.margin.defined_risk_floor, 0)}</span>}
                             {' '}<BadgeChip badge="heuristic" note={margin?.heuristic?.evidence ?? 'Measured 4.8× above Breeze SPAN on the NIFTY 09-Nov-2026 iron condor (₹3.9 L vs ₹81,497.07).'} />
                           </div>
@@ -802,8 +937,9 @@ export function StrategyBuilder() {
                             measured error {(margin?.heuristic?.error_factor_measured ?? 4.8).toFixed(1)}× (12 % of notional vs Breeze SPAN on the NIFTY 09-Nov-2026 iron condor: ₹3.9 L vs ₹81,497) — a real answer (BREEZE / NSE SPAN FILE) replaces this line
                           </div>
                         </>
-                      ) : <div style={{ color: T.dim }}>asking the margin route…</div>}
-                      {analysis.margin.excludes_shares && <div style={{ color: T.dim, fontSize: 10 }}>shares are not margined here (held in the demat; a call written against them is margined by SPAN unless pledged as cover)</div>}
+                      ) : <div style={{ color: T.dim }} data-ostr-margin-asking>● asking BREEZE… — the cached last answer, the NSE SPAN file or the labelled heuristic answers if it is slow</div>}
+                      {analysis?.margin.excludes_shares && <div style={{ color: T.dim, fontSize: 10 }}>shares are not margined here (held in the demat; a call written against them is margined by SPAN unless pledged as cover)</div>}
+                      {analysis ? <>
                       {/* review m061: the items shown add up to the total shown */}
                       <div>Costs est. round trip <span style={{ color: T.amber }}>{fmtInr(analysis.costs.display.total, 0)}</span>
                         <span style={{ color: T.muted }} title={`${analysis.costs.display.note}; exact ₹${n2(analysis.costs.display.exact_total)}`}> — {analysis.costs.display.items.map(([k, v]) => `${k} ${fmtInr(v, 0)}`).join(' · ')}</span></div>
@@ -814,8 +950,9 @@ export function StrategyBuilder() {
                         = <span style={{ color: T.amber }}>{fmtInr(analysis.costs.spread.value, 0)}</span>
                       </div>
                       {analysis.costs.equity && <div style={{ color: T.muted }} title={analysis.costs.equity.note}>shares: {fmtInr(analysis.costs.equity.round_trip.total, 0)} delivery round trip if bought for the structure ({analysis.costs.equity.source})</div>}
+                      </> : <div style={{ color: T.dim, fontSize: 10 }}>costs itemise here once the legs are priced</div>}
                       {margin?.note && mView === 'real' && <div style={{ color: T.dim, fontSize: 10, lineHeight: 1.5 }}>{margin.note}</div>}
-                      <div style={{ color: T.dim, fontSize: 10, lineHeight: 1.5 }}>{analysis.costs.note} · prices only, PAPER terminal: no order route exists.</div>
+                      <div style={{ color: T.dim, fontSize: 10, lineHeight: 1.5 }}>{analysis ? `${analysis.costs.note} · ` : ''}prices only, PAPER terminal: no order route exists.</div>
                     </div>
                   </Panel>
                 </div>
@@ -849,7 +986,8 @@ export function StrategyBuilder() {
               {!analysis && legs.length === 0 && <Notice>The payoff draws here once the book has a leg.</Notice>}
               {analysis && forward != null && (
                 <>
-                  <PayoffChart a={analysis} forward={forward} lotNote={`lot ${lot} · ${expiriesInBook.join(' / ') || chain.expiry}`} showScenario={scenDays !== 0 || ivShift !== 0} />
+                  <PayoffChart a={analysis} forward={forward} lotNote={`lot ${lot} · ${expiriesInBook.join(' / ') || chain.expiry}`}
+                    showScenario={scenDays !== 0 || ivShift !== 0} />
                   {net && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(118px, 1fr))', gap: 8, marginTop: 12 }}>
                       {/* review m062: delta in lots and ₹ per 1 % move; context-neutral colour (a sign is not a view) */}
@@ -864,9 +1002,9 @@ export function StrategyBuilder() {
                   )}
                   <div style={{ fontSize: 10, color: T.dim, marginTop: 8, lineHeight: 1.5 }}>{analysis.greeks.note} · time: {analysis.time_convention}</div>
                   {analysis.grid && (
-                    <div style={{ marginTop: 12, borderTop: `1px solid ${T.border}`, paddingTop: 10 }}>
-                      <Label>P&L grid · spot × IV × date (review M39)</Label>
-                      <div style={{ marginTop: 6 }}><PnlGrid grid={analysis.grid} /></div>
+                    <div style={{ marginTop: 12 }}>
+                      {/* review M39; the grid carries its own ExpandableChart shell (title, badge, ⛶ EXPAND — chart plan B7) */}
+                      <PnlGrid grid={analysis.grid} />
                     </div>
                   )}
                 </>

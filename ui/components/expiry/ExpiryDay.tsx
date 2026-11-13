@@ -1,26 +1,34 @@
 'use client'
 
 /**
- * OMON › XPRY — the expiry-day view (reports/terminal_v2/PLAN.md 2.4; precedent Opstra / Sensibull expiry-day tools, ORATS
- * implied-vs-realised). On an expiry day it follows the expiring series through the session:
+ * OMON › XPRY — the expiry-day cockpit (reports/terminal_v2/PLAN.md 2.4; FINAL ROUND wave B, B-XPRY F-08; precedent
+ * Opstra / Sensibull expiry-day tools, ORATS implied-vs-realised). On an expiry day it follows the expiring series
+ * through the session, all from the stored 2-minute tape:
  *  - OI unwind by strike (the change since the first snapshot, both sides) and the totals;
- *  - max pain through the day against the forward;
- *  - today's straddle at the opening ATM strike as % of its first value, against the historical expiry-day curve (median and
- *    middle half of past expiry days, from Breeze 1-minute replays);
+ *  - the max-pain drift and the intraday PCR path against the forward;
+ *  - the straddle tracker: today's straddle at the opening ATM strike (priced) against the historical expiry-day
+ *    decay curve (median and middle half of past expiry days, from Breeze 1-minute replays);
  *  - pin-risk strikes: the largest open interest within ±1 % of spot.
- * Every day: the next expiry and the implied-vs-realised scorecard (the last close's straddle against NSE's settlement close,
- * kept like the gold accuracy log: stored numbers, never re-scored; the RV20 move as the naive comparator).
- * `context` (OI, max pain, pin risk, curve) / `arithmetic` (scorecard). No signal, no score; describes, does not predict.
+ * Every day: the next expiry, the historical curve (with an honest as-of: the latest REPLAYED expiry, and a note when
+ * stored expiries are not replayed yet) and the implied-vs-realised scorecard (stored numbers, never re-scored).
+ * Charts are on the interactive kit (wheel zoom · drag pan · crosshair · expand · PNG; charts/PLAN.md §4).
+ * `context` (OI, max pain, PCR, pin risk, curve) / `arithmetic` (scorecard). No signal, no score; describes, does not predict.
  */
 import { useEffect, useState } from 'react'
 import { Chip, DataTable, Notice, Panel, Stat, T, fmtNum, sourceOf, type Column } from '@/components/terminal'
+import { ExpandableChart } from '@/components/terminal/ExpandableChart'
 import { useActiveSymbol } from '@/lib/activeSymbol'
 import { getExpiryDay, storeReason, tapeError } from './api'
-import { CALL_COLOR, PUT_COLOR, SessionChart, StrikeBars } from './charts'
+import { CALL_COLOR, ChartWithNotes, PUT_COLOR, SessionChart, StrikeBars } from './charts'
 import {
-  DESCRIBES, TAPE_INDICES, decayVsCurve, expiryWords, fmtOi, fmtSignedOi, minuteLabel, minuteOf, scoreRead, sentence, sinceLabel, tapeSource, unwindRead,
+  DESCRIBES, TAPE_INDICES, decayVsCurve, expiryWords, fmtOi, fmtSignedOi, minuteLabel, minuteOf, scoreRead, sentence, sinceLabel, tapeSource, unwindRead, weekday,
   type ExpiryDay as Xpry, type PinRow, type ScoreRow,
 } from './tapeModel'
+
+/** The curve payload's honesty fields (routers/expiry.py adds them; tapeModel's shape stays untouched). */
+type CurveX = Xpry['curve'] & { as_of?: string | null; replay_pending?: string | null }
+
+const note = (color: string = T.dim) => ({ fontSize: 10, color, marginTop: 4, flex: 'none' } as const)
 
 export function ExpiryDay({ symbol: symbolProp }: { symbol?: string }) {
   const [active, setActive] = useActiveSymbol()
@@ -47,7 +55,7 @@ export function ExpiryDay({ symbol: symbolProp }: { symbol?: string }) {
   const totals = unwindRead(unwind)
   const lotless = (v: number) => fmtSignedOi(v, null, false)
   const since = sinceLabel(live?.first)
-  const curve = d?.curve
+  const curve = d?.curve as CurveX | undefined
   const decay = live?.decay ?? []
   const reason = storeReason(d)
   const scoreCols: Column<ScoreRow>[] = [
@@ -70,9 +78,17 @@ export function ExpiryDay({ symbol: symbolProp }: { symbol?: string }) {
   ]
   const curvePts = curve?.points ?? []
   const decayX = decay.map(p => p.minute)
+  const path = live?.path ?? []
+  const pathX = path.map(p => minuteOf(p.ist) ?? 0)
   const scoreSrc = sourceOf(d?.scorecard.rows[0]?.expiry ?? null, { source: 'iv_surface_daily + NSE index close', maxAgeDays: 10 })
-  const curveSrc = curve && curve.n ? sourceOf(curve.expiries?.[curve.expiries.length - 1] ?? null, { source: 'Breeze 1-minute replay', maxAgeDays: 10 })
+  const curveAsOf = curve?.as_of ?? curve?.expiries?.[curve.expiries.length - 1] ?? null
+  const curveSrc = curve && curve.n ? sourceOf(curveAsOf, { source: 'Breeze 1-minute replay', maxAgeDays: 10,
+      hint: curve.replay_pending ?? 'the latest replayed expiry; the replay is an after-close job (O-T16)' })
     : { state: 'offline' as const, source: 'Breeze 1-minute replay', asOf: null, hint: curve?.note ?? 'no replay stored yet' }
+  const nextWords = !d || d.is_expiry_day || !d.next_expiry ? null
+    : `On ${weekday(d.next_expiry)} ${d.next_expiry} this page follows the expiring series live through the session: ` +
+      'OI unwind by strike, the max-pain drift, the straddle tracker against the curve below, the intraday PCR path and the ' +
+      'pin-risk strikes, from the stored 2-minute tape (09:15–15:30 IST).'
   return (
     <div data-xpry={symbol}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
@@ -84,44 +100,57 @@ export function ExpiryDay({ symbol: symbolProp }: { symbol?: string }) {
       </div>
       {err && <div style={{ marginBottom: 8 }}><Notice color={T.amber}>Expiry view unavailable: {err}</Notice></div>}
       {!err && reason && <div style={{ marginBottom: 8 }}><Notice color={T.amber}>Expiry view unavailable: {reason}</Notice></div>}
-      {d && <div style={{ fontSize: 12, color: T.text, marginBottom: 10 }} data-xpry-words>{expiryWords(d)}</div>}
+      {d && <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }} data-xpry-words>{expiryWords(d)}</div>}
+      {nextWords && <div style={{ fontSize: 11, color: T.muted, marginBottom: 10 }} data-xpry-next>{nextWords}</div>}
 
       {d?.is_expiry_day && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12, marginBottom: 12 }}>
-          <Panel title="OI unwind by strike" accent={T.cyan} source={tapeSource(d.chip, now)} badge="context"
-            subtitle={live?.snapshots ? `${live.first} → ${live.last} IST · ${live.snapshots} snapshots` : 'no snapshot yet'}>
-            {since.late && <div style={{ fontSize: 10, color: T.amber, marginBottom: 4 }}>Change {since.text}.</div>}
-            {unwind.length ? <>
-              <div style={{ display: 'flex', gap: 14, fontFamily: T.mono, fontSize: 11, marginBottom: 6 }}>
-                <span>calls {fmtOi(totals.ceNow, null, false)} <span style={{ color: T.dim }}>({totals.cePct == null ? '—' : `${totals.cePct >= 0 ? '+' : '−'}${Math.abs(totals.cePct).toFixed(1)} %`})</span></span>
-                <span>puts {fmtOi(totals.peNow, null, false)} <span style={{ color: T.dim }}>({totals.pePct == null ? '—' : `${totals.pePct >= 0 ? '+' : '−'}${Math.abs(totals.pePct).toFixed(1)} %`})</span></span>
-                <span style={{ color: T.dim }}>shares, strikes near spot</span>
+          <ExpandableChart title="OI unwind by strike" accent={T.cyan} source={tapeSource(d.chip, now)} badges={[{ label: 'context' }]}
+            legend={live?.snapshots ? `${live.first} → ${live.last} IST · ${live.snapshots} snapshots` : 'no snapshot yet'}
+            height={Math.max(300, unwind.length * 13 + 118)}>
+            {({ height: boxH }) => unwind.length ? (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, minWidth: 0 }}>
+                {since.late && <div style={{ fontSize: 10, color: T.amber, marginBottom: 4, flex: 'none' }}>Change {since.text}.</div>}
+                <div style={{ display: 'flex', gap: 14, fontFamily: T.mono, fontSize: 11, marginBottom: 6, flex: 'none' }}>
+                  <span>calls {fmtOi(totals.ceNow, null, false)} <span style={{ color: T.dim }}>({totals.cePct == null ? '—' : `${totals.cePct >= 0 ? '+' : '−'}${Math.abs(totals.cePct).toFixed(1)} %`})</span></span>
+                  <span>puts {fmtOi(totals.peNow, null, false)} <span style={{ color: T.dim }}>({totals.pePct == null ? '—' : `${totals.pePct >= 0 ? '+' : '−'}${Math.abs(totals.pePct).toFixed(1)} %`})</span></span>
+                  <span style={{ color: T.dim }}>shares, strikes near spot</span>
+                </div>
+                <div style={{ flex: 1, minHeight: 0 }}>
+                  <StrikeBars strikes={unwind.map(r => r.strike)} ce={unwind.map(r => r.ce_chg_open)} pe={unwind.map(r => r.pe_chg_open)}
+                    mark={live?.spot ?? null} fmt={lotless} height={Math.max(160, boxH - (since.late ? 96 : 78))}
+                    ariaLabel="OI change since the first snapshot by strike" />
+                </div>
+                <div style={note()}><span style={{ color: CALL_COLOR }}>calls</span> · <span style={{ color: PUT_COLOR }}>puts</span> · faded = OI leaving · dashed = spot. {sentence(DESCRIBES)}.</div>
               </div>
-              <StrikeBars strikes={unwind.map(r => r.strike)} ce={unwind.map(r => r.ce_chg_open)} pe={unwind.map(r => r.pe_chg_open)} mark={live?.spot ?? null} fmt={lotless}
-                ariaLabel="OI change since the first snapshot by strike" />
-              <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}><span style={{ color: CALL_COLOR }}>calls</span> · <span style={{ color: PUT_COLOR }}>puts</span> · faded = OI leaving · dashed = spot. {sentence(DESCRIBES)}.</div>
-            </> : <div style={{ fontSize: 11, color: T.muted }}>The tape has not stored the expiring series yet today (09:15–15:30 IST, every 2 minutes when the budget allows).</div>}
-          </Panel>
-          <Panel title="Max pain through the day" accent={T.violet} source={tapeSource(d.chip, now)} badge="context"
-            subtitle="vs the forward">
-            {(live?.path ?? []).length ? <>
-              <SessionChart height={170} ariaLabel="max pain and forward through the expiry day"
-                series={[{ label: 'forward', color: T.text, x: (live?.path ?? []).map(p => minuteOf(p.ist) ?? 0), y: (live?.path ?? []).map(p => p.forward), w: 1.3 },
-                         { label: 'max pain', color: T.violet, x: (live?.path ?? []).map(p => minuteOf(p.ist) ?? 0), y: (live?.path ?? []).map(p => p.max_pain), w: 1.5 }]} />
-              <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}><span style={{ color: T.text }}>— forward</span> · <span style={{ color: T.violet }}>— max pain</span>: the strike where option holders&apos; intrinsic value at settlement would be smallest.
-                Max pain is arithmetic on the open interest in the snapshot; settlement is not drawn to it. {sentence(DESCRIBES)}.</div>
-            </> : <div style={{ fontSize: 11, color: T.muted }}>No path yet.</div>}
-          </Panel>
-          <Panel title="Straddle decay vs past expiry days" accent={T.amber} source={decay.length ? tapeSource(d.chip, now) : curveSrc} badge="context"
-            subtitle={`at ${fmtNum(live?.open_strike, 0)} · % of its first value`}>
-            <SessionChart height={180} lUnit="%" ariaLabel="straddle decay against the historical expiry-day curve"
-              band={curvePts.length ? { x: curvePts.map(p => p.minute), lo: curvePts.map(p => p.p25), hi: curvePts.map(p => p.p75) } : undefined}
-              series={[{ label: 'median of past expiry days', color: T.muted, x: curvePts.map(p => p.minute), y: curvePts.map(p => p.median), dash: '4 3', w: 1.2 },
-                       { label: 'today', color: T.amber, x: decayX, y: decay.map(p => p.pct_of_open), w: 1.8 }]} />
-            <div style={{ fontSize: 10, color: T.muted, marginTop: 4 }}><span style={{ color: T.amber }}>— today</span>: the straddle at the opening ATM strike as % of its first snapshot · <span style={{ color: T.muted }}>┄ median</span> and band (middle half) of {curve?.n ?? 0} past expiry days{curve?.start_minute ? `, each rebased to ${minuteLabel(curve.start_minute)} (today's first snapshot)` : ''}</div>
-            <div style={{ fontSize: 11, color: T.text, marginTop: 4 }}>{decayVsCurve(live?.vs_curve) ?? (curve?.n ? 'Today has no snapshot to compare yet.' : 'No past expiry day replayed yet.')}</div>
-            <div style={{ fontSize: 10, color: T.dim, marginTop: 2 }}>{curve?.note?.split('; rebased')[0]}</div>
-          </Panel>
+            ) : <div style={{ fontSize: 11, color: T.muted }}>The tape has not stored the expiring series yet today (09:15–15:30 IST, every 2 minutes when the budget allows).</div>}
+          </ExpandableChart>
+          <ExpandableChart title="Max pain · PCR through the day" accent={T.violet} source={tapeSource(d.chip, now)} badges={[{ label: 'context' }]}
+            legend={<span><span style={{ color: T.text }}>— forward</span> · <span style={{ color: T.violet }}>— max pain</span> (L) · ┄ PCR (R)</span>}
+            height={Math.max(300, unwind.length * 13 + 118)}>
+            {path.length ? (
+              <ChartWithNotes
+                chart={<SessionChart height={170} date={d.date} ariaLabel="max pain, forward and PCR through the expiry day"
+                  series={[{ label: 'forward', color: T.text, x: pathX, y: path.map(p => p.forward), w: 1.3 },
+                           { label: 'max pain', color: T.violet, x: pathX, y: path.map(p => p.max_pain), w: 1.5 },
+                           { label: 'PCR', color: T.muted, x: pathX, y: path.map(p => p.pcr), axis: 'R', w: 1, dash: '3 3' }]} />}
+                below={<div style={note()}>Max pain: the strike where option holders&apos; intrinsic value at settlement would be smallest — arithmetic
+                  on the open interest in the snapshot; settlement is not drawn to it. PCR: put OI ÷ call OI in the snapshot. {sentence(DESCRIBES)}.</div>} />
+            ) : <div style={{ fontSize: 11, color: T.muted }}>No path yet.</div>}
+          </ExpandableChart>
+          <ExpandableChart title="Straddle tracker vs past expiry days" accent={T.amber} source={decay.length ? tapeSource(d.chip, now) : curveSrc} badges={[{ label: 'context' }]}
+            legend={`priced at ${fmtNum(live?.open_strike, 0)} · % of its first value`} height={320}>
+            <ChartWithNotes
+              chart={<SessionChart height={170} lUnit="%" date={d.date} ariaLabel="today's straddle against the historical expiry-day curve"
+                band={curvePts.length ? { x: curvePts.map(p => p.minute), lo: curvePts.map(p => p.p25), hi: curvePts.map(p => p.p75) } : undefined}
+                series={[{ label: 'median of past expiry days', color: T.muted, x: curvePts.map(p => p.minute), y: curvePts.map(p => p.median), dash: '4 3', w: 1.2 },
+                         { label: 'today', color: T.amber, x: decayX, y: decay.map(p => p.pct_of_open), w: 1.8 }]} />}
+              below={<>
+                <div style={note(T.muted)}><span style={{ color: T.amber }}>— today</span>: the straddle at the opening ATM strike as priced, % of its first snapshot · <span style={{ color: T.muted }}>┄ median</span> and band (middle half) of {curve?.n ?? 0} past expiry days{curve?.start_minute ? `, each rebased to ${minuteLabel(curve.start_minute)} (today's first snapshot)` : ''}</div>
+                <div style={{ fontSize: 11, color: T.text, marginTop: 4, flex: 'none' }}>{decayVsCurve(live?.vs_curve) ?? (curve?.n ? 'Today has no snapshot to compare yet.' : 'No past expiry day replayed yet.')}</div>
+                <div style={note()}>{curve?.note?.split('; rebased')[0]}{curve?.replay_pending ? ` · ${curve.replay_pending}` : ''}</div>
+              </>} />
+          </ExpandableChart>
           <Panel title="Pin risk" accent={T.cyan} source={tapeSource(d.chip, now)} badge="context" subtitle="largest OI within ±1 % of spot">
             <DataTable dense columns={pinCols} rows={live?.pin_risk ?? []} rowKey={r => String(r.strike)} empty="no strike near spot in the snapshot" />
             <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>A settlement near a strike with large open interest leaves writers unsure whether they are
@@ -132,14 +161,19 @@ export function ExpiryDay({ symbol: symbolProp }: { symbol?: string }) {
 
       {!d?.is_expiry_day && d && (
         <div style={{ marginBottom: 12 }}>
-          <Panel title="The expiry-day straddle curve" accent={T.amber} source={curveSrc} badge="context"
-            subtitle={`median and middle half of ${curve?.n ?? 0} replayed expiry days (straddle at the opening strike, % of its 09:15 value)`}>
-            {curvePts.length ? <SessionChart height={170} lUnit="%" ariaLabel="historical expiry-day straddle curve"
-              band={{ x: curvePts.map(p => p.minute), lo: curvePts.map(p => p.p25), hi: curvePts.map(p => p.p75) }}
-              series={[{ label: 'median', color: T.amber, x: curvePts.map(p => p.minute), y: curvePts.map(p => p.median), w: 1.5 }]} />
-              : <div style={{ fontSize: 11, color: T.muted }}>No expiry day replayed yet: the replay is an after-close job (Breeze 1-minute bars of past expiries, O-T16). Today&apos;s line joins it on the next expiry day.</div>}
-            <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>{curve?.note}{curve?.note ? '. ' : ''}{sentence(DESCRIBES)}.</div>
-          </Panel>
+          <ExpandableChart title="The expiry-day straddle curve" accent={T.amber} source={curveSrc} badges={[{ label: 'context' }]}
+            legend={`median and middle half of ${curve?.n ?? 0} replayed expiry days · % of the 09:15 straddle`} height={300}>
+            {curvePts.length ? (
+              <ChartWithNotes
+                chart={<SessionChart height={170} lUnit="%" date={d.date} ariaLabel="historical expiry-day straddle curve"
+                  band={{ x: curvePts.map(p => p.minute), lo: curvePts.map(p => p.p25), hi: curvePts.map(p => p.p75) }}
+                  series={[{ label: 'median', color: T.amber, x: curvePts.map(p => p.minute), y: curvePts.map(p => p.median), w: 1.5 }]} />}
+                below={<>
+                  <div style={note()}>{curve?.note}{curve?.note ? '. ' : ''}{sentence(DESCRIBES)}.</div>
+                  {curve?.replay_pending && <div style={note(T.amber)}>{curve.replay_pending}.</div>}
+                </>} />
+            ) : <div style={{ fontSize: 11, color: T.muted }}>No expiry day replayed yet: the replay is an after-close job (Breeze 1-minute bars of past expiries, O-T16). The next expiry day&apos;s line joins it once replayed.</div>}
+          </ExpandableChart>
         </div>
       )}
 

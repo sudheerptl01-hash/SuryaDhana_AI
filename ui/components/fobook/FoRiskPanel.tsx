@@ -7,16 +7,33 @@
  * revaluation beside it, IV-shock and gap scenarios (instant revaluation), and SPAN margin utilisation from POST
  * /api/options/margin (BREEZE / NSE SPAN FILE / HEURISTIC, as answered). Backend: GET /api/risk/fo.
  * Every number is arithmetic on the paper book; history describes, does not predict. PAPER ONLY.
+ *
+ * FINAL ROUND wave B (B-COCKPIT, O-F3): this panel now carries two sub-views — F&O (the risk panel below,
+ * unchanged, plus the SPEC §4 scenario strip) and DISCIPLINE (the risk cockpit, components/risk/Discipline).
+ * The sub-view rides `?sub=` like DERV › VOL does, so the GO hand-off and the banner's REVIEW RULES land here.
  */
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { apiError } from '@/lib/errors'
-import { BadgeChip, Btn, ErrorBox, Grid, KV, Label, Loading, Notice, Panel, Stat, T, fmtInr } from '@/components/terminal'
+import { BadgeChip, Btn, ErrorBox, Grid, KV, Label, Loading, Notice, Panel, Stat, T, Tabs, fmtInr, useSubView } from '@/components/terminal'
+import { Discipline } from '@/components/risk/Discipline'
 import { getRiskFo, type RiskFo } from './api'
 import { bookSource } from './PaperBook'
 
 const pnlColor = (v: number | null | undefined) => v == null || v === 0 ? T.text : v > 0 ? T.green : T.red
 
+const SUBS = ['fo', 'discipline'] as const
+
 export function FoRiskPanel() {
+  const [sub, setSub] = useSubView(SUBS, 'fo')
+  return (
+    <div style={{ display: 'grid', gap: 10 }} data-rsk-fo-subs>
+      <Tabs items={[{ id: 'fo', label: 'F&O risk' }, { id: 'discipline', label: 'Discipline' }]} active={sub} onChange={setSub} />
+      {sub === 'discipline' ? <Discipline /> : <FoRiskBody />}
+    </div>
+  )
+}
+
+function FoRiskBody() {
   const [data, setData] = useState<RiskFo | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -44,6 +61,8 @@ export function FoRiskPanel() {
       {data && data.empty && <Notice color={T.muted}>{data.message}</Notice>}
       {data && !data.empty && g && (
         <div style={{ display: 'grid', gap: 10 }} data-rsk-fo>
+          {/* The scenario strip lives on the paper book (SPEC §4) and not here: this view's own scenarios
+              table below already carries the same ±1/±2 % / IV ±5 / T−1 numbers (one number once per page). */}
           <Grid cols={6}>
             <Stat big={false} label="₹ per 1 % move" value={fmtInr(g.total.delta_inr_per_1pct, 0)} sub="Δ × forward × 1 %, all underlyings together" />
             <Stat big={false} label="Γ P&L of a 1 % move" value={fmtInr(g.total.gamma_pnl_1pct_inr, 0)} sub="½·Γ·(1 % of the forward)²" />

@@ -9,9 +9,12 @@
  *  - the latest stored bid / ask and the change vs the previous session per strike near the forward.
  * `context` (OI, PCR, max pain, straddle path) / `arithmetic` (IV); the chip is DELAYED with the snapshot's age, never LIVE
  * (stored snapshots, not a stream); nothing here feeds a trade. Times are IST.
+ * FINAL ROUND wave B (B-XPRY): the two session charts are on the interactive kit (wheel zoom · pan · crosshair · expand ·
+ * PNG) and share the `omon-live` link group (one calendar); the strike ladder zooms and reports strike + OI on hover.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Chip, DataTable, Notice, Panel, T, fmtNum, type Column, type SourceInfo } from '@/components/terminal'
+import { ExpandableChart } from '@/components/terminal/ExpandableChart'
 import { getOiTape, storeReason, tapeError } from './api'
 import { CALL_COLOR, PUT_COLOR, SessionChart, StrikeBars } from './charts'
 import { DESCRIBES, fmtOi, fmtSignedOi, frameAt, sentence, sinceLabel, tapeSeries, tapeSource, type OiTape as Tape, type StrikeRow } from './tapeModel'
@@ -80,21 +83,21 @@ export function OiTape({ symbol, enabled, expiry }: { symbol: string; enabled: b
       {since.late && last && <div style={{ marginBottom: 6 }}><Notice color={T.amber}>The first snapshot today is {d?.first} IST, not the 09:15 open: &quot;since the open&quot; below means since {d?.first}.</Notice></div>}
       {last && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(230px, 1fr)', gap: 12, alignItems: 'start' }}>
-          <div>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>
-              <span style={{ color: T.cyan }}>— ATM IV %</span> (left) · <span style={{ color: T.amber }}>— straddle ₹ at the moving ATM</span> · <span style={{ color: T.amber }}>┄ at the opening strike {fmtNum(first?.open_strike, 0)}</span> (right)
-            </div>
-            <SessionChart height={160} lUnit="%" ariaLabel="intraday ATM IV and straddle"
-              series={[{ label: 'ATM IV', color: T.cyan, x: series.x, y: series.iv, w: 1.7 },
-                       { label: 'straddle', color: T.amber, x: series.x, y: series.straddle, axis: 'R', w: 1.1 },
-                       { label: 'straddle @ open strike', color: T.amber, x: series.x, y: series.straddleOpen, axis: 'R', w: 1, dash: '4 3' }]} />
-            <div style={{ fontSize: 10, color: T.muted, margin: '6px 0 4px' }}>
-              <span style={{ color: T.text }}>— forward</span> · <span style={{ color: T.violet }}>— max pain</span> (left) · <span style={{ color: T.muted }}>┄ PCR</span> (right)
-            </div>
-            <SessionChart height={120} ariaLabel="forward, max pain and PCR through the day"
-              series={[{ label: 'forward', color: T.text, x: series.x, y: series.fwd, w: 1.3 },
-                       { label: 'max pain', color: T.violet, x: series.x, y: series.maxPain, w: 1.3 },
-                       { label: 'PCR', color: T.muted, x: series.x, y: series.pcr, axis: 'R', w: 1, dash: '3 3' }]} />
+          <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
+            <ExpandableChart title="ATM IV · straddle" accent={T.cyan} height={180}
+              legend={<span><span style={{ color: T.cyan }}>— ATM IV %</span> (L) · <span style={{ color: T.amber }}>— straddle ₹ at the moving ATM</span> · <span style={{ color: T.amber }}>┄ at the opening strike {fmtNum(first?.open_strike, 0)}</span> (R)</span>}>
+              <SessionChart height={160} lUnit="%" ariaLabel="intraday ATM IV and straddle" date={d?.date} linkGroup="omon-live"
+                series={[{ label: 'ATM IV', color: T.cyan, x: series.x, y: series.iv, w: 1.7 },
+                         { label: 'straddle', color: T.amber, x: series.x, y: series.straddle, axis: 'R', w: 1.1 },
+                         { label: 'straddle @ open strike', color: T.amber, x: series.x, y: series.straddleOpen, axis: 'R', w: 1, dash: '4 3' }]} />
+            </ExpandableChart>
+            <ExpandableChart title="Forward · max pain · PCR" accent={T.violet} height={140}
+              legend={<span><span style={{ color: T.text }}>— forward</span> · <span style={{ color: T.violet }}>— max pain</span> (L) · <span style={{ color: T.muted }}>┄ PCR</span> (R)</span>}>
+              <SessionChart height={120} ariaLabel="forward, max pain and PCR through the day" date={d?.date} linkGroup="omon-live"
+                series={[{ label: 'forward', color: T.text, x: series.x, y: series.fwd, w: 1.3 },
+                         { label: 'max pain', color: T.violet, x: series.x, y: series.maxPain, w: 1.3 },
+                         { label: 'PCR', color: T.muted, x: series.x, y: series.pcr, axis: 'R', w: 1, dash: '3 3' }]} />
+            </ExpandableChart>
           </div>
           <div style={{ fontFamily: T.mono, fontSize: 11, display: 'grid', gap: 5 }}>
             <div>ATM IV <b style={{ color: T.text }}>{fmtNum(last.atm_iv, 2)}%</b><span style={{ color: T.dim }}>{chg(last.atm_iv, first?.atm_iv)}</span>

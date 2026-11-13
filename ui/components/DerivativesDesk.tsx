@@ -22,7 +22,7 @@
  * /api/derivatives/symbols: a DEAL pick of a cash-only name used to open DERV on an error instead of NIFTY; a stock waits
  * for the list, the indices never do); the PCR panel's walls read "OI walls · call / put" in the neutral token (m003).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { CHART_BOX, Chip, DataTable, ErrorBox, Input, Loading, Notice, PageHeader, Panel, SourceChip, Stat, T, Tabs, type Column, MINUS, fmtFixed, fmtNum, fmtPct, fmtSigned, ordinal, sourceOf, tone, useChartSize, useSubView } from '@/components/terminal'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { underlyingLiveSymbol } from '@/components/liveModel'
@@ -31,7 +31,10 @@ import { ExpiryDay } from '@/components/expiry/ExpiryDay'
 import { basisForChart, fnoVerdict } from '@/components/vol/volModel'
 import { useActiveSymbol } from '@/lib/activeSymbol'
 import { countUnit, fmtCount } from '@/lib/format'
-import { axisTicks, textWidth } from '@/components/terminal/chart'
+import { Crosshair, axisTicks, useChartInteraction } from '@/components/terminal/chart'
+import { ExpandableChart } from '@/components/terminal/ExpandableChart'
+import { InteractiveSeries } from '@/components/terminal/InteractiveSeries'
+import { useInteractionRef, useShellWiring } from '@/components/vol/charts'
 
 const num = fmtNum
 const pct = fmtPct
@@ -76,100 +79,78 @@ function oiFmt(v: number | null | undefined): string {
   return num(v)
 }
 
-// ── charts: the repo's inline-SVG approach (MarketMonitor.BreadthChart pattern) ──────────
-type Series = { label: string; color: string; values: (number | null)[]; axis?: 'L' | 'R'; dash?: string; w?: number }
+// ── charts (FINAL ROUND W3, chart plan B8/B9): the four time-series are lightweight-charts through the kit's
+// InteractiveSeries (wheel zoom / drag pan / crosshair are LWC's own; FIT + PNG + ⛶ from the ExpandableChart shell);
+// the rollover curve keeps SVG (its x-axis is DTE, not time) and gains the SVG kit v2 interaction below. ──────────
 
-function TsChart({ dates, series, height = 230, zero = false, rPct = false, lUnit = '', rUnit = '' }: {
-  dates: string[]; series: Series[]; height?: number; zero?: boolean; rPct?: boolean
-  /** suffix on the left / right axis labels ('%' for the basis): RUP-11 */
-  lUnit?: string; rUnit?: string
-}) {
-  // drawn in CSS px (C1-17): 10 px axis text at any width; round ticks; month labels thinned to fit
-  const { ref, w: W, h: H } = useChartSize(1000, height, { maxRatio: 1.25 })
-  const padL = 58, padR = 46, top = 10, chartH = H - 46
-  const vals = (axis: 'L' | 'R') => series.filter(s => (s.axis ?? 'L') === axis)
-    .flatMap(s => s.values).filter((v): v is number => v != null && Number.isFinite(v))
-  const lv = vals('L'), rv = vals('R')
-  let lLo = Math.min(...lv), lHi = Math.max(...lv)
-  if (!lv.length) { lLo = 0; lHi = 1 }
-  if (zero) { lLo = Math.min(lLo, 0); lHi = Math.max(lHi, 0) }
-  const lPad = (lHi - lLo || 1) * 0.06; lLo -= lPad; lHi += lPad
-  let rLo = rv.length ? Math.min(...rv) : 0, rHi = rv.length ? Math.max(...rv) : 1
-  if (rPct) { rLo = 0; rHi = Math.max(rHi, 1) }
-  const rPad = (rHi - rLo || 1) * 0.06
-  if (!rPct) { rLo -= rPad; rHi += rPad } else rHi += rPad
-  const x = (i: number) => padL + (i / Math.max(dates.length - 1, 1)) * (W - padL - padR)
-  const yL = (v: number) => top + (1 - (v - lLo) / (lHi - lLo || 1)) * chartH
-  const yR = (v: number) => top + (1 - (v - rLo) / (rHi - rLo || 1)) * chartH
-  const path = (s: Series) => {
-    const y = (s.axis ?? 'L') === 'L' ? yL : yR
-    return s.values.map((v, i) => (v == null || !Number.isFinite(v) ? '' :
-      `${i === 0 || s.values[i - 1] == null ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`)).join('')
-  }
-  const months = dates.map((d, i) => ({ i, m: d.slice(0, 7) })).filter((p, i, a) => i === 0 || p.m !== a[i - 1].m)
-  const monthPitch = months.length > 1 ? (W - padL - padR) / months.length : W
-  const every = Math.max(1, Math.ceil(56 / Math.max(monthPitch, 1)), Math.ceil(months.length / 14))
-  // R11 / RUP-11: round ticks over the PADDED range the axis draws (the headroom can hold the −40 of a −38 basis),
-  // about one per 30 px of chart height and never fewer than 3, printed with their unit ('%' on the basis only) and
-  // U+2212. They used to be lo+pad / mid / hi−pad (70 / 16 / −38), then ≤ 6 ticks inside the unpadded data range.
-  const lAxis = axisTicks(lLo, lHi, chartH)
-  const rAxis = rv.length ? axisTicks(rLo, rHi, chartH) : { ticks: [] as number[], dp: 0 }
-  return (
-    <div ref={ref} style={CHART_BOX}>
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }} role="img" aria-label="time series">
-      {lAxis.ticks.map(v => (
-        <g key={`l${v}`}>
-          <line x1={padL} x2={W - padR} y1={yL(v)} y2={yL(v)} stroke={T.border} strokeDasharray="2 4" />
-          <text x={padL - 6} y={yL(v) + 3} fill={T.dim} fontSize={10} fontFamily={T.mono} textAnchor="end">{fmtFixed(v, lAxis.dp)}{lUnit}</text>
-        </g>
-      ))}
-      {rAxis.ticks.map(v => (
-        <text key={`r${v}`} x={W - padR + 6} y={yR(v) + 3} fill={T.dim} fontSize={10} fontFamily={T.mono}>{fmtFixed(v, rAxis.dp)}{rUnit}</text>
-      ))}
-      {zero && lLo < 0 && lHi > 0 && (
-        <line x1={padL} x2={W - padR} y1={yL(0)} y2={yL(0)} stroke={T.borderHi} strokeDasharray="4 4" />
-      )}
-      {series.map(s => (
-        <path key={s.label} d={path(s)} fill="none" stroke={s.color} strokeWidth={s.w ?? 1.5}
-              strokeDasharray={s.dash} opacity={0.95} />
-      ))}
-      {months.filter((_, k) => k % every === 0).filter(p => x(p.i) + textWidth('Mmm 26', 10) <= W).map(p => (
-        <text key={p.m} x={x(p.i)} y={H - 6} fill={T.dim} fontSize={10} fontFamily={T.mono}>
-          {new Date(`${p.m}-01`).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
-        </text>
-      ))}
-    </svg>
-    </div>
-  )
-}
-
-/** Rollover % vs days-to-expiry: this cycle against the average of the prior ones. */
-function RollCurve({ now, avg }: { now: RollRow[]; avg: { dte: number; roll_pct: number }[] }) {
+/**
+ * Rollover % vs days-to-expiry: this cycle against the average of the prior ones. SVG kit v2 (charts/PLAN.md §4):
+ * wheel + pinch zoom and drag pan over the DTE axis, double-click reset, and a nearest-point crosshair that prints
+ * T−DTE with this cycle's rollover % beside the prior-cycle average in the panel legend (never tooltip-only).
+ */
+function RollCurve({ now, avg, lUnit = '%' }: { now: RollRow[]; avg: { dte: number; roll_pct: number }[]; lUnit?: string }) {
   const { ref, w: W, h: H } = useChartSize(1000, 230, { maxRatio: 1.25 })   // CSS px (C1-17)
+  const { box, setRef } = useInteractionRef(ref)
+  const clipId = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const padL = 48, padR = 16, top = 10, chartH = H - 46
+  const plotW = W - padL - padR
   const maxDte = Math.max(25, ...now.map(r => r.dte), ...avg.map(a => a.dte))
-  const x = (dte: number) => padL + (1 - dte / maxDte) * (W - padL - padR)   // expiry (dte 0) at the right
-  const y = (v: number) => top + (1 - v / 100) * chartH
+  // the interaction domain rises to the right (u = maxDte − dte), so the expiry (T−0) stays at the right edge
+  const nowPts = useMemo(() => [...now].filter(r => r.roll_pct != null).sort((a, b) => b.dte - a.dte), [now])
+  const ia = useChartInteraction(box, { min: 0, max: maxDte }, { points: nowPts.map(r => maxDte - r.dte) })
+  ia.setPlot(padL, plotW)
+  const view = ia.view
+  const x = (dte: number) => padL + ((maxDte - dte - view.min) / (view.max - view.min || 1)) * plotW
+  // R11-style y-axis: round ticks over the padded range, one per ~30 px, the % unit on every label
+  const allVals = [...now.map(r => r.roll_pct), ...avg.map(a => a.roll_pct)].filter((v): v is number => v != null && Number.isFinite(v))
+  let lLo = 0, lHi = Math.max(100, ...allVals)
+  const lPad = (lHi - lLo || 1) * 0.05; lLo -= lPad; lHi += lPad
+  const lAxis = axisTicks(lLo, lHi, chartH)
+  const y = (v: number) => top + (1 - (v - lLo) / (lHi - lLo || 1)) * chartH
   const line = (pts: { dte: number; v: number | null }[]) => pts
     .sort((a, b) => b.dte - a.dte)
     .map((p, i, a) => (p.v == null ? '' : `${i === 0 || a[i - 1].v == null ? 'M' : 'L'}${x(p.dte).toFixed(1)},${y(p.v).toFixed(1)}`)).join('')
+  // T−d labels at round DTEs inside the visible window
+  const dteLo = Math.max(0, maxDte - view.max), dteHi = maxDte - view.min
+  const dteTicks = axisTicks(dteLo, dteHi, Math.max(60, plotW / 2.2)).ticks.filter(d => d >= 0 && Number.isInteger(d))
+  const cr = ia.cursor != null ? nowPts[ia.cursor.i] ?? null : null
+  const crVisible = cr != null && maxDte - cr.dte >= view.min - 0.5 && maxDte - cr.dte <= view.max + 0.5
+  const avgAt = cr ? avg.find(a => a.dte === cr.dte)?.roll_pct ?? null : null
+  const readout = !crVisible || cr == null ? null : (
+    <span>
+      <span style={{ color: T.dim }}>T−{cr.dte}</span> · this cycle <b style={{ color: T.amber, fontWeight: 400 }}>{num(cr.roll_pct, 1)}%</b>
+      <span> · prior cycles {avgAt != null ? `${num(avgAt, 1)}%` : '—'}</span>
+    </span>
+  )
+  const hasShell = useShellWiring(readout, ia.reset)
   return (
-    <div ref={ref} style={CHART_BOX}>
+    <div ref={setRef} style={{ ...CHART_BOX, position: 'relative', touchAction: 'none', cursor: 'crosshair' }}>
+    {!hasShell && readout && (
+      <div style={{ position: 'absolute', top: 2, right: 8, fontFamily: T.mono, fontSize: 10, color: T.muted,
+                    background: 'rgba(10,13,19,0.88)', border: `1px solid ${T.border}`, padding: '1px 6px',
+                    pointerEvents: 'none', zIndex: 2 }}>{readout}</div>
+    )}
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }} role="img" aria-label="rollover curve">
-      {[0, 25, 50, 75, 100].map(v => (
+      <defs><clipPath id={clipId}><rect x={padL} y={0} width={Math.max(plotW, 0)} height={H} /></clipPath></defs>
+      {lAxis.ticks.map(v => (
         <g key={v}>
           <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke={T.border} strokeDasharray="2 4" />
-          <text x={padL - 6} y={y(v) + 3} fill={T.dim} fontSize={10} fontFamily={T.mono} textAnchor="end">{v}%</text>
+          <text x={padL - 6} y={y(v) + 3} fill={T.dim} fontSize={10} fontFamily={T.mono} textAnchor="end">{fmtFixed(v, lAxis.dp)}{lUnit}</text>
         </g>
       ))}
-      {[maxDte, Math.round(maxDte / 2), 5, 0].map(d => (
+      {dteTicks.map(d => (
         <text key={d} x={x(d)} y={H - 6} fill={T.dim} fontSize={10} fontFamily={T.mono} textAnchor="middle">T−{d}</text>
       ))}
-      <path d={line(avg.map(a => ({ dte: a.dte, v: a.roll_pct })))} fill="none" stroke={T.muted} strokeWidth={1.4} strokeDasharray="5 4" />
-      <path d={line(now.map(r => ({ dte: r.dte, v: r.roll_pct })))} fill="none" stroke={T.amber} strokeWidth={2} />
-      {now.length > 0 && now[now.length - 1].roll_pct != null && (
-        <circle cx={x(now[now.length - 1].dte)} cy={y(now[now.length - 1].roll_pct!)} r={3.5} fill={T.amber} />
-      )}
+      <g clipPath={`url(#${clipId})`}>
+        <path d={line(avg.map(a => ({ dte: a.dte, v: a.roll_pct })))} fill="none" stroke={T.muted} strokeWidth={1.4} strokeDasharray="5 4" />
+        <path d={line(now.map(r => ({ dte: r.dte, v: r.roll_pct })))} fill="none" stroke={T.amber} strokeWidth={2} />
+        {now.length > 0 && now[now.length - 1].roll_pct != null && (
+          <circle cx={x(now[now.length - 1].dte)} cy={y(now[now.length - 1].roll_pct!)} r={3.5} fill={T.amber} />
+        )}
+        {crVisible && cr != null && cr.roll_pct != null && (
+          <Crosshair x={x(cr.dte)} y={y(cr.roll_pct)} top={top} height={chartH} left={padL} width={plotW} />
+        )}
+      </g>
     </svg>
     </div>
   )
@@ -202,12 +183,15 @@ function TermPanel({ term, basis, basisNote }: { term: TermStructure; basis: Bas
       <div style={{ padding: 12, borderTop: `1px solid ${T.border}` }}>
         {basis.length > 0 ? (
           <>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 6 }}>
-              NEAR-MONTH ANNUALIZED BASIS % — {basis[0].date} → {basis[basis.length - 1].date}
-              <span style={{ color: T.dim }}> · amber = annualized basis (left) · above 0 = contango (longs pay carry) · sessions ≥ 3 days to expiry only (annualising the last 1–2 days divides by noise and set the axis)</span>
+            <ExpandableChart title="Near-month annualized basis %" height={210}
+              legend={<span style={{ color: T.dim }}>amber = annualized basis · {basis[0].date} → {basis[basis.length - 1].date}</span>}>
+              <InteractiveSeries height={210} ariaLabel="annualized basis history"
+                series={[{ id: 'basis', label: 'basis ann', color: T.amber, w: 2, format: v => `${fmtFixed(v, 1)}%`,
+                           points: basisForChart(basis, 3).map((v, i) => ({ t: basis[i].date, v })) }]} />
+            </ExpandableChart>
+            <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>
+              above 0 = contango (longs pay carry) · sessions ≥ 3 days to expiry only (annualising the last 1–2 days divides by noise and set the axis)
             </div>
-            <TsChart dates={basis.map(r => r.date)} zero height={210} lUnit="%"
-              series={[{ label: 'basis ann %', color: T.amber, values: basisForChart(basis, 3), w: 1.6 }]} />
           </>
         ) : basisNote ? <Notice color={T.violet}>{basisNote}</Notice> : <Loading label="Basis history" />}
       </div>
@@ -249,12 +233,10 @@ function RolloverPanel({ roll, term }: { roll: Rollover; term: TermStructure }) 
                 sub={`next ${fmtCount(c.next_oi, u)} · far ${fmtCount(c.far_oi, u)}`} />) })()}
             <Stat label="Near expiry" value={c.near_expiry.slice(5)} accent={T.amber} sub={`${c.dte} calendar days`} />
           </div>
-          <div>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 6 }}>
-              ROLLOVER % BY DAYS TO EXPIRY — <span style={{ color: T.amber }}>amber = this cycle</span> · <span style={{ color: T.dim }}>dashed = average of prior cycles</span>
-            </div>
-            <RollCurve now={roll.curve_now} avg={roll.curve_avg} />
-          </div>
+          <ExpandableChart title="Rollover % by days to expiry" height={230}
+            legend={<span><span style={{ color: T.amber }}>amber = this cycle</span> · <span style={{ color: T.dim }}>dashed = average of prior cycles</span></span>}>
+            <RollCurve now={roll.curve_now} avg={roll.curve_avg} lUnit="%" />
+          </ExpandableChart>
           <DataTable columns={histCols} rows={[...roll.history].reverse()} rowKey={r => r.expiry} dense
             maxHeight={240} empty="No completed expiries in the panel yet" />
         </div>
@@ -284,25 +266,21 @@ function PcrPanel({ symbol, pcrRows, optHist, maxPain }: {
           </div>
         )}
         {optHist && optHist.length > 0 && (
-          <div>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 6 }}>
-              NEAR-EXPIRY MAX PAIN VS SPOT — <span style={{ color: T.amber }}>amber = spot</span> · <span style={{ color: T.violet }}>violet = max pain</span> · <span style={{ color: T.cyan }}>cyan = chain PCR (right)</span>
-            </div>
-            <TsChart dates={optHist.map(r => r.date)} rPct height={230} series={[
-              { label: 'spot', color: T.amber, values: optHist.map(r => r.spot), w: 1.8 },
-              { label: 'max pain', color: T.violet, values: optHist.map(r => r.max_pain), w: 1.4 },
-              { label: 'pcr', color: T.cyan, values: optHist.map(r => r.pcr), axis: 'R', w: 1.1 },
+          <ExpandableChart title="Near-expiry max pain vs spot" height={230}
+            legend={<span><span style={{ color: T.amber }}>amber = spot</span> · <span style={{ color: T.violet }}>violet = max pain</span> · <span style={{ color: T.cyan }}>cyan = chain PCR (left)</span></span>}>
+            <InteractiveSeries height={230} ariaLabel="max pain vs spot history" series={[
+              { id: 'spot', label: 'spot', color: T.amber, w: 2, points: optHist.map(r => ({ t: r.date, v: r.spot })), format: v => fmtNum(v, 0) },
+              { id: 'maxpain', label: 'max pain', color: T.violet, points: optHist.map(r => ({ t: r.date, v: r.max_pain })), format: v => fmtNum(v, 0) },
+              { id: 'pcr', label: 'chain PCR', color: T.cyan, axis: 'L', points: optHist.map(r => ({ t: r.date, v: r.pcr })), format: v => v.toFixed(2) },
             ]} />
-          </div>
+          </ExpandableChart>
         )}
         {pcrRows.length > 0 && (
-          <div>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 6 }}>
-              AGGREGATE PUT/CALL OI RATIO (all expiries) — {pcrRows[0].date} → {pcrRows[pcrRows.length - 1].date}
-            </div>
-            <TsChart dates={pcrRows.map(r => r.date)} height={190}
-              series={[{ label: 'aggregate PCR', color: T.cyan, values: pcrRows.map(r => r.pcr), w: 1.4 }]} />
-          </div>
+          <ExpandableChart title="Aggregate put/call OI ratio" height={190}
+            legend={<span style={{ color: T.dim }}>all strikes and expiries · {pcrRows[0].date} → {pcrRows[pcrRows.length - 1].date}</span>}>
+            <InteractiveSeries height={190} ariaLabel="aggregate PCR history"
+              series={[{ id: 'pcr', label: 'aggregate PCR', color: T.cyan, points: pcrRows.map(r => ({ t: r.date, v: r.pcr })), format: v => v.toFixed(2) }]} />
+          </ExpandableChart>
         )}
       </div>
     </Panel>
@@ -325,15 +303,13 @@ function VixPanel({ vix }: { vix: Vix }) {
             accent={T.muted} color={T.text}
             sub={(vix.spread ?? 0) >= 0 ? 'VIX above the 20d realized · describes, does not predict' : 'VIX below the 20d realized · describes, does not predict'} />
         </div>
-        <div>
-          <div style={{ fontSize: 10, color: T.muted, marginBottom: 6 }}>
-            <span style={{ color: T.text }}>white = INDIA VIX</span> · <span style={{ color: T.violet }}>violet = NIFTY 20d realised (close-to-close)</span>
-          </div>
-          <TsChart dates={vix.rows.map(r => r.date)} height={210} series={[
-            { label: 'VIX', color: T.text, values: vix.rows.map(r => r.vix), w: 1.7 },
-            { label: 'realized', color: T.violet, values: vix.rows.map(r => r.rv20), w: 1.3 },
+        <ExpandableChart title="VIX vs 20d realised" height={210}
+          legend={<span><span style={{ color: T.text }}>white = INDIA VIX</span> · <span style={{ color: T.violet }}>violet = NIFTY 20d realised (close-to-close)</span></span>}>
+          <InteractiveSeries height={210} ariaLabel="India VIX vs realised volatility" series={[
+            { id: 'vix', label: 'VIX', color: T.text, w: 2, points: vix.rows.map(r => ({ t: r.date, v: r.vix })), format: v => fmtFixed(v, 1) },
+            { id: 'rv', label: 'realised (cc)', color: T.violet, points: vix.rows.map(r => ({ t: r.date, v: r.rv20 })), format: v => fmtFixed(v, 1) },
           ]} />
-        </div>
+        </ExpandableChart>
       </div>
     </Panel>
   )

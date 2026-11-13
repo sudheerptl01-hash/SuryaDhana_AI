@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getOptionChain } from '@/lib/api'
 import { apiError } from '@/lib/errors'
 import { BadgeChip, Btn, Chip, ErrorBox, Input, Label, Loading, Notice, Panel, Select, T, fmtInr, type SourceInfo } from '@/components/terminal'
+import { ScenarioStrip } from '@/components/risk/ScenarioStrip'
 import { closeBook, confirmFills, confirmRoll, getBook, rollBook, type BookPayload, type BookPosition, type BookStructure, type ClosePreview, type RollPreview } from './api'
 
 const n = (v: number | null | undefined, d = 2) => v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -226,6 +227,8 @@ export function PaperBook({ refreshKey }: { refreshKey?: number }) {
           {data.structures.length === 0
             ? <Notice color={T.muted}>No paper structures yet. Build one above and press <b>BOOK PAPER</b>: the legs are written to this book (ui-api&apos;s SQLite) at the prices shown — no order is sent anywhere.</Notice>
             : <>
+                {/* risk/SPEC.md §4: scenario strip over the open book (reads /api/risk/fo itself; hides when empty) */}
+                {data.open_positions > 0 && <ScenarioStrip />}
                 <GreeksTable g={data.greeks} />
                 <div style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>
                   Book P&L <span style={{ color: pnlColor(data.totals.pnl_gross) }}>{fmtInr(data.totals.pnl_gross, 0)}</span> − costs {fmtInr(data.totals.costs, 0)} =
