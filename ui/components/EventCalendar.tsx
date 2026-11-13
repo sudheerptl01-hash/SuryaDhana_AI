@@ -46,7 +46,7 @@ function until(s: string): { text: string; color: string } {
 
 function KindChip({ kind }: { kind: string }) {
   const c = KIND_COLOR[kind] ?? T.muted
-  return <span style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: .8, color: c,
+  return <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: .8, color: c,
                         border: `1px solid ${c}55`, padding: '1px 5px', whiteSpace: 'nowrap' }}>{kind}</span>
 }
 
@@ -194,7 +194,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
         <KindChip kind={r.kind} />
         {(r.tags ?? '').split(',').filter(t => t && t !== r.kind).map(t => <KindChip key={t} kind={t} />)}
         {r.event_date === today && filedToday.has(r.symbol) && (r.kind === 'RESULTS' || (r.tags ?? '').includes('RESULTS')) && (
-          <span title="results filed with NSE today (live announcements)" style={{ fontSize: 9.5, color: T.green, border: `1px solid ${T.green}66`, padding: '0 4px' }}>
+          <span title="results filed with NSE today (live announcements)" style={{ fontSize: 10, color: T.green, border: `1px solid ${T.green}66`, padding: '0 4px' }}>
             ✓ FILED {filedToday.get(r.symbol)}</span>)}
       </span>) },
     { key: 'detail', label: 'Detail', render: r => (
@@ -209,7 +209,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
     { key: 'lastq', label: 'Last quarter', align: 'right', sort: r => lastQ[r.symbol]?.pat_yoy ?? -999,
       title: "the company's previous results (from its NSE filing): profit vs a year ago · P/E",
       render: r => { const f = lastQ[r.symbol]; if (!f) return <span style={{ color: T.dim }}>—</span>
-        return <span style={{ fontSize: 10.5 }}>{f.pat_yoy_turn ? <span style={{ color: f.pat_yoy_turn === 'to profit' ? T.green : T.red }}>{f.pat_yoy_turn}</span>
+        return <span style={{ fontSize: 11 }}>{f.pat_yoy_turn ? <span style={{ color: f.pat_yoy_turn === 'to profit' ? T.green : T.red }}>{f.pat_yoy_turn}</span>
           : <span style={{ color: f.pat_yoy == null ? T.dim : f.pat_yoy >= 0 ? T.green : T.red }}>{f.pat_yoy == null ? '—' : `${fmtSigned(f.pat_yoy, 0)}%`}</span>}
           {f.pe != null && <span style={{ color: T.dim }}> · {f.pe.toFixed(0)}×</span>}</span> } },
     { key: 'turnover_cr', label: '₹ cr/day', align: 'right', sort: r => r.turnover_cr ?? -1,
@@ -239,7 +239,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
           subtitle={`ICICI holdings · Desk · watchlist · pins — ${owners.size} tracked${brokerNote ? ` · ${brokerNote}` : ''}`} pad={mine.length ? 0 : 12}>
           {mine.length
             ? <DataTable columns={cols} rows={mine} rowKey={r => `${r.symbol}-${r.event_date}-${r.kind}`} dense onRowClick={r => onSelectTicker(r.symbol)} />
-            : <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.6 }}>
+            : <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6 }}>
                 No announced events for your {owners.size} tracked stocks in the next 60 days.
                 {owners.size === 0 && ' Pin stocks or add them to the watchlist to track their results and ex-dates here.'}
               </div>}
@@ -350,7 +350,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
               const done = recent.filter(r => r.move_pct != null)
               const upN = done.filter(r => (r.vs_nifty_pct ?? 0) > 0).length
               const avg = done.length ? done.reduce((a, r) => a + (r.vs_nifty_pct ?? 0), 0) / done.length : null
-              return <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>
+              return <span style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>
                 {done.length} reacted · <span style={{ color: T.green }}>{upN} beat NIFTY</span> · <span style={{ color: T.red }}>{done.length - upN} lagged</span>
                 {avg != null && <> · avg <span style={{ color: avg >= 0 ? T.green : T.red }}>{fmtSigned(avg, 1)}%</span> vs NIFTY</>}
               </span>
@@ -393,7 +393,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
           </div>}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => (
-              <div key={d} style={{ padding: '6px 10px', fontSize: 9.5, letterSpacing: 1.4, color: T.dim, borderBottom: `1px solid ${T.border}`,
+              <div key={d} style={{ padding: '6px 10px', fontSize: 10, letterSpacing: 1.4, color: T.dim, borderBottom: `1px solid ${T.border}`,
                                     fontFamily: T.display, textTransform: 'uppercase' }}>{d}</div>
             ))}
             {weeks.flat().map(d => {
@@ -414,16 +414,16 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
                   </div>
                   {(ecoByDay.get(d) ?? []).map(m => (   // macro releases and policy decisions (ECO)
                     <div key={ecoKey(m)} title={`${m.what} · ${m.time ?? ''} IST`}
-                      style={{ fontSize: 9.5, lineHeight: '15px', color: ecoKindSpec(m).color, fontFamily: T.mono, letterSpacing: 0.5,
+                      style={{ fontSize: 10, lineHeight: '15px', color: ecoKindSpec(m).color, fontFamily: T.mono, letterSpacing: 0.5,
                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       ◆ {ecoKindSpec(m).label} {m.time}</div>))}
                   {[...mineHere, ...ev.filter(e => !owners.has(e.symbol))].slice(0, 4).map(e => (
-                    <div key={`${e.symbol}-${e.kind}`} style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 10.5, lineHeight: '16px' }}>
+                    <div key={`${e.symbol}-${e.kind}`} style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 11, lineHeight: '16px' }}>
                       <span style={{ width: 5, height: 5, background: KIND_COLOR[e.kind] ?? T.muted, flex: 'none' }} />
                       <span style={{ color: owners.has(e.symbol) ? T.green : T.text, fontFamily: T.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.symbol}</span>
                     </div>
                   ))}
-                  {ev.length > 4 && <div style={{ fontSize: 9.5, color: T.dim, marginTop: 2 }}>+{ev.length - 4} more</div>}
+                  {ev.length > 4 && <div style={{ fontSize: 10, color: T.dim, marginTop: 2 }}>+{ev.length - 4} more</div>}
                 </button>
               )
             })}

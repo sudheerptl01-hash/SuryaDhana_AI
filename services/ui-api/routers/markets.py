@@ -2207,6 +2207,46 @@ async def index_drivers_monthly(response: Response, index: str = Query("NIFTY 50
             "note": f"monthly sums of stored daily points; {DRIVER_DESCRIBES}", **reads.meta()}
 
 
+# ── /api/market/index-drivers/intraday (FINAL round R2-DRIV; RATING R9-I3) ──────────────────────────────────
+# The within-day contribution timeline: data-service composes it from the tick store's minute closes × the stored
+# point-in-time weights (the 2-min tape as fallback; honest gaps, never interpolated); this route only proxies through
+# one SWR cache and degrades like the other drivers reads (ok: false + store_errors, never a raw transport error).
+INTRADAY_STORE = SWRCache("market.index_drivers.intraday", max_items=16, refresh_after=45.0, max_age=240.0)
+_INTRADAY_EMPTY: dict[str, Any] = {"minutes": [], "actual_pts": [], "explained_pts": [], "residual_pts": [], "priced": [],
+                                   "others_pts": [], "members": {"add": [], "drag": [], "rest": []},
+                                   "coverage": {"members_total": 0, "members_priced": 0, "gaps": []},
+                                   "date": None, "prev_index_level": None, "residual_now": None, "index_source": None,
+                                   "weight_method": None, "weights_as_of": None, "first_minute": None, "last_minute": None,
+                                   "badges": {"timeline": "context", "members": "arithmetic", "fit": "arithmetic"},
+                                   "note": f"no intraday contribution available — {DRIVER_DESCRIBES}"}
+
+
+@router.get("/index-drivers/intraday")
+async def index_drivers_intraday(response: Response, index: str = Query("NIFTY 50"),
+                                 date: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+                                 interval: str = Query("1m", pattern="^(1m|5m)$"),
+                                 top: int = Query(7, ge=3, le=15)) -> dict:
+    """Who is moving the index through the day: per-minute member points (prev close level × weight × intraday return
+    from the tick store), the index's own move, the explained sum and the residual — stacked-timeline data for MEMB.
+    Works closed-market from the stored session; `context`/`arithmetic` badged; describes, does not predict."""
+    name = _check_index(index)
+    params: dict[str, Any] = {"index": name, "interval": interval, "top": top}
+    if date:
+        params["date"] = date
+    key = ("intraday", tuple(sorted((k, str(v)) for k, v in params.items())))
+    try:
+        served = await INTRADAY_STORE.get(key, lambda: _drivers_fetch("/db/index-drivers/intraday", params))
+    except _DriversStoreUnavailable as exc:
+        return {**_INTRADAY_EMPTY, "index": name, "interval": interval, "ok": False,
+                "store_errors": {"/db/index-drivers/intraday": str(exc)}}
+    except Exception as exc:  # noqa: BLE001 — degrade, never a raw transport error on the wire
+        return {**_INTRADAY_EMPTY, "index": name, "interval": interval, "ok": False,
+                "store_errors": {"/db/index-drivers/intraday": type(exc).__name__}}
+    cache_headers(response, served)
+    body = served.value if isinstance(served.value, dict) else {}
+    return {**_INTRADAY_EMPTY, **body, "index": body.get("index") or name, "ok": True, "store_errors": {}}
+
+
 # ── /api/desk/attribution (mounted by main.py at /api/desk; PLAN 1.2) ────────────────────────────────────────
 attribution_router = APIRouter()
 _DESK_STORE = SWRCache("desk.attribution", max_items=8, refresh_after=60.0, max_age=600.0)

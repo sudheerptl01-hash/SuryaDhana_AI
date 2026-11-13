@@ -424,7 +424,7 @@ export function InteractiveSeries({ series, band = null, markers = [], unitL = '
             style={{ padding: '7px 10px', color: T.amber, cursor: 'pointer', whiteSpace: 'nowrap' }}>
             ＋ ALERT AT {fmtValue(menu.price, menuFmt)}
           </div>
-          <div style={{ padding: '0 10px 7px', color: T.dim, fontSize: 9.5, lineHeight: 1.4 }}>
+          <div style={{ padding: '0 10px 7px', color: T.dim, fontSize: 10, lineHeight: 1.4 }}>
             opens the rule builder pre-filled — a level, not a recommendation
           </div>
         </div>

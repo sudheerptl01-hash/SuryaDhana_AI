@@ -176,7 +176,7 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
             <button onClick={() => setFreezeAsk(null)} className="px-2 py-0.5 rounded border border-slate-600 text-slate-400">Later</button>
           </div>
         )}
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10.5px] text-slate-400" data-mlen-labels>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400" data-mlen-labels>
           <BadgeChip badge="arithmetic" note="Training metrics of a classifier: no forecast of returns is claimed." />
           <span>Labels: the production <b className="text-slate-200">v2 5-day labels</b> (close 5 sessions ahead &gt; +0.15 %, ±2 % barrier),
             the ones the label study marks <b className="text-rose-300">FAIL</b>. The better 20-session excess-rank labels are not what this

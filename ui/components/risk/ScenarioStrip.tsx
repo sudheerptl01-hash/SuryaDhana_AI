@@ -52,7 +52,7 @@ export function ScenarioStrip({ data }: { data?: unknown }) {
               style={{ display: 'inline-flex', flexDirection: 'column', gap: 1, padding: '4px 8px', minWidth: 72,
                        border: `1px solid ${tone === 'muted' ? T.border : toneColor[tone]}`, background: T.panel2 }}>
               <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: 1, color: T.dim }}>{tile.label}</span>
-              <span style={{ fontFamily: T.mono, fontSize: 11.5, fontVariantNumeric: 'tabular-nums', color: toneColor[tone] }}>
+              <span style={{ fontFamily: T.mono, fontSize: 12, fontVariantNumeric: 'tabular-nums', color: toneColor[tone] }}>
                 {inr(tile.pnl)}</span>
             </span>
           </span>

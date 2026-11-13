@@ -218,6 +218,9 @@ def _track_once(job: str, *, fail: bool = False, mark: str | None = None, soft_f
 
 
 def test_track_reports_no_new_data_from_the_before_and_after_reads(ctl: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    """M33 + P0-2 (13 Nov 2026): an unmoved catalogued dataset is "no new data" ONLY while the server's
+    holiday-aware watermark check owes nothing; the moment the check says a session was expected, the run is
+    FAILED (table_unmoved:…) — a job may never report success while its table silently stands still."""
     reads = {"n": 0}
     stuck = mc.dataset_fingerprints(_health(ROW_PREOPEN), "gold_preopen_snapshot")
     moved = mc.dataset_fingerprints(_health({**ROW_PREOPEN, "as_of": "2026-11-06"}), "gold_preopen_snapshot")
@@ -227,10 +230,27 @@ def test_track_reports_no_new_data_from_the_before_and_after_reads(ctl: dict[str
         reads["n"] += 1
         return stuck if reads["n"] % 2 else after["value"]
     monkeypatch.setattr(mc, "_dataset_snapshot", snap)
+    verdict: dict[str, Any] = {"body": {"status": "ok", "reasons": []}}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/jobs/data-health":
+            return httpx.Response(200, json=verdict["body"])
+        return httpx.Response(200, json=_health(ROW_PREOPEN))
+    mock_http(monkeypatch, handler)
+
+    # P0-2: unmoved AND the server says a session was owed → FAILED, loudly
+    verdict["body"] = {"status": "FAILED", "reasons": ["table_unmoved:gold_preopen_log"]}
+    assert _track_once("gold_preopen_snapshot") == "FAILED (table_unmoved:gold_preopen_log)"
+    # M33 survives: unmoved but nothing was owed (holiday / pre-deadline) → "no new data"
+    verdict["body"] = {"status": "ok", "reasons": []}
+    assert _track_once("gold_preopen_snapshot") == "no new data"
+    # no watermark evidence at all → never a failure without evidence
+    verdict["body"] = {}
     assert _track_once("gold_preopen_snapshot") == "no new data"
     after["value"] = moved
     assert _track_once("gold_preopen_snapshot") == "done"                               # control: the row moved
     after["value"] = stuck
+    verdict["body"] = {"status": "FAILED", "reasons": ["table_unmoved:gold_preopen_log"]}
     assert _track_once("gold_preopen_snapshot", fail=True) == "error"                  # an error always wins
     assert _track_once("gold_preopen_snapshot", soft_fail=True) == "error"
 

@@ -128,7 +128,7 @@ export function PositioningView(props: GoldSubViewProps) {
 
   return (
     <div data-gold-b4b="positioning" style={{ display: 'grid', gap: 10 }}>
-      <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 12, color: T.muted, lineHeight: 1.6 }}>
         <i>Who</i> is answered weekly by the CFTC's <Term t="COT" /> with a 3-day lag (Tuesday positions, Friday release); <i>what got opened or closed</i> is answered
         daily by exchange <Term t="open interest" />, which never says who. {layer === 'P' && <span>Categories are self-declared (Form 40); a reclassification looks like a flow; reporting level 200 contracts.</span>}
       </div>
@@ -154,7 +154,7 @@ export function PositioningView(props: GoldSubViewProps) {
               <Stat label={<span title={tip('oi_all')}>Open interest</span>} value={num(c.open_interest.total)} color={contextTone} big={false}
                 sub={<span title={tip('oi_change')} data-oi-pctile>Δ {signed(c.open_interest.chg)}{c.open_interest.pct_rank != null ? ` · ${percentileLabel(c.open_interest.pct_rank, nReports, oiPctLabel)}` : ''}</span>} />
             </Grid>
-            <div style={{ fontSize: 10.5, color: T.muted, marginTop: 8 }}>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 8 }}>
               {/* release_ist / next_release_ist are LABELS the server prints (API_CONTRACT §2.5) — never a converted release_at (C-DATA-6) */}
               <span title={tip('cot_as_of')}>as of {istLabel(c.latest?.report_date ?? null)}</span> · <span title={tip('cot_release')} data-cot-release>released {c.latest?.release_ist ?? '—'}</span>
               {/* a scheduled release that has passed with nothing stored is named before `next`, so the line never implies
@@ -209,7 +209,7 @@ export function PositioningView(props: GoldSubViewProps) {
                 [<span key="k" title={tip('net_pct_oi')}>net % OI</span>, pct(mm?.net_pct_oi, 1), contextTone],
                 [<span key="k" title={tip('cot_pctile_all')}>net percentile</span>, <span key="v" data-crowd-pctile>{percentileLabel(crowdPct.value, nReports, crowdPct.label)}</span>, contextTone],
               ]} />
-              <div data-crowd-label style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}>{c.crowd.label || CROWD_LABEL}</div>
+              <div data-crowd-label style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>{c.crowd.label || CROWD_LABEL}</div>
             </>
           ) : <div style={{ color: T.dim, fontSize: 11 }}>{CROWD_LABEL}</div>}
         </GPanel>
@@ -273,7 +273,7 @@ export function PositioningView(props: GoldSubViewProps) {
                 <Field label="options overlay" tip={tip('options_overlay')} value={<span data-options-overlay>{c.options_overlay?.line ?? `options add ${signed(c.options_overlay?.mm_net_options_only)} to funds' net; combined OI ${num(c.options_overlay?.combined_oi)}`}</span>} />
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
                   <a href={String(c.drawer?.raw_block_url ?? CFTC_SHORT)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}><Chip color={T.cyan} style={{ cursor: 'pointer' }}>↗ RAW CFTC BLOCK (deacmxsf.htm)</Chip></a>
-                  {typeof c.drawer?.api_query === 'string' && <code style={{ fontFamily: T.mono, fontSize: 9.5, color: T.dim, wordBreak: 'break-all' }}>{c.drawer.api_query}</code>}
+                  {typeof c.drawer?.api_query === 'string' && <code style={{ fontFamily: T.mono, fontSize: 10, color: T.dim, wordBreak: 'break-all' }}>{c.drawer.api_query}</code>}
                 </div>
                 <div style={{ fontSize: 10, color: T.muted, lineHeight: 1.5 }}>{c.footer ?? 'weekly, Tuesday positions, released Friday 15:30 ET; no daily, no OTC, categories only; our test found no timing value'}</div>
               </div>
@@ -329,7 +329,7 @@ function DailyComex({ data, error, tip, layer, catalog }: DailyProps) {
           </Grid>
           {stack.length > 0 && <StackedBars rows={stack} keys={products.map(p => ({ key: p, label: p }))} height={150} dp={0} label="OI by product" fmtY={v => `${Math.round(v / 1000)}k`} />}
           <OiQuadrantTape tape={data.quadrant_tape ?? []} tips={tip} missingOiNote={CME_OI_LAG} />
-          {data.roll && <div style={{ fontSize: 10.5, color: T.muted }}><span title={tip('roll_ratio')}>roll: front {data.roll.front ?? '—'} · next {data.roll.next ?? '—'} · ratio {num(data.roll.ratio, 2)}</span> · <span title={tip('fnd')} data-days-to-fnd>{data.roll.days_to_tender_or_fnd != null ? `${num(data.roll.days_to_tender_or_fnd, 0)} days to FND${data.roll.fnd_date ? ` (${istLabel(data.roll.fnd_date)})` : ''}` : 'FND not in the stored calendar yet (Sunday 04:00 CME calendar job)'}</span> (product OI until bulletin settlements are allowed, C7)</div>}
+          {data.roll && <div style={{ fontSize: 11, color: T.muted }}><span title={tip('roll_ratio')}>roll: front {data.roll.front ?? '—'} · next {data.roll.next ?? '—'} · ratio {num(data.roll.ratio, 2)}</span> · <span title={tip('fnd')} data-days-to-fnd>{data.roll.days_to_tender_or_fnd != null ? `${num(data.roll.days_to_tender_or_fnd, 0)} days to FND${data.roll.fnd_date ? ` (${istLabel(data.roll.fnd_date)})` : ''}` : 'FND not in the stored calendar yet (Sunday 04:00 CME calendar job)'}</span> (product OI until bulletin settlements are allowed, C7)</div>}
           <Attribution sources={['CME']} />
         </div>
       )}
@@ -380,15 +380,15 @@ function DailyMcx({ data, error, tip, layer, catalog, family }: DailyProps & { f
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 1fr)' }}>
           <div>
             {stack.length > 0 ? <StackedBars rows={stack} keys={expiries.map(e => ({ key: e, label: istLabel(e) }))} height={160} dp={0} label="MCX OI by expiry" /> : <div data-mcx-no-rows style={{ color: T.dim, fontSize: 11 }}>no rows for {fam} yet{data.since ? ` — since ${istLabel(data.since)}` : ' (the 07:35 master job writes one row per expiry per session)'}</div>}
-            {data.roll && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}><span title={tip('roll_ratio')}>roll ratio front ÷ next {num(data.roll.ratio, 2)}</span> · <span title={tip('days_to_tender')} data-days-to-tender>{tenderWords(data.roll.days_to_tender_or_fnd, data.roll.tender_start ? istLabel(data.roll.tender_start) : null, data.roll, todayIst())}</span>{data.roll.tender_start && !data.roll.in_tender && (data.roll.days_to_tender_or_fnd ?? 0) > 0 ? <span title={tip('tender_start')}> · tender from {istLabel(data.roll.tender_start)} (computed; the MCX circular is the legal source)</span> : null}</div>}
+            {data.roll && <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}><span title={tip('roll_ratio')}>roll ratio front ÷ next {num(data.roll.ratio, 2)}</span> · <span title={tip('days_to_tender')} data-days-to-tender>{tenderWords(data.roll.days_to_tender_or_fnd, data.roll.tender_start ? istLabel(data.roll.tender_start) : null, data.roll, todayIst())}</span>{data.roll.tender_start && !data.roll.in_tender && (data.roll.days_to_tender_or_fnd ?? 0) > 0 ? <span title={tip('tender_start')}> · tender from {istLabel(data.roll.tender_start)} (computed; the MCX circular is the legal source)</span> : null}</div>}
             {/* the scope the SERVER summed (CT-06): one contract when it read the Breeze daily bars, 'all <FAM> expiries'
                 when it fell back to the 07:35 master — never a scope this component invents */}
             {data.quadrant_tape?.length ? <div style={{ marginTop: 8 }}>
               <OiQuadrantTape tape={data.quadrant_tape} tips={tip} missingOiNote={MCX_OI_LAG} oiScope={tapeScopeLabel(data, fam)} />
-              {serverStr(data, 'tape_note') && <div data-tape-note style={{ fontSize: 9.5, color: T.dim, marginTop: 4, lineHeight: 1.5 }}>{serverStr(data, 'tape_note')}</div>}
+              {serverStr(data, 'tape_note') && <div data-tape-note style={{ fontSize: 10, color: T.dim, marginTop: 4, lineHeight: 1.5 }}>{serverStr(data, 'tape_note')}</div>}
               {/* a session with no Breeze bar keeps the master's price and all-expiry sum and carries no per-contract
                   ΔOI at all: said here, so the tape's own scope label stays true of every tile under it */}
-              {serverStr(data, 'tape_fill_note') && <div data-tape-fill-note style={{ fontSize: 9.5, color: T.amber, marginTop: 3, lineHeight: 1.5 }}>▲ {serverStr(data, 'tape_fill_note')}</div>}
+              {serverStr(data, 'tape_fill_note') && <div data-tape-fill-note style={{ fontSize: 10, color: T.amber, marginTop: 3, lineHeight: 1.5 }}>▲ {serverStr(data, 'tape_fill_note')}</div>}
             </div> : null}
           </div>
           <DataTable columns={cols} rows={ladder} rowKey={r => `${r.symbol_or_product}-${r.expiry}`} dense empty={<div style={{ padding: 8, color: T.dim, fontSize: 11 }}>ladder empty</div>} />
@@ -469,7 +469,7 @@ function McxHistory({ data, error, tip, layer, catalog, family, expiry, window, 
             rowStyle={r => (r.mechanical ? { opacity: 0.55 } : undefined)}
             empty={<div data-mcx-history-empty style={{ padding: 8, color: T.dim, fontSize: 11 }}>no stored periods for {fam} {data.expiry_label ?? ''} yet</div>} />
           <div data-mcx-history-read style={{ fontSize: 10, color: T.muted, lineHeight: 1.5 }} title={data.rule}>{data.read}</div>
-          <div style={{ fontSize: 9.5, color: T.dim }}>Source: {data.source} · greyed = expiry month (mechanical) · <span title={tip('since')}>history since the first stored bar</span></div>
+          <div style={{ fontSize: 10, color: T.dim }}>Source: {data.source} · greyed = expiry month (mechanical) · <span title={tip('since')}>history since the first stored bar</span></div>
         </div>
       )}
     </GPanel>

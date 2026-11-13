@@ -110,7 +110,7 @@ export function MarginMonitor() {
               </div>
               <DataTable key={mode} columns={buildCols} rows={lists.building} rowKey={r => r.symbol} dense initialSort={{ key: mode === 'pct' ? 'c' : 'r', dir: 'desc' }} />
               {/* m039: the rule lives under the table (the header subtitle wrapped into an eight-line column) */}
-              <div data-mrgn-rule style={{ padding: '6px 10px', fontSize: 10.5, color: T.dim, borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
+              <div data-mrgn-rule style={{ padding: '6px 10px', fontSize: 11, color: T.dim, borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
                 {mode === 'pct'
                   ? <>Funded-quantity growth over {lookback} sessions · ≥ ₹5 cr funded · only names with ≥ {MTF_MIN_SESSIONS} sessions of MTF history
                       {eligible ? (lists.excluded ? ` (${lists.excluded} recent listings left out: growth from a near-zero first day is a base effect)` : '') : ' (history check unavailable: recent listings may lead)'}</>
@@ -119,7 +119,7 @@ export function MarginMonitor() {
             </Panel>
             <Panel source={sourceOf(data?.as_of ?? null, { source: 'NSE MTF report (T+1)', maxAgeDays: 5 })} badge="context" title="Most crowded" accent={T.red} pad={0}>
               <DataTable columns={cols} rows={lists.crowded} rowKey={r => r.symbol} dense initialSort={{ key: 'd', dir: 'desc' }} />
-              <div style={{ padding: '6px 10px', fontSize: 10.5, color: T.dim, borderTop: `1px solid ${T.border}` }}>Days of normal turnover a forced sale would take · ≥ ₹5 cr funded</div>
+              <div style={{ padding: '6px 10px', fontSize: 11, color: T.dim, borderTop: `1px solid ${T.border}` }}>Days of normal turnover a forced sale would take · ≥ ₹5 cr funded</div>
             </Panel>
             <Panel source={sourceOf(data?.as_of ?? null, { source: 'NSE MTF report (T+1)', maxAgeDays: 5 })} badge="context" title="Largest funded positions" accent={T.cyan} pad={0}>
               <DataTable columns={cols} rows={lists.largest} rowKey={r => r.symbol} dense initialSort={{ key: 'a', dir: 'desc' }} />

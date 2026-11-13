@@ -216,7 +216,7 @@ export function FundamentalsScreen() {
           subtitle={`of ${rows.length} · ${reported} have reported ${latestQ ? qn(latestQ) : 'the latest quarter'}; amber = still on an older quarter${showStale ? '' : ` · ${staleCount} stale rows hidden`} · growth and P/E are arithmetic on the filings, the P/E percentile is context · hover a ticker for the quote`}>
           <DataTable columns={cols} rows={shown} rowKey={r => r.symbol} dense maxHeight={620} initialSort={{ key: 'mcap', dir: 'desc' }} exportName="fund" />
         </Panel>
-        <div style={{ fontSize: 10.5, color: T.dim, marginTop: 8, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 11, color: T.dim, marginTop: 8, lineHeight: 1.6 }}>
           A screen, not a signal. The idea behind the GROWTH presets was tested: <CatalogLine id="reports/earnings_growth_drift/FINDINGS.md" />{' '}
           Coverage grows as companies are opened (FA), report results, or in the Saturday sweep. Growth compares the latest
           quarter with the same quarter a year earlier (consolidated where filed); EPS-based ratios are avoided because NSE

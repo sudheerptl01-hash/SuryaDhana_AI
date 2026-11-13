@@ -62,7 +62,7 @@ export function CrushLedger({ initial }: { initial?: string | null }) {
         <input value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase())} placeholder="F&O stock" aria-label="crush ledger symbol"
           style={{ background: T.panel, border: `1px solid ${T.border}`, color: T.text, fontFamily: T.mono, fontSize: 11, padding: '3px 6px', width: 96, outline: 'none', textTransform: 'uppercase' }} />
       </span>}>
-      {screenNote && <div style={{ padding: '6px 12px', fontSize: 10.5, color: T.amber }}>VOL screener (the picker's names): {screenNote}</div>}
+      {screenNote && <div style={{ padding: '6px 12px', fontSize: 11, color: T.amber }}>VOL screener (the picker's names): {screenNote}</div>}
       {err && <div style={{ padding: '8px 12px', fontSize: 11, color: T.amber }}>Unavailable: {err}</div>}
       {d && !d.ok && <div style={{ padding: '8px 12px', fontSize: 11, color: T.muted }}>No crush ledger stored ({storeNote(d)}): <code>iv_event_log</code> is written by <code>iv_eod</code> from <code>nse_results</code> release times once the IV store is deployed.</div>}
       {d && d.ok && <DataTable columns={cols} rows={d.rows} rowKey={r => `${r.symbol}-${r.released_at}`} dense exportName={`EVTS_crush_${symbol}`}

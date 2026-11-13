@@ -133,9 +133,9 @@ export function IndexIntraday({ height = 200, initial = 'NIFTY 50', onSource }: 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', fontFamily: T.mono }}>
         <span style={{ fontSize: 20, fontWeight: 700, color: T.text }}>{fmt(shown)}</span>
         <span style={{ fontSize: 12, fontWeight: 700, color: up ? T.green : T.red }}>{fmtPct(shownChg, 2)}</span>
-        <span style={{ fontSize: 10.5, color: T.dim }}>{hover ? `at ${hover.time}` : data?.day ? `${data.day.slice(5)} · prev ${fmt(prev)}` : ''}</span>
+        <span style={{ fontSize: 11, color: T.dim }}>{hover ? `at ${hover.time}` : data?.day ? `${data.day.slice(5)} · prev ${fmt(prev)}` : ''}</span>
         <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 10.5, color: T.muted }}>H {fmt(hi)} · L {fmt(lo)}{chg != null && hi != null && lo != null && prev ? ` · range ${((hi - lo) / prev * 100).toFixed(2)}%` : ''}</span>
+        <span style={{ fontSize: 11, color: T.muted }}>H {fmt(hi)} · L {fmt(lo)}{chg != null && hi != null && lo != null && prev ? ` · range ${((hi - lo) / prev * 100).toFixed(2)}%` : ''}</span>
       </div>
       <div ref={box} style={{ width: '100%', height, marginTop: 4, position: 'relative' }}>
         {!rows.length && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: T.dim, zIndex: Z.raised }}>

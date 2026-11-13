@@ -79,16 +79,16 @@ export function PriceLadder({ steps, duty, premium, premiumPending, basisPct, ba
             <g key={s.step} data-ladder-step={s.step} data-ladder-clock={clock}>
               <title>{tips(tipKey) ?? STEP_TEXT[k.split(/[^a-z_]/)[0]] ?? s.step}</title>
               <rect x={x} y={14 + barMaxH - bh} width={bw} height={bh} fill={fill} opacity={clock === 'now' ? 0.85 : 0.6} />
-              <text x={x + bw / 2} y={14 + barMaxH - bh - 4} textAnchor="middle" fontSize={10.5} fontFamily={T.mono} fill={T.bright}>{fmtStep(s)}</text>
-              <text x={x + bw / 2} y={14 + barMaxH + 14} textAnchor="middle" fontSize={9.5} fontFamily={T.mono} fill={T.text} data-ladder-scaled-from={scaledFrom[s.step] ?? undefined}>{STEP_TEXT[k.split(/[^a-z_]/)[0]] ?? s.step}{scaledFrom[s.step] ? ` (${scaledFrom[s.step]} → ₹/10 g)` : ''}</text>
-              <text x={x + bw / 2} y={14 + barMaxH + 26} textAnchor="middle" fontSize={8.5} fontFamily={T.mono} fill={clock === 'now' ? T.cyan : T.dim}>{ladderTsLabel(s)}</text>
-              <text x={x + bw / 2} y={14 + barMaxH + 37} textAnchor="middle" fontSize={8.5} fontFamily={T.mono} fill={T.dim}>{s.source ?? ''}</text>
+              <text x={x + bw / 2} y={14 + barMaxH - bh - 4} textAnchor="middle" fontSize={11} fontFamily={T.mono} fill={T.bright}>{fmtStep(s)}</text>
+              <text x={x + bw / 2} y={14 + barMaxH + 14} textAnchor="middle" fontSize={10} fontFamily={T.mono} fill={T.text} data-ladder-scaled-from={scaledFrom[s.step] ?? undefined}>{STEP_TEXT[k.split(/[^a-z_]/)[0]] ?? s.step}{scaledFrom[s.step] ? ` (${scaledFrom[s.step]} → ₹/10 g)` : ''}</text>
+              <text x={x + bw / 2} y={14 + barMaxH + 26} textAnchor="middle" fontSize={9} fontFamily={T.mono} fill={clock === 'now' ? T.cyan : T.dim}>{ladderTsLabel(s)}</text>
+              <text x={x + bw / 2} y={14 + barMaxH + 37} textAnchor="middle" fontSize={9} fontFamily={T.mono} fill={T.dim}>{s.source ?? ''}</text>
               {i < ordered.length - 1 && <text x={(i + 1) * colW} y={14 + barMaxH / 2} textAnchor="middle" fontSize={11} fill={T.dim}>→</text>}
             </g>
           )
         })}
       </svg>
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 10.5, color: T.text, marginTop: 2 }}>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11, color: T.text, marginTop: 2 }}>
         <span title={tips('duty_rate')} data-duty-line>duty <b style={{ color: T.cyan }}>{num(duty.pct, 0)} %</b> since {dateLabel(duty.effective)}{duty.notification ? ` · ${duty.notification}` : ''} · <span style={{ color: T.amber }}>confirm at CBIC (O-3)</span></span>
         <span title={tips('india_premium_pct')} data-ladder-premium={premium ? 'stored' : 'pending'}>
           IBJA premium vs duty-paid{' '}

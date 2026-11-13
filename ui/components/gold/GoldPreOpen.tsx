@@ -191,7 +191,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
       {cf && (
         /* F6: ONE line for the pick, in the pick's own unit, so a GOLDPETAL reader never reads GOLD 1 kg's ₹1,42,540 as
            theirs. The model's own numbers below stay GOLD's and the subtitle says so (the scored history is GOLD). */
-        <div data-gold-open-pick style={{ padding: '8px 12px', border: `1px solid ${T.border}`, background: '#080b10', fontSize: 11.5 }}>
+        <div data-gold-open-pick style={{ padding: '8px 12px', border: `1px solid ${T.border}`, background: '#080b10', fontSize: 12 }}>
           <span style={{ color: T.muted }}>YOUR PICK · </span>
           <span style={{ color: T.bright }}>{cf.contract}{cf.expiry ? ` ${dayLabel(cf.expiry)}` : ''}</span>
           <span style={{ color: T.muted }}> fair </span>
@@ -208,13 +208,13 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
 
       {/* 0. after 09:15: this morning's call (the 08:45 snapshot vs the captured open), or why there is none (C-TRADER-14) */}
       {call.phase === 'open_missing' && (
-        <div data-gold-call="open-missing" style={{ padding: '10px 14px', border: `1px solid ${T.amber}55`, background: '#080b10', fontSize: 11.5, color: T.text }}>
+        <div data-gold-call="open-missing" style={{ padding: '10px 14px', border: `1px solid ${T.amber}55`, background: '#080b10', fontSize: 12, color: T.text }}>
           <div style={{ fontFamily: T.display, fontSize: 14, fontWeight: 700, letterSpacing: 1.2, color: T.amber }}>THIS MORNING&apos;S CALL · OPEN NOT CAPTURED</div>
           <div style={{ marginTop: 3 }}>The 08:45 snapshot said fair open {fmtInr(call.row.fair_open)}; the 09:10 capture did not run (ICICI session or job missed). Type the MCX open in the accuracy log below to score the day.</div>
         </div>
       )}
       {call.phase === 'no_snapshot' && (
-        <div data-gold-call="no-snapshot" style={{ padding: '10px 14px', border: `1px solid ${T.amber}55`, background: '#080b10', fontSize: 11.5, color: T.text }}>
+        <div data-gold-call="no-snapshot" style={{ padding: '10px 14px', border: `1px solid ${T.amber}55`, background: '#080b10', fontSize: 12, color: T.text }}>
           <div style={{ fontFamily: T.display, fontSize: 14, fontWeight: 700, letterSpacing: 1.2, color: T.amber }}>NO SNAPSHOT TODAY (JOB MISSED)</div>
           <div style={{ marginTop: 3 }}>The 08:45 gold snapshot did not run today, so there is no call to score; the fair value below is the model re-computed now, not a pre-open call. The accuracy log keeps its {stats?.days ?? 0} scored day{(stats?.days ?? 0) === 1 ? '' : 's'}.</div>
         </div>
@@ -222,7 +222,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
       {callDone && todayRow && (
         <div data-gold-call style={{ padding: '10px 14px', border: `1px solid ${Math.abs(todayRow.error ?? 0) <= threshold ? T.green : T.amber}55`, background: '#080b10' }}>
           <div style={{ fontFamily: T.display, fontSize: 14, fontWeight: 700, letterSpacing: 1.2, color: Math.abs(todayRow.error ?? 0) <= threshold ? T.green : T.amber }}>THIS MORNING&apos;S CALL</div>
-          <div style={{ fontSize: 11.5, color: T.text, marginTop: 3 }}>
+          <div style={{ fontSize: 12, color: T.text, marginTop: 3 }}>
             MCX opened {fmtInr(todayRow.actual_open)} ({todayRow.actual_source ?? '—'}); the 08:45 fair open was {fmtInr(todayRow.fair_open)}
             {todayRow.error != null && <> · miss <b>{fmtSignedInr(todayRow.error)}</b></>}
             {todayRow.naive_error != null && <span style={{ color: T.muted }}> · naive (open = settlement) {fmtSignedInr(todayRow.naive_error)}</span>}
@@ -239,7 +239,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
           <div style={{ flex: 1, minWidth: 260 }}>
             {/* server-built sentences: numbers re-grouped the Indian way (₹144,376 → ₹1,44,376), C1-08 */}
             <div style={{ fontFamily: T.display, fontSize: 20, fontWeight: 700, letterSpacing: 1.4, color: vs.color, textTransform: 'uppercase' }}>{indianGrouping(String(v.title ?? ''))}</div>
-            <div style={{ fontSize: 11.5, color: T.text, marginTop: 3 }}>{indianGrouping(String(v.detail ?? ''))}</div>
+            <div style={{ fontSize: 12, color: T.text, marginTop: 3 }}>{indianGrouping(String(v.detail ?? ''))}</div>
           </div>
           <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <BadgeChip badge="heuristic" evidence={missNote} />
@@ -314,7 +314,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
               style={{ display: 'grid', gridTemplateColumns: '92px 1fr 40px', gap: 10, padding: '6px 12px', textDecoration: 'none',
                        borderBottom: `1px solid ${T.border}`, alignItems: 'baseline' }}>
               <span style={{ fontSize: 9, letterSpacing: .8, color: T.cyan, textTransform: 'uppercase' }}>{h.topic}</span>
-              <span style={{ fontSize: 11.5, color: T.text, lineHeight: 1.4 }}>{h.title}
+              <span style={{ fontSize: 12, color: T.text, lineHeight: 1.4 }}>{h.title}
                 <span style={{ color: T.dim, fontSize: 10 }}> · {h.publisher}</span></span>
               <span style={{ fontSize: 10, color: T.muted, textAlign: 'right' }}>{ago(h.published_at)}</span>
             </a>

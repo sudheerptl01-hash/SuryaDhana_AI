@@ -51,9 +51,9 @@ export function KgxBar({ period, total, pure, usdEffect, inrEffect, weights, bas
           return (
             <g key={l.key} data-kgx-leg={l.key}>
               <title>{tips(l.tip)}</title>
-              <text x={2} y={y + 10} fontSize={9.5} fontFamily={T.mono} fill={T.text}>{l.label}</text>
+              <text x={2} y={y + 10} fontSize={10} fontFamily={T.mono} fill={T.text}>{l.label}</text>
               {l.v != null && <rect x={l.v >= 0 ? cx : cx - len} y={y + 2} width={Math.max(1, len)} height={9} fill={l.color} opacity={0.85} />}
-              <text x={l.v != null && l.v >= 0 ? cx + len + 4 : cx - len - 4} y={y + 10} textAnchor={l.v != null && l.v >= 0 ? 'start' : 'end'} fontSize={9.5} fontFamily={T.mono} fill={T.bright}>{signedPct(l.v, 2)}</text>
+              <text x={l.v != null && l.v >= 0 ? cx + len + 4 : cx - len - 4} y={y + 10} textAnchor={l.v != null && l.v >= 0 ? 'start' : 'end'} fontSize={10} fontFamily={T.mono} fill={T.bright}>{signedPct(l.v, 2)}</text>
             </g>
           )
         })}

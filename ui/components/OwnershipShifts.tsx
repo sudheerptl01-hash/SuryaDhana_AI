@@ -58,7 +58,7 @@ export function OwnershipShifts() {
     { key: 'h', label: 'Shareholders', align: 'right', sort: r => r.d_holders_pct ?? -99,
       render: r => <span><span style={{ color: (r.d_holders_pct ?? 0) > 20 ? T.amber : T.muted }}>{r.d_holders_pct == null ? '—' : `${fmtSigned(r.d_holders_pct, 0)}%`}</span>
         <span style={{ color: T.dim, fontSize: 10 }}> {r.total_holders != null ? `→ ${(r.total_holders / 1e5).toFixed(1)} L` : ''}</span></span> },
-    { key: 'q', label: 'Quarter', render: r => <span style={{ color: T.dim, fontSize: 10.5 }}>{qtr(r.prev_period)} → {qtr(r.period_end)}</span> },
+    { key: 'q', label: 'Quarter', render: r => <span style={{ color: T.dim, fontSize: 11 }}>{qtr(r.prev_period)} → {qtr(r.period_end)}</span> },
   ]
 
   return (
@@ -75,7 +75,7 @@ export function OwnershipShifts() {
           right={<div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{VIEWS.map(([k, l]) => <Chip key={k} color={T.violet} active={view === k} onClick={() => setView(k)}>{l}</Chip>)}</div>}>
           <DataTable columns={cols} rows={rows} rowKey={r => r.symbol} dense maxHeight={720} empty="No filings for this quarter yet" />
           {/* m037: how the header's coverage splits for this quarter */}
-          <div data-hds-coverage style={{ padding: '6px 10px', fontSize: 10.5, color: T.dim, borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
+          <div data-hds-coverage style={{ padding: '6px 10px', fontSize: 11, color: T.dim, borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
             Quarter ended {qtr(active)}: {cov.filings} filings read · <span style={{ color: T.muted }}>{cov.qoq} compared with the quarter before</span>
             {cov.listing > 0 && <> · {cov.listing} left out: the earlier filing is not the previous quarter end (an IPO or listing-time shareholding: allotment, not buying)</>}
             {cov.first > 0 && <> · {cov.first} with no earlier filing</>}

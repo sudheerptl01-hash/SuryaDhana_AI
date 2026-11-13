@@ -60,9 +60,9 @@ export function IpoMonitor() {
   }), [priced])
 
   const issueCols: Column<IpoIssue>[] = [
-    { key: 'status', label: 'Status', render: r => <span style={{ color: r.status === 'Open' ? T.green : T.amber, fontWeight: 600, fontSize: 10.5, letterSpacing: 0.5 }}>{(r.status ?? '').toUpperCase()}</span> },
+    { key: 'status', label: 'Status', render: r => <span style={{ color: r.status === 'Open' ? T.green : T.amber, fontWeight: 600, fontSize: 11, letterSpacing: 0.5 }}>{(r.status ?? '').toUpperCase()}</span> },
     { key: 'company', label: 'Company', render: r => <span><span style={{ color: T.amber }}>{r.symbol}</span> <span style={{ color: T.muted }}>{r.company}</span></span> },
-    { key: 'series', label: 'Board', render: r => <span style={{ color: r.series === 'SME' ? T.violet : T.cyan, fontSize: 10.5 }}>{r.series === 'SME' ? 'SME' : 'MAIN'}</span> },
+    { key: 'series', label: 'Board', render: r => <span style={{ color: r.series === 'SME' ? T.violet : T.cyan, fontSize: 11 }}>{r.series === 'SME' ? 'SME' : 'MAIN'}</span> },
     { key: 'dates', label: 'Bidding', render: r => <span style={{ color: T.text }}>{day(r.start)} → {day(r.end)}{r.days_left != null && r.days_left >= 0 && r.status === 'Open' ? <span style={{ color: T.dim }}> · {r.days_left === 0 ? 'closes today' : `${r.days_left}d left`}</span> : null}</span> },
     { key: 'band', label: 'Price band', align: 'right', render: r => <span style={{ color: T.bright }}>{r.price_lo != null ? (r.price_lo === r.price_hi ? `₹${r.price_hi}` : `₹${r.price_lo}–${r.price_hi}`) : '—'}</span> },
     { key: 'size', label: 'Size', align: 'right', sort: r => r.size_cr ?? 0, render: r => <span style={{ color: T.text }}>{r.size_cr != null ? `₹${r.size_cr.toLocaleString('en-IN', { maximumFractionDigits: 0 })} cr` : '—'}</span> },
@@ -127,7 +127,7 @@ export function IpoMonitor() {
             subtitle="listing open / day-1 close vs the issue price · +20 / +60 sessions measured from the day-1 close (what a buyer after listing got)">
             <DataTable columns={cols} rows={rows} rowKey={r => r.symbol + r.listing_date} dense maxHeight={720} initialSort={{ key: 'date', dir: 'desc' }} empty="No listings in this window" />
             {(clean.unpriced.length > 0 || clean.entitlements.length > 0) && (
-              <div data-ipo-left-out style={{ padding: '6px 10px', fontSize: 10.5, color: T.dim, borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
+              <div data-ipo-left-out style={{ padding: '6px 10px', fontSize: 11, color: T.dim, borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
                 {clean.unpriced.length > 0 && <>No NSE bhavcopy prices yet (left out): {clean.unpriced.join(', ')}. </>}
                 {clean.entitlements.length > 0 && <>Rights entitlements / partly-paid lines, not IPOs (left out): {clean.entitlements.join(', ')}.</>}
               </div>)}

@@ -342,11 +342,11 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
             Clear all
           </button>
         )}
-        {cue && <span data-eqs-cue className="ml-auto text-[10.5px]" style={{ color: T.amber }} title="Columns outside the visible part of the table">{cue}</span>}
+        {cue && <span data-eqs-cue className="ml-auto text-[11px]" style={{ color: T.amber }} title="Columns outside the visible part of the table">{cue}</span>}
         {etfCount > 0 && (
           <button onClick={() => setShowEtfs(v => !v)} data-eqs-etf-toggle
             title="ETFs are funds, not companies: no earnings, no market cap (m078)"
-            className={clsx(cue ? 'ml-3' : 'ml-auto', 'text-[10.5px] px-2 py-0.5 border')}
+            className={clsx(cue ? 'ml-3' : 'ml-auto', 'text-[11px] px-2 py-0.5 border')}
             style={{ borderColor: T.border, color: showEtfs ? T.amber : T.muted }}>
             {showEtfs ? `✓ ${etfCount} ETFs shown` : `${etfCount} ETFs hidden · show`}
           </button>
@@ -422,7 +422,7 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
       )}
 
       {/* m079: what each column is and where it came from (evidence badges; M07 provenance counts) */}
-      <div data-eqs-legend className="px-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px]" style={{ color: T.dim }}>
+      <div data-eqs-legend className="px-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]" style={{ color: T.dim }}>
         <span><span style={{ color: T.muted }}>CMP</span> the stored NSE close (live NSE quote on the first {LIVE_ROWS} rows when the feed answers)</span>
         <span className="inline-flex items-center gap-1"><BadgeChip badge="arithmetic" /> P/E · Mkt cap · size rank at that close, from the latest NSE results filing ({legend.filings.toLocaleString('en-IN')} rows){legend.rebased ? `; ${legend.rebased} rebased from the enrichment snapshot (ˢ)` : ''}{legend.withheld ? `; ${legend.withheld} withheld (snapshot not comparable)` : ''}</span>
         <span className="inline-flex items-center gap-1"><BadgeChip badge="context" /> NP / Sales Qtr: that filing vs a year earlier · Div Yld, ROCE: the enrichment snapshot{(() => { const d = stocks.reduce<string | null>((m, x) => (x.metrics_as_of && (!m || x.metrics_as_of > m) ? x.metrics_as_of : m), null); return d ? ` of ${d.slice(0, 10)}` : ' (undated)' })()} (COMP and DVD give the trailing-12-month yield)</span>
@@ -443,54 +443,54 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
               <tr className={clsx('border-b', 'border-[#1a2130] bg-[#080b10]')}>
                 {/* CT-08: the watch star leads (it was the last column, the first to be cut off at 1600 px) */}
                 {onWatchToggle && (
-                  <th className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')} title="Watchlist">★</th>
+                  <th className={clsx('px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')} title="Watchlist">★</th>
                 )}
                 {/* Static columns */}
                 <th onClick={() => toggleSort('ticker')}
-                  className={clsx('px-2 py-2 text-left text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   Ticker <SortIcon col="ticker" />
                 </th>
-                <th className={clsx('px-2 py-2 text-left text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Company · Sector</th>
-                <th className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')} title="member of the NIFTY 500 index">Nifty</th>
-                <th className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}
+                <th className={clsx('px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Company · Sector</th>
+                <th className={clsx('px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')} title="member of the NIFTY 500 index">Nifty</th>
+                <th className={clsx('px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}
                   title="SEBI-style size by market-cap rank at the latest close: 1–100 large, 101–250 mid, the rest small (heuristic: SEBI ranks the six-month average)">Size</th>
-                <th className={clsx('px-2 py-2 text-left text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Event</th>
+                <th className={clsx('px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Event</th>
 
                 {/* Financial columns — sortable */}
                 <th onClick={() => toggleSort('cmp')}
-                  className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-right text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   CMP ₹ <SortIcon col="cmp" />
                   {liveEq.available && liveEq.source && <span title={`first ${LIVE_ROWS} rows in this order: live NSE quotes; the rest: the stored close (EOD)`}>
-                    {' '}<SourceChip info={liveEq.source} style={{ fontSize: 8.5, padding: '0 4px' }} /></span>}
+                    {' '}<SourceChip info={liveEq.source} style={{ fontSize: 9, padding: '0 4px' }} /></span>}
                 </th>
                 <th onClick={() => toggleSort('pe_ratio')}
-                  className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-right text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   <span title="trailing P/E at the stored NSE close (latest NSE results filing)">P/E</span> <SortIcon col="pe_ratio" />
                 </th>
                 <th onClick={() => toggleSort('mktcap_cr')}
-                  className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-right text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   Mkt Cap Cr <SortIcon col="mktcap_cr" />
                 </th>
                 <th onClick={() => toggleSort('div_yld_pct')}
-                  className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-center text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   <span title="the enrichment snapshot's dividend yield rebased to the stored close; COMP / DVD give the trailing-12-month yield from NSE corporate actions">Div Yld%ˢ</span> <SortIcon col="div_yld_pct" />
                 </th>
                 <th onClick={() => toggleSort('np_qtr_cr')}
-                  className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-right text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   <span title="net profit of the latest quarter filed with NSE, ₹ cr, vs the same quarter a year earlier">NP Qtr Cr</span> <SortIcon col="np_qtr_cr" />
                 </th>
                 <th onClick={() => toggleSort('sales_qtr_cr')}
-                  className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-right text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   Sales Qtr Cr <SortIcon col="sales_qtr_cr" />
                 </th>
                 <th onClick={() => toggleSort('roce_pct')}
-                  className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-right text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   ROCE% <SortIcon col="roce_pct" />
                 </th>
 
                 {/* Data quality columns */}
                 <th onClick={() => toggleSort('density')}
-                  className={clsx('px-2 py-2 text-left text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
+                  className={clsx('px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   Data% <SortIcon col="density" />
                 </th>
               </tr>

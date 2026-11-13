@@ -583,10 +583,10 @@ export function ChartStudio({ symbol: symbolProp }: { symbol?: string }) {
         </div>
         {/* M42: F&O overlays from the stored tables (daily timeframes) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginBottom: 8 }} data-sd-chart-overlays>
-          <span style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1 }}>F&amp;O</span>
+          <span style={{ fontSize: 10, color: T.dim, letterSpacing: 1 }}>F&amp;O</span>
           <Chip active={showFut} color={T.amber} onClick={() => setShowFut(v => !v)} title="the near-month future's close on the price pane (nse_fo_daily)">FUT</Chip>
           <span style={{ width: 1, height: 14, background: T.border, margin: '0 4px' }} />
-          <span style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1 }}>LOWER PANE</span>
+          <span style={{ fontSize: 10, color: T.dim, letterSpacing: 1 }}>LOWER PANE</span>
           {(['rsi', 'iv', 'oi', 'basis'] as LowerPane[]).map(k => (
             <Chip key={k} active={lower === k} color={T.cyan} onClick={() => { setLower(k); if (k === 'rsi' && !show.rsi) setShow(s => ({ ...s, rsi: true })); if (k !== 'rsi') setShow(s => ({ ...s, rsi: true })) }}>
               {k === 'rsi' ? 'RSI 14' : k === 'iv' ? 'IV30' : k === 'oi' ? 'OI' : 'BASIS'}
@@ -602,7 +602,7 @@ export function ChartStudio({ symbol: symbolProp }: { symbol?: string }) {
                       fontVariantNumeric: 'tabular-nums', marginBottom: 6, minHeight: 24 }}>
           <span style={{ fontSize: 19, fontWeight: 700, color: T.bright }}>{px(shown?.c)}</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: tone(chgPct) }}>{fmtPct(chgPct, 2)}</span>
-          <span style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1 }}>{shown ? chgLabel.toUpperCase() : ''}</span>
+          <span style={{ fontSize: 10, color: T.dim, letterSpacing: 1 }}>{shown ? chgLabel.toUpperCase() : ''}</span>
           {shown && (
             <span style={{ fontSize: 11, color: T.muted, display: 'inline-flex', gap: 10, flexWrap: 'wrap' }}>
               <span>{data?.kind === 'ticks' ? `${shown.t} IST` : shown.t}</span>

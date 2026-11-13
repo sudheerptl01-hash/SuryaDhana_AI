@@ -68,7 +68,7 @@ function FamilyCard({ f, selected, onPick, today, tip, livePrice }: { f: Contrac
         <span style={{ fontFamily: T.display, fontSize: 13, fontWeight: 700, letterSpacing: 1.2, color: selected ? T.amber : T.bright }}>{f.code}</span>
         <span style={{ fontSize: 10, color: T.muted }}>{f.name ?? ''}</span>
         <span style={{ flex: 1 }} />
-        <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.dim }}>{f.lot} · {f.quote_unit} · {f.purity}</span>
+        <span style={{ fontFamily: T.mono, fontSize: 10, color: T.dim }}>{f.lot} · {f.quote_unit} · {f.purity}</span>
       </div>
       <KV items={[
         ['tick value', <span key="t" title={tip('tick_value')}>{f.tick_rupees != null ? `₹${fmtFixed(f.tick_rupees, 0)} = ` : ''}{fmtInr0(f.tick_value)}</span>],
@@ -121,7 +121,7 @@ export function ContractSelector({ families, sel, onSel, pickers = false, layer 
   // the family's own quote unit (D3): PETAL is ₹/1 g, GUINEA ₹/8 g — never headed '₹/10 g'
   const famUnit = quoteUnitShort(fam?.quote_unit ?? fam?.code ?? sel.family)
   const ladderCols: Column<ContractExpiryRow>[] = [
-    { key: 'expiry', label: 'Expiry', render: e => <span style={{ color: e === picked ? T.amber : T.text, fontWeight: e === picked ? 700 : 400 }}>{expiryMonthLabel(e.expiry)} <span style={{ color: T.dim }}>{e.expiry}</span>{e === front ? <Chip color={T.amber} style={{ marginLeft: 6, fontSize: 8.5, padding: '0 4px' }}>FRONT</Chip> : null}</span> },
+    { key: 'expiry', label: 'Expiry', render: e => <span style={{ color: e === picked ? T.amber : T.text, fontWeight: e === picked ? 700 : 400 }}>{expiryMonthLabel(e.expiry)} <span style={{ color: T.dim }}>{e.expiry}</span>{e === front ? <Chip color={T.amber} style={{ marginLeft: 6, fontSize: 9, padding: '0 4px' }}>FRONT</Chip> : null}</span> },
     { key: 'source', label: 'Source', render: e => <span style={{ color: e.source === 'observed' ? T.green : T.dim }} title={e.source === 'observed' ? 'expiry observed in the ICICI MCX security master' : 'expiry computed from the family\'s rule (5th / month-end, holiday-shifted) until the master lists it'}>{e.source}</span> },
     ...(chainOnPage ? [] : [
       { key: 'settle', label: `settle ${famUnit}`, align: 'right' as const, render: (e: ContractExpiryRow) => {
@@ -143,8 +143,8 @@ export function ContractSelector({ families, sel, onSel, pickers = false, layer 
   return (
     <div data-gold-selector style={{ display: 'grid', gap: 10 }}>
       {pickers && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', alignItems: 'center', fontSize: 10.5 }}>
-          <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>CONTRACT</span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', alignItems: 'center', fontSize: 11 }}>
+          <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted }}>CONTRACT</span>
           <span title={exch.reason}>
             <Select value={sel.exchange} onChange={v => { const e = EXCHANGES.find(x => x.value === v); if (e && !e.disabled) onSel({ exchange: v }) }} options={EXCHANGES.map(e => ({ value: e.value, label: e.label }))} />
           </span>
@@ -174,7 +174,7 @@ export function ContractSelector({ families, sel, onSel, pickers = false, layer 
       {fam && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>{fam.code} EXPIRIES · OI LADDER</span>
+            <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted }}>{fam.code} EXPIRIES · OI LADDER</span>
             {roll && <Chip color={T.amber} title="front-month OI falling faster than the next month is rising">⟳ {roll.split(':')[0].toUpperCase()}</Chip>}
             <span style={{ flex: 1 }} />
             <span style={{ fontSize: 10, color: T.dim }}>{layer === 'P' ? 'click a row to pick the expiry; the front is the highest-OI expiry more than 5 sessions from the tender period' : 'click a row to trade that month on MCXG and read it on every GOLD panel'}{chainOnPage ? ' · settle, band and carry: the MCX chain below' : ''}</span>
@@ -182,7 +182,7 @@ export function ContractSelector({ families, sel, onSel, pickers = false, layer 
           <DataTable columns={ladderCols} rows={fam.expiries} rowKey={e => e.expiry} dense onRowClick={e => onSel({ expiry: e.expiry })} exportName={`gold-${fam.code.toLowerCase()}-expiries`}
             empty="No expiries from the ICICI master yet (computed expiries appear once the rule runs)." />
           {sel.options && (
-            <div data-gold-options style={{ marginTop: 8, padding: '6px 10px', border: `1px solid ${T.violet}55`, fontSize: 10.5, color: T.text }}>
+            <div data-gold-options style={{ marginTop: 8, padding: '6px 10px', border: `1px solid ${T.violet}55`, fontSize: 11, color: T.text }}>
               <b style={{ color: T.violet }}>OPTIONS</b>{' '}
               {fam.options?.available
                 ? <>CE/PE on {fam.code}: expiries {fam.options.expiries?.map(expiryMonthLabel).join(' · ') || '—'}{fam.options.strike_step != null ? ` · strike step ₹${fmtFixed(fam.options.strike_step, 0)}` : ''}. </>
@@ -215,7 +215,7 @@ function CurveChart({ points, ghost, ghostDate, label, fnd }: { points: CurvePoi
       <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label}>
         {yAxis.ticks.map(t => (
           <g key={t}><line x1={padL} x2={padL + plotW} y1={y(t)} y2={y(t)} stroke={T.border} strokeDasharray="2 4" />
-            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={9.5} fill={T.muted} fontFamily={T.mono}>{fmtFixed(t, yAxis.dp)}</text></g>
+            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={10} fill={T.muted} fontFamily={T.mono}>{fmtFixed(t, yAxis.dp)}</text></g>
         ))}
         <text x={padL - 6} y={padT - 3} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>$/oz</text>
         {ghost.length > 1 && <path d={path(ghost)} fill="none" stroke={T.dim} strokeWidth={1} strokeDasharray="3 3" />}
@@ -358,7 +358,7 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
             {!spec ? <NoVerdict what="the CME product reference file (C4) is fetched by the 15:45 job" /> : (
               <>
                 {specIsMatched === false && (
-                  <div data-gold-spec-mismatch style={{ fontSize: 10.5, color: T.amber, marginBottom: 6 }}>
+                  <div data-gold-spec-mismatch style={{ fontSize: 11, color: T.amber, marginBottom: 6 }}>
                     This PRF row is {spec.symbol} {specMonth}, not the matched {comexMonthLabel(comexMatched)}: its first notice / last trade are {specMonth}&apos;s. The matched month&apos;s row arrives with the CME product-reference refresh.
                   </div>
                 )}
@@ -396,7 +396,7 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
             <DataTable columns={mcxCols} rows={mcxRows} rowKey={p => `${p.symbol ?? ''}-${p.expiry}`} dense exportName="gold-mcx-chain" onRowClick={p => onSel?.({ expiry: p.expiry })}
               empty="No MCX curve rows yet — history begins the day the 07:35 master job starts." />
             {mc?.basis && (
-              <div data-gold-mcx-basis style={{ padding: '6px 12px', fontSize: 10.5, color: T.muted, borderTop: `1px solid ${T.border}` }} title={tip('mcx_basis_pct')}>
+              <div data-gold-mcx-basis style={{ padding: '6px 12px', fontSize: 11, color: T.muted, borderTop: `1px solid ${T.border}` }} title={tip('mcx_basis_pct')}>
                 {/* the basis names its clock (C-BEGINNER-5 / C-DATA-11); the landed / duty-paid rupees are the page's ONE fair block (C-TRADER-19) */}
                 {/* the basis's OWN session (never the request date): the server's label verbatim, its purity once, its settle source once */}
                 {(() => {
@@ -408,9 +408,9 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
                 {' · '}landed {fmtInr0(pageFair?.landed ?? mc.basis.landed_inr)} · duty {(pageFair?.duty_pct ?? mc.basis.duty_pct) != null ? `${fmtFixed(pageFair?.duty_pct ?? mc.basis.duty_pct, 0)} %` : '—'}{(pageFair?.duty_effective ?? mc.basis.duty_effective) ? ` since ${dayLabel(pageFair?.duty_effective ?? mc.basis.duty_effective)}` : ''} (confirm at CBIC) · duty-paid landed now {fmtInr0(pageFair?.duty_paid_landed ?? mc.basis.duty_paid_landed_inr)} {chainUnit} (the same rupee as HEALTH and PHYSICAL) · USD/INR {fmtFixed(mc.basis.usdinr, 2)}{mc.basis.usdinr_source ? ` ${mc.basis.usdinr_source}` : ''}
               </div>
             )}
-            {chainNote && <div data-gold-settle-note={chainNote.tone} data-gold-chain-note style={{ padding: '4px 12px', fontSize: 10.5, color: chainNote.tone === 'amber' ? T.amber : T.muted }}>⚠ {chainNote.text}</div>}
+            {chainNote && <div data-gold-settle-note={chainNote.tone} data-gold-chain-note style={{ padding: '4px 12px', fontSize: 11, color: chainNote.tone === 'amber' ? T.amber : T.muted }}>⚠ {chainNote.text}</div>}
             {mcxCarry != null && spreads[0]?.ann != null && (
-              <div data-gold-carry-gap style={{ padding: '4px 12px', fontSize: 10.5, color: T.muted }} title={tip('annualised_carry_pct')}>
+              <div data-gold-carry-gap style={{ padding: '4px 12px', fontSize: 11, color: T.muted }} title={tip('annualised_carry_pct')}>
                 carry: MCX {fmtSignedPctSp(mcxCarry, 1)} p.a. (band, {chain.day || 'its session'}) vs COMEX {expiryMonthLabel(spreads[0].from.expiry)}→{expiryMonthLabel(spreads[0].to.expiry)} {fmtSignedPctSp(spreads[0].ann, 1)} p.a. · gap {fmtSigned(mcxCarry - spreads[0].ann, 1)} pp —
                 the rupee–dollar interest differential (not stored on this page) explains part of it; the rest is local demand / duty expectation. A long pays it at each roll.
               </div>
@@ -451,7 +451,7 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
         <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
           {LINKS.map(l => (
             <a key={l.name} href={l.url} target="_blank" rel="noreferrer" data-link-only style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center', padding: '6px 10px', border: `1px solid ${T.border}`, textDecoration: 'none', color: T.text }}>
-              <span><span style={{ fontSize: 11.5 }}>{l.name}</span><div style={{ fontSize: 9.5, color: T.dim }}>{l.what}</div></span>
+              <span><span style={{ fontSize: 12 }}>{l.name}</span><div style={{ fontSize: 10, color: T.dim }}>{l.what}</div></span>
               <Chip color={T.cyan}>↗ OPEN</Chip>
             </a>
           ))}

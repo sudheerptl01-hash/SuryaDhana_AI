@@ -39,9 +39,9 @@ export function trackVerdict(d: TrackRecordData): { text: string; color: string 
 }
 
 function Table({ rows, first }: { rows: Horizon[]; first: string }) {
-  const th = { padding: '6px 10px', fontSize: 9.5, letterSpacing: 1, color: T.muted, textAlign: 'right' as const, fontWeight: 600,
+  const th = { padding: '6px 10px', fontSize: 10, letterSpacing: 1, color: T.muted, textAlign: 'right' as const, fontWeight: 600,
                borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap' as const, textTransform: 'uppercase' as const }
-  const td = { padding: '5px 10px', fontSize: 11.5, textAlign: 'right' as const, fontFamily: T.mono, borderBottom: `1px solid ${T.border}` }
+  const td = { padding: '5px 10px', fontSize: 12, textAlign: 'right' as const, fontFamily: T.mono, borderBottom: `1px solid ${T.border}` }
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
       <thead><tr>
@@ -80,7 +80,7 @@ function Box({ title, children, sub }: { title: string; children: React.ReactNod
 function PickList({ rows, title }: { rows: TrackRow[]; title: string }) {
   return (
     <Box title={title} sub="to date, vs similar stocks">
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <tbody>{rows.map(r => (
           <tr key={`${r.scan_date}-${r.symbol}`} style={{ borderBottom: `1px solid ${T.border}` }}>
             <td style={{ padding: '5px 10px', color: T.amber, fontWeight: 700 }}>{r.nse_symbol ?? r.symbol}</td>

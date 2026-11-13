@@ -481,7 +481,7 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           {ulPriced && ul.source
             ? <Stat label={`${symbol} spot`} value={num(ulRow!.price, 2)} accent={T.amber}
-                sub={<span><SourceChip info={ul.source} style={{ fontSize: 8.5 }} /> · EOD {num(term.spot, 2)} on {term.as_of} (the tables below)</span>} />
+                sub={<span><SourceChip info={ul.source} style={{ fontSize: 9 }} /> · EOD {num(term.spot, 2)} on {term.as_of} (the tables below)</span>} />
             : <Stat label={`${symbol} spot (EOD)`} value={num(term.spot, 2)} accent={T.amber} sub={`EOD ${term.as_of} · ${term.source}`} />}
           <Stat label="Futures OI (all expiries)" value={oiFmt(term.fut_oi_total)} accent={T.cyan} sub="shares, summed over the listed futures" />
           <Stat label="INDIA VIX" value={num(vix?.level, 2)} accent={T.muted} color={T.text}

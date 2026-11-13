@@ -240,7 +240,7 @@ export function WatchMonitor() {
           <span style={{ color: tone(pnl), fontWeight: 600 }}>{pnl >= 0 ? '+' : '−'}₹{Math.abs(Math.round(pnl)).toLocaleString('en-IN')} ({pct((px / b.buy - 1) * 100)})</span></span> } },
     { key: 'fa', label: 'P/E · profit y/y', align: 'right', sort: r => fin[r.sym]?.pe ?? 1e9, title: 'valuation and latest quarter from NSE results filings (FA)',
       render: r => { const f = fin[r.sym]; if (!f) return <span style={{ color: T.dim }}>…</span>
-        return <span style={{ fontSize: 10.5 }}><span style={{ color: T.muted }}>{f.pe != null ? `${fmtFixed(f.pe, 1)}×` : '—'}</span>
+        return <span style={{ fontSize: 11 }}><span style={{ color: T.muted }}>{f.pe != null ? `${fmtFixed(f.pe, 1)}×` : '—'}</span>
           <span style={{ color: T.dim }}> · </span>{f.pat_yoy_turn ? <span style={{ color: f.pat_yoy_turn === 'to profit' ? T.green : T.red }}>{f.pat_yoy_turn}</span>
             : <span style={{ color: f.pat_yoy == null ? T.dim : f.pat_yoy >= 0 ? T.green : T.red }}>{fmtPct(f.pat_yoy, 0)}</span>}</span> } },
     { key: 'spark', label: '1M', title: 'NSE rows: the last 22 NSE daily closes (stored, split/bonus-adjusted) plus today\'s live point; non-NSE pins: Yahoo',
@@ -258,7 +258,7 @@ export function WatchMonitor() {
     { key: 'alert', label: 'Alert', render: r => {
       const a = alerts[r.sym]
       return <span role="button" title="Set price alerts" onClick={e => { e.stopPropagation(); openEditor(r.sym) }}
-        style={{ display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer', fontFamily: T.mono, fontSize: 10.5 }}>
+        style={{ display: 'inline-flex', gap: 5, alignItems: 'center', cursor: 'pointer', fontFamily: T.mono, fontSize: 11 }}>
         <span style={{ color: a ? T.amber : T.dim }}><BellGlyph size={10} /></span>
         {a?.above != null && <span style={{ color: T.green }}>↑{a.above.toLocaleString('en-IN')}</span>}
         {a?.below != null && <span style={{ color: T.red }}>↓{a.below.toLocaleString('en-IN')}</span>}
@@ -334,7 +334,7 @@ export function WatchMonitor() {
             ))}
           </div>
           {history.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 10.5, color: T.muted }}>
+            <div style={{ marginTop: 8, fontSize: 11, color: T.muted }}>
               Fired: {history.slice(0, 6).map(h => `${h.sym} ${h.side === 'above' ? '↑' : '↓'}${h.level.toLocaleString('en-IN')} (${new Date(h.at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })})`).join(' · ')}
             </div>
           )}

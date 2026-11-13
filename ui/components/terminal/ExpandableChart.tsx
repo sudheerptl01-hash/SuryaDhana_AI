@@ -54,7 +54,7 @@ function LegendSlot({ store, resting }: { store: LegendStore; resting?: ReactNod
   }, [store])
   const node = store.node ?? resting
   return (
-    <span data-sd-chart-legend style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted, whiteSpace: 'nowrap',
+    <span data-sd-chart-legend style={{ fontFamily: T.mono, fontSize: 11, color: T.muted, whiteSpace: 'nowrap',
                                         overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 520, minWidth: 0 }}>
       {node ?? '—'}
     </span>

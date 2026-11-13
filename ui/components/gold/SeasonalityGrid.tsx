@@ -28,7 +28,7 @@ export function SeasonalityGrid({ rows, since, source, tips }: { rows: SeasonRow
             <div key={m} title={`${tip}\n${tips('season_mean') ?? ''}`} style={{ border: `1px solid ${FESTIVAL[i + 1] ? T.amberDim : T.border}`, padding: '5px 2px', textAlign: 'center', background: `rgba(181,139,255,${(0.08 + a * 0.5).toFixed(2)})` }}>
               <div style={{ fontSize: 9, color: T.muted, fontFamily: T.mono }}>{m}{FESTIVAL[i + 1] ? ' ✦' : ''}</div>
               <div style={{ fontSize: 11, color: T.bright, fontFamily: T.mono }}>{r ? signedPct(r.mean_pct, 1) : '—'}</div>
-              <div style={{ fontSize: 8.5, color: T.dim, fontFamily: T.mono }} title={tips('season_hit_rate')}>{r?.hit_rate != null ? `${Math.round(r.hit_rate * 100)} %` : ''}</div>
+              <div style={{ fontSize: 9, color: T.dim, fontFamily: T.mono }} title={tips('season_hit_rate')}>{r?.hit_rate != null ? `${Math.round(r.hit_rate * 100)} %` : ''}</div>
             </div>
           )
         })}

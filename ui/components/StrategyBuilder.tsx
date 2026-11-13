@@ -295,21 +295,21 @@ function PayoffSvg({ a, forward, showScenario, width: W, height: H }: {
       {yAxis.ticks.map(v => (
         <g key={v}>
           <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke={T.border} strokeWidth={Math.abs(v) < 1e-9 ? 1.4 : 0.6} />
-          <text x={padL - 6} y={y(v) + 3} fontSize={9.5} fill={T.dim} textAnchor="end" fontFamily={T.mono}>{fmtAxisRupees(v, yAxis.unit, yAxis.step)}</text>
+          <text x={padL - 6} y={y(v) + 3} fontSize={10} fill={T.dim} textAnchor="end" fontFamily={T.mono}>{fmtAxisRupees(v, yAxis.unit, yAxis.step)}</text>
         </g>
       ))}
       {xTicks.filter(s => s >= xmin && s <= xmax).map(s => (
-        <text key={s} x={x(s)} y={H - padB + 14} fontSize={9.5} fill={T.dim} textAnchor="middle" fontFamily={T.mono}>{s.toLocaleString('en-IN')}</text>
+        <text key={s} x={x(s)} y={H - padB + 14} fontSize={10} fill={T.dim} textAnchor="middle" fontFamily={T.mono}>{s.toLocaleString('en-IN')}</text>
       ))}
       <g clipPath={`url(#${clipId})`}>
         {/* forward */}
         <line x1={x(forward)} x2={x(forward)} y1={padT} y2={H - padB} stroke={T.amber} strokeDasharray="3 3" opacity={0.8} />
-        <text x={x(forward) + 4} y={padT + 10} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>fwd {forward.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</text>
+        <text x={x(forward) + 4} y={padT + 10} fontSize={10} fill={T.amber} fontFamily={T.mono}>fwd {forward.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</text>
         {/* breakevens: labelled, exact */}
         {a.breakevens.map((b, i) => (
           <g key={b}>
             <line x1={x(b)} x2={x(b)} y1={padT} y2={H - padB} stroke={T.cyan} strokeDasharray="5 4" opacity={0.75} />
-            <text x={x(b)} y={H - padB - 4 - beRows[i] * 12} fontSize={9.5} fill={T.cyan} textAnchor="middle" fontFamily={T.mono}
+            <text x={x(b)} y={H - padB - 4 - beRows[i] * 12} fontSize={10} fill={T.cyan} textAnchor="middle" fontFamily={T.mono}
                   stroke={T.panel} strokeWidth={3} paintOrder="stroke">{beText(b)}</text>
           </g>
         ))}
@@ -339,7 +339,7 @@ function PayoffChart({ a, forward, lotNote, showScenario }: {
         height={H}>
         {({ width, height }) => <PayoffSvg a={a} forward={forward} showScenario={showScenario} width={width} height={height} />}
       </ExpandableChart>
-      <div style={{ fontSize: 10.5, color: T.muted, marginTop: 4 }}>
+      <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>
         <span style={{ color: T.green }}>— {expiryLabel}</span> (red where losing) ·{' '}
         <span style={{ color: T.cyan }}>— today (Black-76)</span>
         {showScenario && <> · <span style={{ color: T.violet }}>┄ +{a.scenario.days_forward}d, IV {a.scenario.iv_shift >= 0 ? '+' : '−'}{Math.abs(a.scenario.iv_shift)} pts</span></>}
@@ -868,7 +868,7 @@ export function StrategyBuilder() {
                   </div>
                 </Notice>
               )}
-              {bookMsg && <div style={{ fontSize: 10.5, color: bookMsg.ok ? T.cyan : T.red, marginTop: 6 }} data-ostr-book-msg>{bookMsg.text}</div>}
+              {bookMsg && <div style={{ fontSize: 11, color: bookMsg.ok ? T.cyan : T.red, marginTop: 6 }} data-ostr-book-msg>{bookMsg.text}</div>}
 
               {(analysis != null || fnoLegs.length > 0) && (
                 <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
@@ -884,7 +884,7 @@ export function StrategyBuilder() {
                     {/* T-07b: the same breakevens with the round-trip costs on top — arithmetic, same payoff curve */}
                     {analysis.breakevens_net_of_costs && analysis.breakevens_net_of_costs.values.length > 0 && (
                       <span data-ostr-be-costs title={analysis.breakevens_net_of_costs.note}
-                        style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>
+                        style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontFamily: T.mono, fontSize: 11, color: T.muted }}>
                         breakeven incl. {fmtInr(analysis.breakevens_net_of_costs.costs_inr, 0)} costs: {analysis.breakevens_net_of_costs.values.map(b => n2(b, 1)).join(' / ')}
                         <BadgeChip badge="arithmetic" note={analysis.breakevens_net_of_costs.note} />
                       </span>
@@ -934,7 +934,7 @@ export function StrategyBuilder() {
                               <span style={{ color: T.muted }}> · defined-risk floor {fmtInr(analysis.margin.defined_risk_floor, 0)}</span>}
                             {' '}<BadgeChip badge="heuristic" note={margin?.heuristic?.evidence ?? 'Measured 4.8× above Breeze SPAN on the NIFTY 09-Nov-2026 iron condor (₹3.9 L vs ₹81,497.07).'} />
                           </div>
-                          <div style={{ color: T.violet, fontSize: 10.5 }} data-ostr-heuristic-error>
+                          <div style={{ color: T.violet, fontSize: 11 }} data-ostr-heuristic-error>
                             measured error {(margin?.heuristic?.error_factor_measured ?? 4.8).toFixed(1)}× (12 % of notional vs Breeze SPAN on the NIFTY 09-Nov-2026 iron condor: ₹3.9 L vs ₹81,497) — a real answer (BREEZE / NSE SPAN FILE) replaces this line
                           </div>
                         </>
@@ -964,15 +964,15 @@ export function StrategyBuilder() {
             <Panel title="Payoff" accent={T.green} source={seedSrc ?? sourceOf(chain.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic"
               subtitle={busy ? 'pricing…' : analysis ? `to scale · ${analysis.single_expiry ? 'at expiry + today' : 'at the NEAREST expiry (calendar) + today'}${scenDays || ivShift ? ' + scenario' : ''}` : undefined}>
               {chain.live && (
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginBottom: 8 }} data-ostr-spot>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', fontFamily: T.mono, fontSize: 11, color: T.muted, marginBottom: 8 }} data-ostr-spot>
                   <span>chain spot <span style={{ color: T.text }}>{n2(chain.spot, 2)}</span> · fwd <span style={{ color: T.amber }}>{n2(forward, 2)}</span> at {stampClock(chain.as_of) || '—'} IST (the book is priced on these)</span>
                   {spotNow != null && ul.sourceFor(ulSym ?? '') && <span title="the underlying's price now (live quote service: Breeze websocket, else NSE's website); context only — the legs keep their seeded prices until ↻ CHAIN">
                     · spot now <span style={{ color: T.text }}>{n2(spotNow, 2)}</span>{drift != null && <span style={{ color: T.dim }}> ({drift >= 0 ? '+' : '−'}{Math.abs(drift).toFixed(2)}% since the seed)</span>}{' '}
-                    <SourceChip info={ul.sourceFor(ulSym ?? '')!} style={{ fontSize: 8.5 }} /></span>}
+                    <SourceChip info={ul.sourceFor(ulSym ?? '')!} style={{ fontSize: 9 }} /></span>}
                 </div>
               )}
               {/* T+n and IV-shift sliders (review M39): a third curve, the whole book revalued */}
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginBottom: 8 }} data-ostr-sliders>
+              <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', fontFamily: T.mono, fontSize: 11, color: T.muted, marginBottom: 8 }} data-ostr-sliders>
                 <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>T+
                   <input type="range" min={0} max={Math.max(0, Math.floor(nearestLegDays * 2) / 2)} step={0.5} value={scenDays}
                     onChange={e => setScenDays(Number(e.target.value))} aria-label="days forward" />

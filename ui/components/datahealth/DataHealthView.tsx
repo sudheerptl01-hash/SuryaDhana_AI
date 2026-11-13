@@ -18,7 +18,7 @@ const STATE_COLOR: Record<string, string> = { gap: T.red, red: T.red, amber: T.a
 
 function StateChip({ s }: { s: string }) {
   const c = STATE_COLOR[s] ?? T.dim
-  return <span data-health-state={s} style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: c, border: `1px solid ${c}88`, padding: '1px 6px' }}>
+  return <span data-health-state={s} style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: 1, color: c, border: `1px solid ${c}88`, padding: '1px 6px' }}>
     {s.toUpperCase()}</span>
 }
 
@@ -100,7 +100,7 @@ export function DataStaleChip() {
   return (
     <span role="button" tabIndex={0} data-data-stale={face.n ?? '?'} data-data-health={snap.status} title={face.title}
       onClick={openDataView} onKeyDown={e => { if (e.key === 'Enter') openDataView() }}
-      style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.1, color: c, border: `1px solid ${c}66`, padding: '1px 6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+      style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.1, color: c, border: `1px solid ${c}66`, padding: '1px 6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
       {face.label}
     </span>
   )

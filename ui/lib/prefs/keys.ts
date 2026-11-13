@@ -27,6 +27,7 @@ export const SYNC_KEYS = [
   'suryadhana.whatsnew', //           components/Brief.tsx — dismissed "what's new" version
   'activeSymbol.v1', //               lib/activeSymbol.ts ACTIVE_SYMBOL_KEY — last underlying / expiry / strikes picked (terminal v2 1.3; the per-window copy is sessionStorage)
   'strip.order.v1', //                components/shell/stripOrder.ts STRIP_ORDER_KEY — the owner's page-strip order (page review M37)
+  'suryadhana.workspaces.v1', //      lib/workspaces.ts WORKSPACES_KEY — saved workspaces/layouts {v, list[≤8]: {name, page, strip, symbol, expiry, sub, at}} (FINAL ROUND R2); never credentials or book contents
 ] as const
 
 export type SyncKey = (typeof SYNC_KEYS)[number]

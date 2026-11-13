@@ -147,7 +147,7 @@ export function DealsMonitor() {
           {clients.length > 0 && (
             <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE deals' })} badge="context" title="Most active clients" accent={T.cyan} style={{ marginBottom: 12 }}
               subtitle={`by gross deal value over ${days} day${days > 1 ? 's' : ''} · click to see their deals`}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '4px 18px', fontSize: 11.5 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '4px 18px', fontSize: 12 }}>
                 {clients.map(c => (
                   <div key={c.name} role="button" onClick={() => setQ(c.name)}
                        style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 80px 60px', gap: 8, cursor: 'pointer', padding: '2px 0', borderBottom: `1px solid ${T.border}` }}>

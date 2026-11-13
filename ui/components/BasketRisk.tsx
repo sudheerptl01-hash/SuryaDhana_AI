@@ -16,7 +16,7 @@ const f0 = (v: number | null | undefined, d = 0) => (v == null ? '—' : v.toFix
 function Fact({ label, value, sub, color = T.text }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div style={{ padding: '8px 10px', borderRight: `1px solid ${T.border}`, minWidth: 0 }}>
-      <div style={{ fontSize: 9.5, color: T.muted, letterSpacing: 1 }}>{label.toUpperCase()}</div>
+      <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1 }}>{label.toUpperCase()}</div>
       <div style={{ fontSize: 17, fontWeight: 700, color, marginTop: 2 }}>{value}</div>
       {sub && <div style={{ fontSize: 10, color: T.dim, marginTop: 1 }}>{sub}</div>}
     </div>
@@ -78,11 +78,11 @@ export function BasketRisk({ symbols, industries, capPct = 40, title = 'Watchlis
       )}
       {conc.length > 0 && (
         <div style={{ padding: '8px 10px', borderBottom: `1px solid ${T.border}` }}>
-          <div style={{ fontSize: 9.5, color: T.muted, letterSpacing: 1, marginBottom: 6 }}>
+          <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 6 }}>
             INDUSTRY CONCENTRATION · Desk cap {capPct}% = {capN} of {symbols.length}
           </div>
           {conc.map(([ind, k]) => (
-            <div key={ind} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 26px', gap: 8, alignItems: 'center', fontSize: 10.5, marginBottom: 3 }}>
+            <div key={ind} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 26px', gap: 8, alignItems: 'center', fontSize: 11, marginBottom: 3 }}>
               <span style={{ color: ind === 'Unknown' ? T.amber : T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ind}</span>
               <span style={{ position: 'relative', height: 8, background: T.border }}>
                 <span style={{ position: 'absolute', left: 0, top: 0, height: 8, width: `${(k / symbols.length) * 100}%`,

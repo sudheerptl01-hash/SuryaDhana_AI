@@ -122,6 +122,22 @@ def index_drivers_weights(index: str = Query("NIFTY 50", max_length=32), date_: 
     return reads.contract_weights(_store(), index, day=day)
 
 
+# FINAL round R2-DRIV (RATING R9-I3): the within-day contribution timeline — tick-store minute closes × stored
+# PIT weights, the 2-min tape as the fallback, honest gaps. Sync def: parquet/pandas run in the threadpool.
+@router.get("/db/index-drivers/intraday")
+def index_drivers_intraday(index: str = Query("NIFTY 50", max_length=32),
+                           date_: str | None = Query(None, alias="date", pattern=r"^\d{4}-\d{2}-\d{2}$"),
+                           interval: str = Query("1m", pattern="^(1m|5m)$"),
+                           top: int = Query(7, ge=3, le=15)) -> dict[str, Any]:
+    from index_drivers import intraday as _intraday
+
+    try:
+        day = date.fromisoformat(date_) if date_ else None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"bad date {date_!r}") from exc
+    return _intraday.intraday(_store(), index.upper(), day=day, interval=interval, top=top)
+
+
 @router.get("/db/index-drivers/catalog")
 def index_drivers_catalog() -> dict[str, Any]:
     return reads.catalog()

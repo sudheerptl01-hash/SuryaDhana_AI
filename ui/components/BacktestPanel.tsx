@@ -463,7 +463,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
           </div>
 
           {looksLegacy({ holdSessions: forwardDays, maxPositions, frictionBps: frictionBps ?? MIN_FRICTION_BPS }) && (
-            <p className="text-[10.5px] text-rose-300/90 leading-snug">This is a short-hold or floor-cost setup: the configuration the research FAILED after
+            <p className="text-[11px] text-rose-300/90 leading-snug">This is a short-hold or floor-cost setup: the configuration the research FAILED after
               costs. Read any result as a cost lesson, not an edge.</p>
           )}
           <button onClick={run} disabled={loading || watchlistEmpty}
@@ -542,7 +542,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                 className="mt-5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border border-amber-500/50 text-amber-300 hover:bg-amber-500/10 disabled:opacity-40">
                 ▶ Run the Desk-like baseline
               </button>
-              <p className="text-[10.5px] text-slate-500 max-w-md mt-3">A backtest describes what a rule did; it predicts nothing until a pre-registered,
+              <p className="text-[11px] text-slate-500 max-w-md mt-3">A backtest describes what a rule did; it predicts nothing until a pre-registered,
                 out-of-sample study passes (RSCH).</p>
             </div>
           )}

@@ -102,8 +102,8 @@ function NetPurchases({ bars }: { bars: NetPurchaseBar[] }) {
   const shown = bars.filter(b => !b.unitError)
   const flagged = bars.filter(b => b.unitError)
   return (
-    <div data-gold-netpurchases style={{ display: 'grid', gap: 3, padding: '8px 12px', fontFamily: T.mono, fontSize: 10.5 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '48px 64px minmax(0, 1fr) 76px 76px', gap: 8, color: T.dim, fontSize: 9.5, letterSpacing: .6 }}>
+    <div data-gold-netpurchases style={{ display: 'grid', gap: 3, padding: '8px 12px', fontFamily: T.mono, fontSize: 11 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '48px 64px minmax(0, 1fr) 76px 76px', gap: 8, color: T.dim, fontSize: 10, letterSpacing: .6 }}>
         <span>CTRY</span><span>MONTH</span><span>Δ m/m (t)</span><span style={{ textAlign: 'right' }}>Δ m/m t</span><span style={{ textAlign: 'right' }}>Δ 12 m t</span>
       </div>
       {shown.map(b => (
@@ -165,11 +165,11 @@ function BalanceBars({ rows }: { rows: NonNullable<GoldFlows['balance_sheet']> }
         })}
       </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: `44px repeat(${periods.length}, minmax(0, 1fr))`, gap: 3, fontSize: 8.5, color: T.dim, fontFamily: T.mono, marginTop: 2 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `44px repeat(${periods.length}, minmax(0, 1fr))`, gap: 3, fontSize: 9, color: T.dim, fontFamily: T.mono, marginTop: 2 }}>
         <span />
         {periods.map((p, i) => <span key={p} style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden' }}>{i % every === 0 || i === periods.length - 1 ? quarterLabel(p) : ''}</span>)}
       </div>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 9.5, color: T.muted, marginTop: 4 }}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 10, color: T.muted, marginTop: 4 }}>
         {BALANCE_DEMAND.map(k => <span key={k}><span style={{ display: 'inline-block', width: 8, height: 8, background: BALANCE_COLOR[k], marginRight: 3 }} />{k.replace('_', ' ')}</span>)}
         <span><span style={{ display: 'inline-block', width: 12, borderTop: `1px dashed ${T.cyan}`, marginRight: 3, verticalAlign: 'middle' }} />supply (mine + recycled + hedging)</span>
       </div>
@@ -323,7 +323,7 @@ export function MonthlyView({ layer, usdinr, tooltips, catalog }: GoldSubViewPro
                 ['AMFI gold-ETF AUM', pm.amfi?.aum_cr != null ? `₹${fmtFixed(pm.amfi.aum_cr, 0)} cr${pm.amfi.tonnes_est != null ? ` ≈ ${fmtFixed(pm.amfi.tonnes_est, 1)} t` : ''}` : '—'],
               ]} />
             )}
-            <div style={{ fontSize: 9.5, color: T.dim, marginTop: 6 }}>Sources: Shanghai Gold Exchange, PIB, Swiss Federal Customs, AMFI — displayed with attribution on this private terminal; not re-served.</div>
+            <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>Sources: Shanghai Gold Exchange, PIB, Swiss Federal Customs, AMFI — displayed with attribution on this private terminal; not re-served.</div>
           </Pending>
         </GoldPanel>
       </div>
@@ -337,7 +337,7 @@ export function MonthlyView({ layer, usdinr, tooltips, catalog }: GoldSubViewPro
         <Pending s={flows} label="the balance sheet">
           {(flows.data?.balance_sheet ?? []).length === 0 ? <NoVerdict what="the WGC quarterly balance sheet is gated on O-1 and fetched when due" />
             : <BalanceBars rows={flows.data!.balance_sheet!} />}
-          <div style={{ fontSize: 9.5, color: T.dim, marginTop: 6 }}>Source: World Gold Council (Goldhub) — displayed with attribution on this private terminal; not re-served or exported.</div>
+          <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>Source: World Gold Council (Goldhub) — displayed with attribution on this private terminal; not re-served or exported.</div>
         </Pending>
       </GoldPanel>
 
@@ -349,9 +349,9 @@ export function MonthlyView({ layer, usdinr, tooltips, catalog }: GoldSubViewPro
         copyP="Gold/M2 percentile over the stored months; HY OAS (ICE BofA) level and percentile; GPR monthly (Caldara–Iacoviello) percentile; Cleveland Fed 10-y expected inflation and the 5y5y forward; nothing here forecasts (G-MACRO)."
         right={<Chip color={T.muted} onClick={() => setLiqOpen(o => !o)}>{liqOpen ? 'COLLAPSE' : 'EXPAND'}</Chip>}>
         {liqOpen ? <Pending s={liq} label="monthly series"><KV items={liqItems} cols={2} /></Pending>
-          : <div style={{ fontSize: 10.5, color: T.muted }}>{liqItems.map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>}
+          : <div style={{ fontSize: 11, color: T.muted }}>{liqItems.map(([k, v]) => `${k}: ${v}`).join(' · ')}</div>}
       </GoldPanel>
-      <div style={{ fontSize: 9.5, color: T.dim }}>Prices: {fmtUsd(daily[daily.length - 1]?.c, 1)} last stored close{usdinr != null && daily.length ? ` ≈ ${fmtInr0(landedInr10g(daily[daily.length - 1].c, usdinr))} landed ₹/10 g at today's USD/INR (no duty)` : ''}.</div>
+      <div style={{ fontSize: 10, color: T.dim }}>Prices: {fmtUsd(daily[daily.length - 1]?.c, 1)} last stored close{usdinr != null && daily.length ? ` ≈ ${fmtInr0(landedInr10g(daily[daily.length - 1].c, usdinr))} landed ₹/10 g at today's USD/INR (no duty)` : ''}.</div>
     </div>
   )
 }

@@ -60,7 +60,7 @@ export function TradeTicket({ price, atrPct }: { price: number; atrPct: number |
   }, [amount, mult, capital, price, atrPct])
 
   const row = (k: string, v: React.ReactNode, c?: string) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: `1px solid ${T.border}`, fontSize: 11.5 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: `1px solid ${T.border}`, fontSize: 12 }}>
       <span style={{ color: T.muted }}>{k}</span><span style={{ fontFamily: T.mono, color: c ?? T.text }}>{v}</span>
     </div>
   )

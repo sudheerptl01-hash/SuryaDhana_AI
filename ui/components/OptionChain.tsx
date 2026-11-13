@@ -159,7 +159,7 @@ function Smile({ data }: { data: Chain }) {
       <text x={W - P} y={H - 6} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>{kLast.toLocaleString('en-IN')}</text>
       {fwdIn && data.forward != null && <text x={x(data.forward)} y={H - 6} textAnchor="middle" fontSize={9} fill={T.amber} fontFamily={T.mono}>fwd</text>}
       {cur && <Crosshair x={x(cur.k)} y={y(cur.iv)} top={8} height={H - 30} left={P} width={W - 2 * P} />}
-      {ia.zoomed && <text x={W - P} y={12} textAnchor="end" fontSize={8.5} fill={T.dim} fontFamily={T.mono}>zoomed · double-click resets</text>}
+      {ia.zoomed && <text x={W - P} y={12} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>zoomed · double-click resets</text>}
     </svg>
     </div>
   )
@@ -268,11 +268,11 @@ function OiBars({ data }: { data: Chain }) {
       })}
       {/* the server's walls: named above their bar, or an edge marker when the strike is outside the plotted window */}
       {wallLabels.map(l => (
-        <text key={l.side} x={l.x} y={l.y} textAnchor={l.anchor} fontSize={8.5} fill={l.color} fontFamily={T.mono} letterSpacing={0.5}
+        <text key={l.side} x={l.x} y={l.y} textAnchor={l.anchor} fontSize={9} fill={l.color} fontFamily={T.mono} letterSpacing={0.5}
               data-wall={l.side} data-wall-edge={l.edge}>{l.tip && <title>{l.tip}</title>}{l.text}</text>
       ))}
       {curVis >= 0 && <Crosshair x={cx(curVis)} top={TOP} height={AXIS - TOP} left={P} width={W - 2 * P} />}
-      {ia.zoomed && <text x={W - P} y={10} textAnchor="end" fontSize={8.5} fill={T.dim} fontFamily={T.mono}>zoomed · double-click resets</text>}
+      {ia.zoomed && <text x={W - P} y={10} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>zoomed · double-click resets</text>}
     </svg>
     </div>
   )
@@ -487,9 +487,9 @@ export function OptionChain() {
         </form>} />
       {error && <ErrorBox error={error} onRetry={() => load()} />}
       {liveNote && <div style={{ fontSize: 11, color: T.amber, marginBottom: 8 }}>⚠ {liveNote}</div>}
-      {ban && ban.list.includes(symbol) && <div style={{ fontSize: 11.5, color: T.red, border: `1px solid ${T.red}55`, padding: '6px 10px', marginBottom: 8 }}>
+      {ban && ban.list.includes(symbol) && <div style={{ fontSize: 12, color: T.red, border: `1px solid ${T.red}55`, padding: '6px 10px', marginBottom: 8 }}>
         ⚑ {symbol} is in the F&O ban period{ban.date ? ` for ${ban.date}` : ''}: open interest crossed 95% of the market-wide limit, so no new positions (only closing trades) until it drops below 80%.</div>}
-      {ban && ban.list.length > 0 && <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 8 }}>
+      {ban && ban.list.length > 0 && <div style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>
         F&O ban{ban.date ? ` (${new Date(`${ban.date}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })})` : ''}:{' '}
         {ban.list.map(b => <span key={b} role="button" onClick={() => pick(b)} style={{ color: T.red, cursor: 'pointer', marginRight: 8 }}>{b}</span>)}
         <span style={{ color: T.dim }}>· NSE's securities-in-ban list; entering and leaving the ban are volatile events</span></div>}
@@ -497,7 +497,7 @@ export function OptionChain() {
       {rolled && data && data.expiry !== rolled && <div style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>
         The {new Date(`${rolled}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} series settled today: showing the next expiry. Its chip is still there for the final prices.</div>}
       {data && <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }} data-omon-alerts>
-        <span style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1 }}>ALERT ON</span>
+        <span style={{ fontSize: 10, color: T.dim, letterSpacing: 1 }}>ALERT ON</span>
         <Chip color={T.muted} title="this expiry's ATM straddle at or under a level (stored EOD chain) · opens ALRT"
           onClick={() => draftAlert({ series: `straddle:${data.symbol}:${data.expiry}`, op: 'below', value: null, repeat: 'repeat', cooldown_min: 1440 })}>STRADDLE</Chip>
         <Chip color={T.muted} title="the strike with the most call OI moves (stored EOD chain) · opens ALRT"
@@ -529,7 +529,7 @@ export function OptionChain() {
             )
           })}
           {screenRow?.mwpl_pct != null && (
-            <span style={{ marginLeft: 8, display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 10.5, color: T.muted, fontFamily: T.mono }}
+            <span style={{ marginLeft: 8, display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 11, color: T.muted, fontFamily: T.mono }}
               title="Open interest as a share of the market-wide position limit (NSE combined OI file). At 95 % the stock enters the F&O ban. Context: describes crowding, does not predict.">
               % MWPL <b style={{ color: T.text }}>{screenRow.mwpl_pct.toFixed(0)}%</b> <BadgeChip badge="context" />
             </span>
@@ -542,7 +542,7 @@ export function OptionChain() {
         <Panel title="Chain" pad={0} accent={T.amber} style={{ marginBottom: 12 }} source={chainSource} badge="arithmetic"
           subtitle={`calls left · puts right · OI, OI change and volume in ${oiUnit} · bars = open interest · IV only for out-of-the-money strikes · a dim price with ˢ is NSE's settlement (no trade today) · click a price for the pricer (OVME) · click a strike (or j / k + space) to pick it for OSTR`}
           right={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', rowGap: 4, justifyContent: 'flex-end' }} data-omon-controls>
-            {picks.length > 0 && <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.violet }} data-omon-picks>
+            {picks.length > 0 && <span style={{ fontFamily: T.mono, fontSize: 11, color: T.violet }} data-omon-picks>
               {picks.map(k => num(k, k % 1 ? 1 : 0)).join(' · ')} → {SEED_NAME[Math.min(picks.length, 4)]}</span>}
             {picks.length > 0 && <Chip color={T.muted} onClick={() => setPicks([])} title="clear the picked strikes">CLEAR</Chip>}
             <Chip color={T.violet} active={picks.length > 0} onClick={openInOstr} aria-label="open in OSTR"
@@ -557,7 +557,7 @@ export function OptionChain() {
           <div ref={scrollRef} tabIndex={0} onKeyDown={onChainKey} style={{ maxHeight: 640, overflowY: 'auto', position: 'relative', outline: 'none' }} data-omon-chain>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
               <thead style={{ position: 'sticky', top: 0, background: '#080b10', zIndex: Z.raised }}>
-                <tr style={{ color: T.muted, fontSize: 9.5, letterSpacing: .8 }}>
+                <tr style={{ color: T.muted, fontSize: 10, letterSpacing: .8 }}>
                   {['OI', 'OI CHG', 'VOLUME', 'IV', ...(greeks ? ['Δ', ...(hasNseDelta ? ['NSE Δ'] : []), 'Θ/D'] : []), 'PRICE'].map(h => <th key={`c${h}`} title={h.startsWith('OI') || h === 'VOLUME' ? `${oiUnit}` : h === 'Θ/D' ? unitLabel : undefined} style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>CALL {h}{h.startsWith('OI') || h === 'VOLUME' ? <span style={{ color: T.dim, fontWeight: 400 }}> ({oiUnit === 'contracts' ? 'ctr' : 'sh'})</span> : null}</th>)}
                   <th style={{ padding: '6px 8px', color: T.amber }}>STRIKE</th>
                   {greeks && <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }} title="gamma: change in delta per 1 point of the underlying (same for the call and the put at one IV)">Γ</th>}
@@ -649,7 +649,7 @@ export function OptionChain() {
             <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
               <Stat big={false} label="Spot / forward" value={num(ulPriced ? ulRow!.price : data.spot, 2)}
                     sub={<span>forward {num(data.forward, 2)} ({data.forward_source})
-                      {ulPriced && ul.source ? <> · <SourceChip info={ul.source} style={{ fontSize: 8.5 }} /></>
+                      {ulPriced && ul.source ? <> · <SourceChip info={ul.source} style={{ fontSize: 9 }} /></>
                         : data.live ? <span style={{ color: T.dim }}> · spot as NSE's chain prints it</span> : <span style={{ color: T.dim }}> · EOD {data.date}</span>}</span>} />
               <Stat big={false} label="ATM implied vol" value={data.atm_iv != null ? `${data.atm_iv.toFixed(2)}%` : '—'} accent={T.violet}
                     sub={data.expected_move_pct != null ? `priced move by expiry ±${data.expected_move_pct}% · T ${fmtNum(tDays, tDays != null && tDays % 1 ? 2 : 0)} d ÷ 365` : ''} />
@@ -666,7 +666,7 @@ export function OptionChain() {
                       : 'the strikes holding the most call / put open interest (where writers sit) · context'} />
             </div>
           ) : (
-            <div style={{ fontSize: 10.5, color: T.dim }}>Collapsed (chain-first) — open for the levels. The ladder above carries each expiry&apos;s ATM IV and the header strip the comparisons; each number appears once per page.</div>
+            <div style={{ fontSize: 11, color: T.dim }}>Collapsed (chain-first) — open for the levels. The ladder above carries each expiry&apos;s ATM IV and the header strip the comparisons; each number appears once per page.</div>
           )}
         </Panel>
         <div style={{ fontSize: 10, color: T.dim, marginTop: 8, lineHeight: 1.6 }}>

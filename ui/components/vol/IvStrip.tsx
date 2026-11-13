@@ -28,7 +28,7 @@ export function IvStrip({ symbol, nextResults }: { symbol: string; nextResults?:
   const cell = (label: string, value: React.ReactNode, title?: string) => (
     <div title={title} style={{ textAlign: 'center', border: `1px solid ${T.border}`, padding: '4px 6px', minWidth: 0 }}>
       <div style={{ fontSize: 9, color: T.dim, letterSpacing: 1, whiteSpace: 'nowrap' }}>{label}</div>
-      <div style={{ fontFamily: T.mono, fontSize: 11.5, color: T.text, whiteSpace: 'nowrap' }}>{value}</div>
+      <div style={{ fontFamily: T.mono, fontSize: 12, color: T.text, whiteSpace: 'nowrap' }}>{value}</div>
     </div>
   )
   return (

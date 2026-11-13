@@ -248,7 +248,7 @@ export function Compare() {
         right={<div style={{ display: 'flex', gap: 4 }}>{PERIODS.map(([k, l]) => <Chip key={k} color={T.amber} active={period === k} onClick={() => setPeriod(k)}>{l}</Chip>)}</div>} />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
         {syms.map(s => (
-          <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: `1px solid ${color(s)}66`, padding: '3px 8px', fontFamily: T.mono, fontSize: 11.5 }}>
+          <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: `1px solid ${color(s)}66`, padding: '3px 8px', fontFamily: T.mono, fontSize: 12 }}>
             <span style={{ width: 10, height: 3, background: color(s) }} />
             <span style={{ color: data[s] === 'error' ? T.red : T.text }} data-comp-source={seriesSource(s)}
               title={missingWhy[s] ?? (seriesSource(s) === 'yahoo' ? 'not an NSE code: Yahoo daily closes' : 'NSE bhavcopy closes (split/bonus-adjusted), end of day')}>
@@ -280,7 +280,7 @@ export function Compare() {
                 <g key={s}>
                   <path d={v.map((p, i) => `${i ? 'L' : 'M'}${chart.x(i).toFixed(1)},${chart.y(p).toFixed(1)}`).join('')} fill="none"
                         stroke={color(s)} strokeWidth={s === BENCH ? 1.4 : 2} strokeDasharray={s === BENCH ? '5 4' : undefined} />
-                  <text x={W - PAD_R + 6} y={chart.y(v[v.length - 1]) + 3} fontSize={10.5} fill={color(s)} fontFamily={T.mono}>
+                  <text x={W - PAD_R + 6} y={chart.y(v[v.length - 1]) + 3} fontSize={11} fill={color(s)} fontFamily={T.mono}>
                     {s === BENCH ? 'NIFTY' : s} {fmtPct(v[v.length - 1] - 100, 0)}
                   </text>
                 </g>

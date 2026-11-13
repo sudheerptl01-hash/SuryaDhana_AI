@@ -4241,6 +4241,34 @@ async def _tg_send(client: httpx.AsyncClient, text: str) -> None:
             await _tg_call(client, "sendMessage", chat_id=TELEGRAM_CHAT_ID, text=_re.sub(r"<[^>]+>", "", part))
 
 
+async def _tg_send_photo(client: httpx.AsyncClient, path: Path, caption: str) -> bool:
+    """sendPhoto as multipart (the JSON ``_tg_call`` cannot carry a file). True on Telegram's ok."""
+    try:
+        with path.open("rb") as fh:
+            r = await client.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto",
+                                  data={"chat_id": TELEGRAM_CHAT_ID, "caption": caption[:1024]},
+                                  files={"photo": (path.name, fh, "image/png")})
+        return r.status_code == 200 and bool((r.json() or {}).get("ok"))
+    except Exception:
+        return False
+
+
+async def _bot_chart(client: httpx.AsyncClient, text: str) -> str:
+    """/chart SYMBOL [D|W|M]: render the deployed CHRT page (or GOLD DAILY) off-thread and reply with the PNG.
+
+    scripts/telegram_chart.py owns the whitelist ({CHRT, GOLD DAILY}; BRKR/PORT/RSK refused), the one-at-a-time
+    lock, the 20 s budget and the <= 1 MB cap; its caption is source + as-of only (no direction words). The render
+    is sync Playwright, so it runs in a thread — the poller's loop never blocks. Returns '' once the photo is
+    sent (nothing more to say), else the one-line usage / busy / failure text."""
+    import telegram_chart as tgchart
+    path, caption = await asyncio.to_thread(tgchart.chart_for_telegram, text)
+    if path is None:
+        return caption
+    if await _tg_send_photo(client, path, caption):
+        return ""
+    return f"Chart rendered but Telegram refused the upload ({tgbot.esc(path.name)})."
+
+
 def _env_set(key: str, value: str) -> None:
     sys.path.insert(0, str(_ROOT / "scripts"))
     from daily_session_refresh import write_env_value
@@ -4676,7 +4704,8 @@ async def telegram_poller() -> None:
         return
     async with httpx.AsyncClient(timeout=40) as client:
         await _tg_call(client, "setMyCommands",
-                       commands=[{"command": c, "description": d[:255]} for c, _, d in tgbot.COMMANDS])
+                       commands=[{"command": c, "description": d[:255]} for c, _, d in tgbot.COMMANDS]
+                       + [{"command": "chart", "description": "chart PNG: /chart TCS [D|W|M] · /chart GOLD"}])
         try:
             offset = json.loads(_TG_OFFSET.read_text()).get("offset")
         except (OSError, ValueError):
@@ -4700,9 +4729,12 @@ async def telegram_poller() -> None:
                         await _tg_call(client, "deleteMessage", chat_id=TELEGRAM_CHAT_ID, message_id=m.get("message_id"))
                     _log.info("telegram", f"command {cmd or ('code' if text.strip().isdigit() else 'text')}")
                     try:
-                        reply = await alert_bot_reply(text, _bot_get, _bot_put)
-                        if reply is None:
-                            reply = await tgbot.handle(text, _bot_get, _bot_put, _BOT_ACTIONS)
+                        if cmd.split("@")[0] == "/chart":
+                            reply = await _bot_chart(client, text)
+                        else:
+                            reply = await alert_bot_reply(text, _bot_get, _bot_put)
+                            if reply is None:
+                                reply = await tgbot.handle(text, _bot_get, _bot_put, _BOT_ACTIONS)
                     except Exception as exc:   # one bad command must not stop the bot
                         reply = f"⚠️ That failed: {tgbot.esc(type(exc).__name__)}: {tgbot.esc(str(exc)[:200])}"
                     await _tg_send(client, reply)

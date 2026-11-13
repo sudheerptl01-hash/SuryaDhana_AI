@@ -41,7 +41,7 @@ function Table({ rows, k }: { rows: string[]; k: string }) {
   const numeric = head.map((_, c) => body.length > 0 && body.every(r => !r[c] || NUM_CELL.test(r[c].replace(/\*\*/g, ''))))
   return (
     <div style={{ overflowX: 'auto', margin: '10px 0 14px', border: `1px solid ${T.border}` }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 11.5 }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 12 }}>
         <thead>
           <tr>{head.map((h, c) => (
             <th key={c} style={{ textAlign: numeric[c] ? 'right' : 'left', padding: '6px 10px', background: '#080b10',
@@ -75,7 +75,7 @@ export function Markdown({ source }: { source: string }) {
   const lines = source.replace(/\r\n/g, '\n').split('\n')
   const blocks: ReactNode[] = []
   let i = 0
-  const p = { fontSize: 12.5, lineHeight: 1.7, color: T.text, margin: '0 0 10px' }
+  const p = { fontSize: 13, lineHeight: 1.7, color: T.text, margin: '0 0 10px' }
   while (i < lines.length) {
     const line = lines[i], k = `b${i}`
     if (!line.trim()) { i++; continue }
@@ -124,7 +124,7 @@ export function Markdown({ source }: { source: string }) {
       }
       const Tag = ordered ? 'ol' : 'ul'
       blocks.push(
-        <Tag key={k} style={{ margin: '0 0 10px', paddingLeft: 20, listStyleType: ordered ? 'decimal' : 'disc', fontSize: 12.5, lineHeight: 1.7, color: T.text }}>
+        <Tag key={k} style={{ margin: '0 0 10px', paddingLeft: 20, listStyleType: ordered ? 'decimal' : 'disc', fontSize: 13, lineHeight: 1.7, color: T.text }}>
           {items.map((it, j) => <li key={j} style={{ marginLeft: it.depth * 16, marginBottom: 3 }}>{inline(it.text, `${k}l${j}`)}</li>)}
         </Tag>)
       continue

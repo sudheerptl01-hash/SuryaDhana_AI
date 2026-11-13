@@ -240,7 +240,7 @@ export function PortfolioSummary() {
               {steps.map(([label, ok]) => <Chip key={label} color={ok ? T.green : T.amber} active={!!ok}>{ok ? '✓' : '•'} {label}</Chip>)}
             </div>
             {issue?.kind === 'network' && (
-              <div style={{ marginBottom: 10, fontSize: 11.5, color: T.amber }} data-icici-kind="network">
+              <div style={{ marginBottom: 10, fontSize: 12, color: T.amber }} data-icici-kind="network">
                 {ICICI_UNREACHABLE}. No new login is needed: press Recheck when the network is back.</div>
             )}
             {connectionStatus?.needs_api_credentials || issue?.showCredentials ? (
@@ -263,7 +263,7 @@ export function PortfolioSummary() {
                     <Label color={T.amber}>1 · Log in at ICICI</Label>
                     <Btn variant="primary" size="sm" onClick={() => openExternal(String(connectionStatus.login_url))}
                          title="Opens ICICI's login page in your browser">LOG IN TO ICICI ↗</Btn>
-                    <span style={{ fontSize: 10.5, color: T.muted }}>after logging in, ICICI redirects to a page whose address holds the session token</span>
+                    <span style={{ fontSize: 11, color: T.muted }}>after logging in, ICICI redirects to a page whose address holds the session token</span>
                   </div>
                 )}
                 <Label color={T.amber}>{connectionStatus?.login_url && issue?.suggestLogin !== false ? '2 · ' : ''}Paste the redirect URL or session token</Label>

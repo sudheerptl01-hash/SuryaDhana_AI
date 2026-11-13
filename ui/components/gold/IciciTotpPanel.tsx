@@ -208,15 +208,15 @@ export function IciciTotpPanel({ connected, onSessionLive, onStatus }: {
                 {c.pulse && <Dot color={TONE[c.tone]} pulse size={5} />}{c.pulse ? ' ' : ''}{c.text}
               </Chip>
             ))}
-            {statusErr && <span style={{ fontSize: 10.5, color: T.amber }}>status: {statusErr}</span>}
+            {statusErr && <span style={{ fontSize: 11, color: T.amber }}>status: {statusErr}</span>}
           </div>
-          <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}>{jobLine(status)}</div>
-          {envWarn && <div data-env-warning style={{ fontSize: 10.5, color: T.amber, marginTop: 4 }}>▲ {envWarn} (a readable .env with the seed is a complete login)</div>}
+          <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>{jobLine(status)}</div>
+          {envWarn && <div data-env-warning style={{ fontSize: 11, color: T.amber, marginTop: 4 }}>▲ {envWarn} (a readable .env with the seed is a complete login)</div>}
           {status?.configured && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
               <Btn size="sm" onClick={reveal} title="The six digits the stored secret produces right now, computed by ui-api (the secret itself never leaves the server)">SHOW CURRENT CODE</Btn>
               {revealed && (revealed.problem
-                ? <span style={{ fontSize: 10.5, color: T.red }}>{revealed.problem}</span>
+                ? <span style={{ fontSize: 11, color: T.red }}>{revealed.problem}</span>
                 : <span style={{ fontFamily: T.mono, fontSize: 13, color: T.bright }} data-totp-revealed>{groupCode(revealed.code)} <span style={{ fontSize: 10, color: T.muted }}>· {revealed.left} s · compare with the phone</span></span>)}
             </div>
           )}
@@ -251,10 +251,10 @@ export function IciciTotpPanel({ connected, onSessionLive, onStatus }: {
                 <div data-totp-preview>Current code <span style={{ fontFamily: T.mono, fontSize: 14, color: T.bright }}>{groupCode(preview.code)}</span>
                   <span style={{ color: T.muted }}> · {left} s · {preview.digits} digits · {preview.period} s · {preview.algorithm} · key length {preview.length}</span></div>
                 <Meter value={left / Math.max(1, preview.period)} color={T.cyan} height={4} />
-                <div style={{ fontSize: 10.5, color: T.muted }}>open Google Authenticator: the ICICI entry must show the same six digits; wait for one rollover before you save.</div>
+                <div style={{ fontSize: 11, color: T.muted }}>open Google Authenticator: the ICICI entry must show the same six digits; wait for one rollover before you save.</div>
               </>
-            ) : previewErr ? <div style={{ fontSize: 10.5, color: T.amber }}>{previewErr}</div>
-              : <div style={{ fontSize: 10.5, color: T.dim }}>the code appears here 400 ms after you paste; nothing is stored until SAVE.</div>}
+            ) : previewErr ? <div style={{ fontSize: 11, color: T.amber }}>{previewErr}</div>
+              : <div style={{ fontSize: 11, color: T.dim }}>the code appears here 400 ms after you paste; nothing is stored until SAVE.</div>}
           </div>
         </div>
 
@@ -266,12 +266,12 @@ export function IciciTotpPanel({ connected, onSessionLive, onStatus }: {
             <Btn variant="go" onClick={save} disabled={!canSave} title={canSave ? 'Saves ICICI_TOTP_SECRET to .env through the guarded writer' : 'Paste a valid key and type the six digits the phone shows'}>{saving ? 'SAVING…' : 'SAVE'}</Btn>
             {saveMsg && <span data-totp-save-msg style={{ fontSize: 11, color: saveMsg.ok ? T.green : T.red }}>{saveMsg.ok ? '✓ ' : '✕ '}{saveMsg.text}</span>}
           </div>
-          <div style={{ marginTop: 8, fontSize: 10.5, color: T.muted }}>Keychain (preferred: encrypted, not in repo backups) — run this in Terminal; it prompts for the key, nothing lands in shell history:</div>
+          <div style={{ marginTop: 8, fontSize: 11, color: T.muted }}>Keychain (preferred: encrypted, not in repo backups) — run this in Terminal; it prompts for the key, nothing lands in shell history:</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
-            <code data-keychain-one-liner style={{ fontFamily: T.mono, fontSize: 10.5, color: T.cyan, background: '#07090d', border: `1px solid ${T.border}`, padding: '4px 8px', userSelect: 'all' }}>{oneLiner}</code>
+            <code data-keychain-one-liner style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan, background: '#07090d', border: `1px solid ${T.border}`, padding: '4px 8px', userSelect: 'all' }}>{oneLiner}</code>
             <Btn size="sm" onClick={copy}>{copied ? 'COPIED' : 'COPY'}</Btn>
             <Btn size="sm" onClick={() => loadStatus()} title="Re-read the status: a Keychain item shows as TOTP CONFIGURED · Keychain">DETECT</Btn>
-            {status?.keychain_present != null && <span style={{ fontSize: 10.5, color: status.keychain_present ? T.green : T.dim }}>{status.keychain_present ? 'Keychain item found' : 'no Keychain item yet'}</span>}
+            {status?.keychain_present != null && <span style={{ fontSize: 11, color: status.keychain_present ? T.green : T.dim }}>{status.keychain_present ? 'Keychain item found' : 'no Keychain item yet'}</span>}
           </div>
         </div>
 
@@ -289,7 +289,7 @@ export function IciciTotpPanel({ connected, onSessionLive, onStatus }: {
                   </>
                 : <Btn size="sm" onClick={() => setForceArmed(true)} disabled={!!forceReason} title={forceReason ?? 'A fresh login even if the token still works (ends today\'s session)'}>FORCE A NEW LOGIN (ends today's session)</Btn>
             )}
-            {status?.force_supported && status.block?.credentials && <span style={{ fontSize: 10.5, color: T.amber }}>▲ a credentials block file exists: a forced login will be refused until it is cleared</span>}
+            {status?.force_supported && status.block?.credentials && <span style={{ fontSize: 11, color: T.amber }}>▲ a credentials block file exists: a forced login will be refused until it is cleared</span>}
           </div>
           <div data-totp-watch={watch} style={{ fontSize: 11, color: watch === 'live' ? T.green : watch === 'timeout' || watch === 'error' || watch === 'unsupported' ? T.amber : T.muted, marginTop: 6 }}>
             {watch === 'live' && <Dot color={T.green} pulse size={6} />} {sessionWatchLine(watch, elapsed, watchDetail)}
@@ -305,13 +305,13 @@ export function IciciTotpPanel({ connected, onSessionLive, onStatus }: {
                 <Btn size="sm" onClick={() => setDisableArmed(false)}>CANCEL</Btn>
               </>
             : <Btn size="sm" onClick={() => setDisableArmed(true)} disabled={!status?.configured} title={status?.configured ? 'Writes ICICI_TOTP_SECRET= through the guarded .env writer' : 'Nothing to disable'}>DISABLE AUTO-LOGIN</Btn>}
-          {disableMsg && <span style={{ fontSize: 10.5, color: T.muted }}>{disableMsg}</span>}
+          {disableMsg && <span style={{ fontSize: 11, color: T.muted }}>{disableMsg}</span>}
         </div>
 
         {status?.block?.totp && (
           <Notice color={T.red}>ICICI rejected the authenticator code on the last run (block file present): the secret no longer matches ICICI. Re-register the authenticator (step 1), save the new key (steps 2–3); unattended runs use the SMS path until the secret changes.</Notice>
         )}
-        <div style={{ fontSize: 9.5, color: T.dim, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 10, color: T.dim, lineHeight: 1.5 }}>
           The key is kept in this page's memory only until SAVE and is never written to preferences or browser storage; the preview call goes to ui-api on this machine and returns six digits, never the key. Deploy order (PLAN §g): secret first (no restart), attended test after 15:40, then leave the 08:00 job alone.
         </div>
       </div>

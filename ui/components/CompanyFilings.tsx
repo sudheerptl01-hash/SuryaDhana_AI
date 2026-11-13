@@ -110,20 +110,20 @@ export function CompanyFilings() {
                   <span style={{ display: 'inline-flex', gap: 4, alignItems: 'baseline' }}>
                     {mine.has(f.symbol) && <span title="your stock" style={{ color: T.cyan }}>●</span>}<TickerLink symbol={f.symbol} />
                   </span>
-                  <span style={{ fontSize: 9.5, letterSpacing: 0.6, color: COLOR[f.category] ?? T.dim, fontWeight: 600 }}>{LABEL[f.category] ?? f.category.toUpperCase()}</span>
+                  <span style={{ fontSize: 10, letterSpacing: 0.6, color: COLOR[f.category] ?? T.dim, fontWeight: 600 }}>{LABEL[f.category] ?? f.category.toUpperCase()}</span>
                   <span style={{ minWidth: 0 }}>
-                    <span style={{ fontSize: 11.5, color: T.text }}>{f.subject}</span>
+                    <span style={{ fontSize: 12, color: T.text }}>{f.subject}</span>
                     {f.category === 'results' && (() => {   // what the numbers said, once the filing's XBRL has been read
                       const n = resFin[f.symbol]
                       if (!n || !(n.filed_at ?? '').startsWith((f.time ?? '').slice(0, 10)) || (n.revenue_yoy == null && n.pat_yoy == null && !n.pat_yoy_turn)) return null
                       const c = (v: number | null | undefined) => v == null ? T.dim : v >= 0 ? T.green : T.red
-                      return <span style={{ fontSize: 10.5, fontFamily: T.mono, marginLeft: 8, color: T.muted }}>
+                      return <span style={{ fontSize: 11, fontFamily: T.mono, marginLeft: 8, color: T.muted }}>
                         {fiscalQuarter(n.period_end)} · rev <span style={{ color: c(n.revenue_yoy) }}>{fmtPct(n.revenue_yoy, 0)}</span> · profit{' '}
                         {n.pat_yoy_turn ? <span style={{ color: n.pat_yoy_turn === 'to profit' ? T.green : T.red }}>{n.pat_yoy_turn}</span>
                           : <span style={{ color: c(n.pat_yoy) }}>{fmtPct(n.pat_yoy, 0)}</span>} y/y
                         {n.pe != null && <span style={{ color: T.dim }}> · P/E {n.pe.toFixed(0)}×</span>}</span>
                     })()}
-                    {f.text && <span title={f.text} style={{ display: 'block', fontSize: 10.5, color: T.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.text}</span>}
+                    {f.text && <span title={f.text} style={{ display: 'block', fontSize: 11, color: T.dim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.text}</span>}
                   </span>
                   {f.pdf ? <a href={f.pdf} target="_blank" rel="noreferrer" title="open the filing on NSE" style={{ color: T.cyan, textDecoration: 'none', fontSize: 12 }}>↗</a> : <span />}
                 </div>

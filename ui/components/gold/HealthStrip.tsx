@@ -69,7 +69,7 @@ export function HeaderStrip({ overview, sel, loading, error }: { overview: GoldO
   // last are the same quantity when they agree — printed once, REREVIEW N7); never a leading 'settle —'
   const comexOnce = settle == null && sameComexPrint(matchedLast, live)
   const comexHead = settle ?? live ?? matchedLast
-  const dim = { color: T.dim, fontSize: 9.5, fontWeight: 400 } as const
+  const dim = { color: T.dim, fontSize: 10, fontWeight: 400 } as const
   return (
     <div data-gold-strip title={tip}
       style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', alignItems: 'flex-end', padding: '8px 14px', border: `1px solid ${T.border}`,
@@ -124,7 +124,7 @@ export function HeaderStrip({ overview, sel, loading, error }: { overview: GoldO
         {loading && !overview && <span className="t-pulse" style={{ fontSize: 10, color: T.amber }}>LOADING</span>}
         {error && !overview && <span style={{ fontSize: 10, color: T.amber }}>strip unavailable: {error}</span>}
       </div>
-      <div style={{ flexBasis: '100%', fontSize: 9.5, color: T.dim, fontFamily: T.mono, letterSpacing: .4 }} data-gold-instruments>
+      <div style={{ flexBasis: '100%', fontSize: 10, color: T.dim, fontFamily: T.mono, letterSpacing: .4 }} data-gold-instruments>
         {instrumentLine(overview, sel)}
       </div>
     </div>
@@ -142,7 +142,7 @@ export function GoldHoverCard() {
   const s = o?.strip
   const row = (k: string, v: string, sub?: string) => (
     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '2px 0', borderBottom: `1px dashed ${T.border}` }}>
-      <span style={{ color: T.muted, fontSize: 10 }}>{k}</span><span style={{ color: T.text }}>{v}{sub && <span style={{ color: T.dim, fontSize: 9.5 }}> {sub}</span>}</span>
+      <span style={{ color: T.muted, fontSize: 10 }}>{k}</span><span style={{ color: T.text }}>{v}{sub && <span style={{ color: T.dim, fontSize: 10 }}> {sub}</span>}</span>
     </div>
   )
   return (
@@ -158,7 +158,7 @@ export function GoldHoverCard() {
         {(() => { const r = pageRealYield(s, o.health); return row('10-y real', r.value != null ? `${fmtFixed(r.value, 2)} %` : '—', dayLabel(r.date)) })()}
         {row(`MCX ${o.contract.mcx} ${expiryMonthLabel(o.contract.expiry)}`, fmtInr0(stripSettlement(s, o.health?.fair).settlement), settlementLine(stripSettlement(s, o.health?.fair)))}
         {row('COT funds net (MM)', s.cot_mm_net != null ? fmtSignedCount(s.cot_mm_net) : '—', `${fmtK(s.cot_mm_chg)} w/w · ${dayLabel(s.cot_as_of)}`)}
-        <div style={{ color: T.dim, fontSize: 9.5, marginTop: 4 }}>{instrumentLine(o, { exchange: 'MCX', family: (o.contract.mcx as GoldContractSel['family']) ?? 'GOLD', expiry: o.contract.expiry, options: false })}</div>
+        <div style={{ color: T.dim, fontSize: 10, marginTop: 4 }}>{instrumentLine(o, { exchange: 'MCX', family: (o.contract.mcx as GoldContractSel['family']) ?? 'GOLD', expiry: o.contract.expiry, options: false })}</div>
       </>}
     </div>
   )
@@ -186,8 +186,8 @@ export function Pickers({ sel, onSel, families, unit, onUnit, window, onWindow, 
   const exch = EXCHANGES.find(e => e.value === sel.exchange) ?? EXCHANGES[0]
   return (
     <div data-gold-pickers style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', alignItems: 'center', padding: '6px 10px', border: `1px solid ${T.border}`,
-                                    background: '#07090d', marginBottom: 8, fontSize: 10.5 }}>
-      <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>CONTRACT</span>
+                                    background: '#07090d', marginBottom: 8, fontSize: 11 }}>
+      <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted }}>CONTRACT</span>
       <span title={exch.reason}>
         <Select value={sel.exchange} onChange={v => { const e = EXCHANGES.find(x => x.value === v); if (e && !e.disabled) onSel({ exchange: v }) }}
           options={EXCHANGES.map(e => ({ value: e.value, label: e.label }))} />
@@ -202,11 +202,11 @@ export function Pickers({ sel, onSel, families, unit, onUnit, window, onWindow, 
         ↔ COMEX {comexMatched ? comexMonthLabel(comexMatched) : '—'} ↔ GC1
       </span>
       <span style={{ flex: 1 }} />
-      <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>UNIT</span>
+      <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted }}>UNIT</span>
       <Select value={unit} onChange={onUnit} options={GOLD_UNITS.map(u => ({ value: u, label: UNIT_LABEL[u] }))} />
-      <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>WINDOW</span>
+      <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted }}>WINDOW</span>
       {(['D', 'W', 'M'] as Window[]).map(w => <Chip key={w} color={T.amber} active={window === w} onClick={() => onWindow(w)} title={w === 'D' ? 'day' : w === 'W' ? 'week' : 'month'}>{w}</Chip>)}
-      <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted, marginLeft: 6 }}>LAYER</span>
+      <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted, marginLeft: 6 }}>LAYER</span>
       <Chip color={T.cyan} active={layer === 'B'} onClick={() => onLayer('B')} title="Beginner: the plain line under each panel">[B]</Chip>
       <Chip color={T.violet} active={layer === 'P'} onClick={() => onLayer('P')} title="Pro: the exact definition, lag and formula under each panel">[P]</Chip>
     </div>

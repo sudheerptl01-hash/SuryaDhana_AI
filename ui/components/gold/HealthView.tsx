@@ -162,9 +162,9 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
         copyP="Each tile: the direction rule, the publisher's lag and the percentile window (1 y / 3 y once history exists; printed only with ≥ 60 observations). Each Δ carries its own unit (bp for yields, $/oz for the Shanghai premium, % for the price). Curve/roll is arithmetic; the rest is context.">
         <Pending s={health} label="the gauges">
           {gauges.length === 0 && <NoVerdict what="the gauges arrive with the first ingest" />}
-          {fallbackContract && <div data-gold-health-fallback style={{ fontSize: 10.5, color: T.amber, marginBottom: 6 }}>
+          {fallbackContract && <div data-gold-health-fallback style={{ fontSize: 11, color: T.amber, marginBottom: 6 }}>
             The header strip did not load: these gauges and the verdict come from /api/gold/health — INDIA BASIS is {fallbackContract}&apos;s, not necessarily {sel.family}&apos;s.</div>}
-          {!agree.ok && <div data-gold-basis-mismatch style={{ fontSize: 10.5, color: T.amber, marginBottom: 6 }}>⚠ India basis: {agree.reason} — one basis per clock is the rule; reload the strip (↻).</div>}
+          {!agree.ok && <div data-gold-basis-mismatch style={{ fontSize: 11, color: T.amber, marginBottom: 6 }}>⚠ India basis: {agree.reason} — one basis per clock is the rule; reload the strip (↻).</div>}
           <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))' }}>
             {TILES.map(t => {
               const g = findGauge(gauges, t.key)
@@ -183,7 +183,7 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
               const chip = t.key === 'india_basis' ? basisClockChip(g, overview, settleBlock) : null
               const settleSrc = g.settlement_source ?? settleBlock.settlement_source
               const sessionChip = chip
-                ? <span data-gold-basis-chip={chip.kind} style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1, color: chip.kind === 'live' ? T.green : T.muted, border: `1px solid ${chip.kind === 'live' ? T.green : T.muted}55`, padding: '1px 6px', whiteSpace: 'nowrap' }}
+                ? <span data-gold-basis-chip={chip.kind} style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1, color: chip.kind === 'live' ? T.green : T.muted, border: `1px solid ${chip.kind === 'live' ? T.green : T.muted}55`, padding: '1px 6px', whiteSpace: 'nowrap' }}
                     title={chip.kind === 'live'
                       ? `live clock: ${g.basis_label ?? 'live MCX vs duty-paid landed now'}${g.basis_contract ? ` · ${g.basis_contract}` : ''}; MCX = the Breeze quote's own minute, COMEX = the cached Yahoo leg's time (the duty-paid landed is computed from it)`
                       : `${g.settle_basis_label ?? g.settlement_session_label ?? 'the settlement'} · ${settleSrc === 'breeze_vwap30' ? 'last-30-min VWAP of the Breeze 1-minute bars' : settleSrc == null ? 'source not stated' : 'ICICI price-band midpoint'}`}>
@@ -203,7 +203,7 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
                     value={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap', minWidth: 0 }}>
                       <span style={offline ? { color: T.muted } : undefined}>{val}</span>
                       {chg && <span style={{ fontSize: 11, color: priceChange && g.change != null ? (g.change > 0 ? T.green : g.change < 0 ? T.red : T.muted) : T.muted, fontWeight: 500 }}>{arrow(g.change ?? g.change_bp)}{chg}</span>}
-                      {offline && <span style={{ fontSize: 9.5, color: T.amber, fontFamily: T.mono, letterSpacing: .8 }} title={g.value != null ? 'the last stored value: the source is stale or offline (PLAN a.1: never blank)' : 'no point stored yet'}>{g.value != null ? 'LAST STORED' : 'NO STORED VALUE'}</span>}
+                      {offline && <span style={{ fontSize: 10, color: T.amber, fontFamily: T.mono, letterSpacing: .8 }} title={g.value != null ? 'the last stored value: the source is stale or offline (PLAN a.1: never blank)' : 'no point stored yet'}>{g.value != null ? 'LAST STORED' : 'NO STORED VALUE'}</span>}
                     </span>}
                     sub={<span style={{ display: 'grid', gap: 3, minWidth: 0 }}>
                       {g.spark && g.spark.length > 1 && <Spark values={g.spark} width={160} height={22} color={T.dim} />}
@@ -229,11 +229,11 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
                           ? <span data-gold-ry-older style={{ color: T.amber }}> · an older point than the header strip&apos;s ({dayLabel(ry.date)}, {realYieldSeriesWords(ry.seriesId)})</span> : null}</span>}
                       {g.last_bar_partial && <span data-gauge-partial style={{ color: T.dim, fontSize: 10 }}>{g.last_bar_note ?? 'today\u2019s bar is a partial Globex day, not a settlement'}</span>}
                       <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
-                        {dir && !trendTile && <span style={{ color: T.text, fontFamily: T.mono, fontSize: 9.5, letterSpacing: .8 }}>{dir.toUpperCase()}{layer === 'P' && g.percentile_1y != null ? ` · ${percentileText(g.percentile_1y, '1 y')}` : ''}{layer === 'P' && g.percentile_3y != null ? ` · ${percentileText(g.percentile_3y, '3 y')}` : ''}</span>}
-                        {trendTile && layer === 'P' && <span style={{ color: T.dim, fontFamily: T.mono, fontSize: 9.5 }}>rule: {dir ?? g.rule}{g.percentile_1y != null ? ` · ${percentileText(g.percentile_1y, '1 y')}` : ''}</span>}
+                        {dir && !trendTile && <span style={{ color: T.text, fontFamily: T.mono, fontSize: 10, letterSpacing: .8 }}>{dir.toUpperCase()}{layer === 'P' && g.percentile_1y != null ? ` · ${percentileText(g.percentile_1y, '1 y')}` : ''}{layer === 'P' && g.percentile_3y != null ? ` · ${percentileText(g.percentile_3y, '3 y')}` : ''}</span>}
+                        {trendTile && layer === 'P' && <span style={{ color: T.dim, fontFamily: T.mono, fontSize: 10 }}>rule: {dir ?? g.rule}{g.percentile_1y != null ? ` · ${percentileText(g.percentile_1y, '1 y')}` : ''}</span>}
                         <BadgeChip badge={g.badge} />
                         {sessionChip ?? <LagChipEl freshness={{ state: g.state, source: g.source, as_of: g.release_at, age_days: g.age_days }} maxAgeDays={catalog[g.series_id ?? '']?.max_age_days} />}
-                        {!sessionChip && g.report_date && <span style={{ color: T.dim, fontSize: 9.5 }}>{dayLabel(g.report_date)}</span>}
+                        {!sessionChip && g.report_date && <span style={{ color: T.dim, fontSize: 10 }}>{dayLabel(g.report_date)}</span>}
                         {gate === 'unknown' && g.series_id && <span style={{ color: T.dim, fontSize: 9 }} title="the catalog is not loaded; the verdict gate could not be checked">catalog?</span>}
                       </span>
                     </span>} />
@@ -285,9 +285,9 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
                 <div key={`${e.event_date ?? e.date}-${e.time_ist ?? ''}-${e.kind}-${e.name}`} data-event-impact={(e.impact ?? '').toLowerCase() || undefined}
                   style={{ display: 'grid', gridTemplateColumns: '112px 56px 1fr auto', gap: 8, padding: '5px 12px', borderBottom: `1px solid ${T.border}`, fontSize: 11 }}>
                   <span style={{ color: T.muted, fontFamily: T.mono }}>{eventWhen(e)}</span>
-                  <span style={{ color: (e.impact ?? '').toLowerCase() === 'high' ? T.text : T.dim, fontFamily: T.mono, fontSize: 9.5, letterSpacing: .6 }}>{(e.impact ?? '').toUpperCase()}</span>
+                  <span style={{ color: (e.impact ?? '').toLowerCase() === 'high' ? T.text : T.dim, fontFamily: T.mono, fontSize: 10, letterSpacing: .6 }}>{(e.impact ?? '').toUpperCase()}</span>
                   <span style={{ color: T.text }}>{eventStar(e) ? '★ ' : ''}{e.name}{e.detail ? <span style={{ color: T.dim }}> · {e.detail}</span> : null}</span>
-                  {(() => { const tag = eventSessionTag(e); return <span data-event-session={tag?.text ?? ''} style={{ color: tag?.tone === 'amber' ? T.amber : T.dim, fontFamily: T.mono, fontSize: 9.5 }}>{tag?.text ?? ''}</span> })()}
+                  {(() => { const tag = eventSessionTag(e); return <span data-event-session={tag?.text ?? ''} style={{ color: tag?.tone === 'amber' ? T.amber : T.dim, fontFamily: T.mono, fontSize: 10 }}>{tag?.text ?? ''}</span> })()}
                 </div>
               ))}
             </div>
@@ -309,12 +309,12 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
               const summary = b.overnight_summary ?? str('overnight_summary')
               const plan = b.open_plan ?? str('open_plan')
               const risks = (b.key_risks_today ?? (Array.isArray(d.key_risks_today) ? (d.key_risks_today as unknown[]).map(String) : [])) as string[]
-              return <div style={{ fontSize: 11.5, lineHeight: 1.6, color: T.text }}>
+              return <div style={{ fontSize: 12, lineHeight: 1.6, color: T.text }}>
                 <div data-gold-brief-head style={{ fontFamily: T.mono, fontSize: 10, color: T.muted, marginBottom: 4 }}>{briefHeader(b, !!(summary || plan || risks.length))}</div>
                 {summary && <p style={{ margin: '0 0 6px' }}>{summary}</p>}
                 {plan && <p style={{ margin: '0 0 6px', color: T.muted }}>{plan}</p>}
                 {risks.length > 0 && <div style={{ color: T.muted }}>Key risks: {risks.join(' · ')}</div>}
-                {!summary && !plan && risks.length === 0 && <div style={{ color: T.dim, fontSize: 10.5 }}>The document carries no summary, plan or risk list for this date; with no body to read, its bias and confidence words are not shown.</div>}
+                {!summary && !plan && risks.length === 0 && <div style={{ color: T.dim, fontSize: 11 }}>The document carries no summary, plan or risk list for this date; with no body to read, its bias and confidence words are not shown.</div>}
               </div>
             })()}
           </Pending>

@@ -50,7 +50,7 @@ export function ResultsImpliedMoves({ filedAt }: { filedAt?: ReadonlyMap<string,
       subtitle={`next ${d.days} days · NSE F&O bhavcopy ${d.fo_date ?? ''} · this week's median priced ÷ usual ${med.toFixed(2)}× · amber = ≥ 1.5× that median (an unusually big reaction priced), cyan = ≤ ⅔ of it`}>
       <DataTable columns={cols} rows={pre} rowKey={r => `${r.symbol}-${r.results_date}`} dense initialSort={{ key: 'ratio', dir: 'desc' }} exportName="results_implied_moves" />
       {post.length > 0 && (
-        <div data-evts-post-event style={{ fontSize: 10.5, color: T.muted, padding: '6px 10px', borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
+        <div data-evts-post-event style={{ fontSize: 11, color: T.muted, padding: '6px 10px', borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
           Already reported before the {d.fo_date ? fmtDay(d.fo_date) : ''} close, so the options shown are post-event (left out of the table and the median):{' '}
           {post.map(r => <span key={r.symbol} style={{ marginRight: 8, whiteSpace: 'nowrap' }}><TickerLink symbol={r.symbol} />
             <span style={{ color: T.dim }}> {filedAt?.get(r.symbol) ? `filed ${hhmm(filedAt.get(r.symbol))}` : fmtDay(r.results_date)}</span></span>)}

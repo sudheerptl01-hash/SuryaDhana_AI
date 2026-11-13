@@ -79,13 +79,13 @@ export function EdgeTile({ label, e, sub }: { label: string; e: AlphaEdgeStats |
           <div className="text-lg font-bold font-mono tabular-nums leading-tight" style={{ color: T.text }}>
             {fmtBps(e.mean_net5_bps)} <span className="text-[10px]" style={{ color: T.muted }}>mean net</span>
           </div>
-          <div className="text-[9.5px] font-mono" style={{ color: T.muted }}>{fmtCi(e.mean_net5_ci95_bps, v => fmtBps(v))}</div>
+          <div className="text-[10px] font-mono" style={{ color: T.muted }}>{fmtCi(e.mean_net5_ci95_bps, v => fmtBps(v))}</div>
           <div className="text-[10px] font-mono mt-0.5" style={{ color: '#aab3c2' }}>
             win {pct0(e.win_rate)}{e.win_rate_ci95 ? ` (${pct0(e.win_rate_ci95[0])}–${pct0(e.win_rate_ci95[1])})` : ''} · n = {e.n_with_forward}
             {e.n_dates != null ? ` on ${e.n_dates} dates` : ''}
           </div>
           {e.top3_dates_signal_share != null && e.top3_dates_signal_share >= 0.25 && (
-            <div className="text-[9.5px] mt-0.5" style={{ color: T.amber }}
+            <div className="text-[10px] mt-0.5" style={{ color: T.amber }}
                  title={(e.top3_dates ?? []).map(d => `${d.date}: ${d.n} signals, mean ${fmtBps(d.mean_net5_bps)}`).join('\n')}>
               {pct0(e.top3_dates_signal_share)} of the signals fell on 3 days
             </div>
@@ -429,7 +429,7 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
                 ⚙ Data
               </h3>
             </div>
-            <div className="px-4 py-3 space-y-1.5 text-[10.5px]" style={{ color: '#8aa0b8' }}>
+            <div className="px-4 py-3 space-y-1.5 text-[11px]" style={{ color: '#8aa0b8' }}>
               <p>Scans read the stored EOD panel (data-service{scan ? `, as of ${scan.as_of}` : ''}), refreshed by the scheduled
                 evening pipeline. This page fetches nothing itself.</p>
               <p>Service health: <span role="button" tabIndex={0} onClick={() => goToPage('system')}

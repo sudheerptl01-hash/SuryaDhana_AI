@@ -125,7 +125,14 @@ export function badgeSpec(badge: Badge | string | null | undefined, evidence?: s
 /** A source name short enough for a chip ('SPDR Gold Shares (displayed with attribution)' → 'SPDR GOLD SHARES…'). */
 function chipSource(source: string | null | undefined, max = 18): string {
   if (!source) return ''
-  const s = source.toUpperCase()
+  // R2-TYPE (F-DESIGN defect 4): a chip never truncates mid-word — "YAHOO (CACHED FETCHER)" read
+  // "YAHOO (CACHED FET…". The parenthetical is dropped (it stays whole in the hover title) and the
+  // name is trimmed word-by-word, the same rule as the terminal kit's faceSource().
+  let s = source.toUpperCase().replace(/\s*\(.*$/, '').trim()
+  if (s.length <= max) return s
+  const words = s.split(/\s+/)
+  while (words.length > 1 && words.join(' ').length > max) words.pop()
+  s = words.join(' ')
   return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s
 }
 

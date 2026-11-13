@@ -95,7 +95,7 @@ export function DriversTabNotice({ d }: { d: IndexDrivers | null }) {
   return (
     <div data-drivers-tab={v.state} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '6px 12px', borderBottom: `1px solid ${T.border}`,
                                             borderLeft: `3px solid ${T.amber}`, background: '#0b0a06', fontSize: 11, color: T.text, lineHeight: 1.5 }}>
-      <span style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: T.amber, flex: 'none' }}>{v.label}</span>
+      <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: 1, color: T.amber, flex: 'none' }}>{v.label}</span>
       <span style={{ flex: 1 }}>{v.caption}. The greyed figures below are the stored arithmetic, shown so the gap stays visible.</span>
       <BadgeChip badge="arithmetic" />
     </div>
@@ -109,7 +109,7 @@ export function TabGrey({ tab, children }: { tab: DriverTab | null | undefined; 
   if (!v.grey) return <>{children}</>
   return (
     <div data-drivers-greyed={v.state}>
-      <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.amber, letterSpacing: 0.5, margin: '0 0 4px 2px' }}>{cap}</div>
+      <div style={{ fontFamily: T.mono, fontSize: 10, color: T.amber, letterSpacing: 0.5, margin: '0 0 4px 2px' }}>{cap}</div>
       <div style={{ opacity: 0.5, filter: 'grayscale(0.7)' }} title={v.caption ?? undefined}>{children}</div>
     </div>
   )
@@ -122,12 +122,12 @@ export function DriverRegimeStrip({ index, d, tl60 }: { index: string; d: IndexD
   const challenger = challengerLine(d?.driver?.challenger)       // m028: a raw leader the hysteresis has not adopted yet
   return (
     <div data-driver-regime style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '7px 12px', marginBottom: 12, border: `1px solid ${T.border}`,
-                                     borderLeft: `3px solid ${T.muted}`, background: '#080b10', fontSize: 11.5, color: T.text }}>
-      <span style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: T.muted, border: `1px solid ${T.border}`, padding: '1px 5px', flex: 'none' }}>
+                                     borderLeft: `3px solid ${T.muted}`, background: '#080b10', fontSize: 12, color: T.text }}>
+      <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: 1, color: T.muted, border: `1px solid ${T.border}`, padding: '1px 5px', flex: 'none' }}>
         DRIVER REGIME · {index}</span>
       <span style={{ flex: 1 }}>
         {line ?? `No driver state stored yet for ${index} · backfill pending — describes, does not predict`}
-        {challenger && <span data-driver-challenger style={{ display: 'block', color: T.muted, fontSize: 10.5, marginTop: 2 }}>challenger pending: {challenger}</span>}
+        {challenger && <span data-driver-challenger style={{ display: 'block', color: T.muted, fontSize: 11, marginTop: 2 }}>challenger pending: {challenger}</span>}
       </span>
       <BadgeChip badge={d?.badges?.driver ?? 'context'} />
     </div>
@@ -163,7 +163,7 @@ export function MonthlyLeaderboard({ index }: { index: string }) {
       {!rows.length ? <div style={{ padding: 12, fontSize: 11, color: T.muted }}>{m.loading ? 'Loading…' : m.error ?? 'no months stored yet · backfill pending'}</div> : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }} data-drivers-monthly>
-            <thead><tr style={{ color: T.muted, fontSize: 9.5 }}>
+            <thead><tr style={{ color: T.muted, fontSize: 10 }}>
               {['MONTH', 'LEADER', 'LEADER PTS', 'SHARE', 'TOP-3 ADD', 'TOP-3 DRAG', 'INDEX MOVE', 'EXPLAINED'].map((h, i) =>
                 <th key={h} style={{ textAlign: i < 2 || i === 4 || i === 5 ? 'left' : 'right', padding: '5px 8px', borderBottom: `1px solid ${T.border}` }}>{h}</th>)}
             </tr></thead>

@@ -121,8 +121,8 @@ export function WorldMarkets() {
           <span key={s} style={{ marginLeft: 8, color: tone(v.change_pct) }}>{GROUPS.flatMap(g => g.rows).find(r => r[0] === s)?.[1]} {fmtSigned(v.change_pct!, 2)}%</span>))}</span> : undefined} />
       {fomc.length > 0 && (
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'baseline', border: `1px solid ${T.border}`, background: T.panel,
-                      padding: '7px 12px', marginBottom: 12, fontSize: 11.5 }}>
-          <span style={{ fontFamily: T.display, fontSize: 10.5, letterSpacing: 1.4, color: T.cyan }}>POLICY DATES · US FED (FOMC)</span>
+                      padding: '7px 12px', marginBottom: 12, fontSize: 12 }}>
+          <span style={{ fontFamily: T.display, fontSize: 11, letterSpacing: 1.4, color: T.cyan }}>POLICY DATES · US FED (FOMC)</span>
           {fomc.slice(0, 4).map((m, i) => {
             const days = Math.round((new Date(`${m.end}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86_400_000)
             return (
@@ -134,7 +134,7 @@ export function WorldMarkets() {
           })}
           <span style={{ color: T.dim, fontSize: 10 }}>≈23:30 IST (00:30 in US winter) · ★ projections</span>
           {rbi.length > 0 && <>
-            <span style={{ fontFamily: T.display, fontSize: 10.5, letterSpacing: 1.4, color: T.amber, marginLeft: 8 }}>RBI MPC</span>
+            <span style={{ fontFamily: T.display, fontSize: 11, letterSpacing: 1.4, color: T.amber, marginLeft: 8 }}>RBI MPC</span>
             {rbi.slice(0, 2).map((m, i) => (
               <span key={m.end} style={{ color: i === 0 ? T.text : T.muted }}>
                 {new Date(`${m.end}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
@@ -142,7 +142,7 @@ export function WorldMarkets() {
               </span>))}
             <span style={{ color: T.dim, fontSize: 10 }}>≈10:00 IST · sources: federalreserve.gov, rbi.org.in</span>
           </>}
-          <span role="button" onClick={() => goToPage('eco')} style={{ marginLeft: 'auto', color: T.cyan, cursor: 'pointer', fontSize: 10.5 }}
+          <span role="button" onClick={() => goToPage('eco')} style={{ marginLeft: 'auto', color: T.cyan, cursor: 'pointer', fontSize: 11 }}
             title="India CPI, WPI, IIP, GDP releases with RBI and Fed decisions">FULL CALENDAR · ECO ›</span>
         </div>
       )}
@@ -151,7 +151,7 @@ export function WorldMarkets() {
           <Panel source={g.title === 'India' && liveIn.available && liveIn.source
               ? { ...liveIn.source, hint: `NSE indices: ${liveIn.source.hint ?? 'live NSE quotes'} · SENSEX and the sparks: Yahoo, delayed` }
               : sourceOf(asOf ? asOf.toISOString() : null, { source: 'Yahoo', maxAgeDays: 1 })} key={g.title} title={g.title} accent={g.accent} pad={0}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11.5 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 12 }}>
               <tbody>
                 {g.title === 'India' && gift?.last != null && (
                   <tr style={{ borderBottom: `1px solid ${T.border}`, background: '#0d1219' }}
@@ -199,7 +199,7 @@ export function WorldMarkets() {
                     </tr>
                     {sym === 'GC=F' && (
                       <tr data-wei-gold style={{ borderBottom: `1px solid ${T.border}`, background: '#0d1219' }}>
-                        <td colSpan={7} style={{ padding: '3px 10px', fontSize: 10.5, maxWidth: 0, overflow: 'hidden' }}>
+                        <td colSpan={7} style={{ padding: '3px 10px', fontSize: 11, maxWidth: 0, overflow: 'hidden' }}>
                           <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}
                                 onMouseEnter={() => setGoldHover(true)} onMouseLeave={() => setGoldHover(false)}>
                             <span style={{ color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}
@@ -222,7 +222,7 @@ export function WorldMarkets() {
                 })}
                 {g.title === 'Rates & crypto' && gsec && (
                   <tr style={{ borderBottom: `1px solid ${T.border}` }} title="NSE's 10-year benchmark G-sec clean-price index: the price falls when the yield rises">
-                    <td style={{ padding: '6px 10px', color: T.text, whiteSpace: 'nowrap' }}>INDIA 10Y G-SEC <span style={{ color: T.dim, fontSize: 9.5 }}>PRICE</span></td>
+                    <td style={{ padding: '6px 10px', color: T.text, whiteSpace: 'nowrap' }}>INDIA 10Y G-SEC <span style={{ color: T.dim, fontSize: 10 }}>PRICE</span></td>
                     <td style={{ padding: '6px 6px', textAlign: 'right', color: T.bright }}>{fmt(gsec.last ?? undefined)}</td>
                     <td />
                     <td style={{ padding: '6px 6px', textAlign: 'right', color: tone(gsec.change_pct), fontWeight: 600 }}>{gsec.change_pct != null ? `${fmtSigned(gsec.change_pct, 2)}%` : ''}</td>

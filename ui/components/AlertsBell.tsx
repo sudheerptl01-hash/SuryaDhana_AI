@@ -66,7 +66,7 @@ export function AlertsBell() {
           {items.map((i, k) => (
             <div key={`${i.at}-${k}`} style={{ padding: '7px 12px', borderBottom: `1px solid ${T.border}`, fontSize: 11 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                <span style={{ color: KIND_COLOR[i.kind] ?? T.text, fontSize: 9.5, letterSpacing: 0.8 }}>{i.kind.toUpperCase()}</span>
+                <span style={{ color: KIND_COLOR[i.kind] ?? T.text, fontSize: 10, letterSpacing: 0.8 }}>{i.kind.toUpperCase()}</span>
                 <span style={{ color: T.dim, fontSize: 10 }}>{new Date(i.at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })}</span>
               </div>
               <div style={{ color: T.text, marginTop: 2 }}>{i.body}</div>

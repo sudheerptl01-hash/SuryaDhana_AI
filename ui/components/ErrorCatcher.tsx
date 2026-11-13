@@ -81,7 +81,7 @@ export function UiErrorChip() {
         <div role="dialog" aria-label="UI errors"
           style={{ position: 'absolute', bottom: 20, right: 0, width: 460, maxHeight: 320, overflowY: 'auto', zIndex: Z.dropdown,
                    background: '#0b0f16', border: '1px solid #2a3448', borderTop: '2px solid #ff4d5e', boxShadow: '0 12px 32px rgba(0,0,0,.6)',
-                   padding: '8px 10px', fontSize: 10.5, letterSpacing: '.02em', textTransform: 'none', color: '#d6dbe4', whiteSpace: 'normal' }}>
+                   padding: '8px 10px', fontSize: 11, letterSpacing: '.02em', textTransform: 'none', color: '#d6dbe4', whiteSpace: 'normal' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <span style={{ color: '#ff4d5e', fontWeight: 700, letterSpacing: '.14em' }}>UI ERRORS IN THIS WINDOW</span>
             <span style={{ flex: 1 }} />
@@ -92,7 +92,7 @@ export function UiErrorChip() {
           </div>
           {[...errors].reverse().map((e, i) => (
             <div key={`${e.at}-${i}`} style={{ padding: '5px 0', borderTop: '1px solid #1a2130' }}>
-              <div style={{ color: '#6f7a8e', fontSize: 9.5 }}>
+              <div style={{ color: '#6f7a8e', fontSize: 10 }}>
                 {ist(e.at)} IST · {(e.report.kind ?? 'error').toUpperCase()} · {e.report.tab || '—'} · {DELIVERY_LABEL[e.delivery]}
               </div>
               <div style={{ color: '#ffb000', wordBreak: 'break-word' }}>{e.report.message}</div>

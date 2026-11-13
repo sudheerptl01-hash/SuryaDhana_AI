@@ -28,7 +28,7 @@ function RevengeCountdown({ until }: { until: number }) {
   const now = useSecondTick()
   if (now >= until) return null
   return (
-    <div data-sd-revenge style={{ fontSize: 10.5, color: T.muted, fontFamily: T.mono }}>
+    <div data-sd-revenge style={{ fontSize: 11, color: T.muted, fontFamily: T.mono }}>
       next paper booking in {mmss(until - now)} — your cooling rule
     </div>
   )
@@ -96,8 +96,8 @@ function RulesCard() {
                      padding: '5px 0', borderBottom: `1px dashed ${T.border}`, fontSize: 11 }}>
             <span style={{ width: 7, height: 7, borderRadius: 7, background: stateDot(r.state), justifySelf: 'center' }} />
             <span style={{ color: T.text }}>{r.label}</span>
-            <span style={{ color: T.muted, fontFamily: T.mono, fontSize: 10.5 }}>{r.setting}</span>
-            <span style={{ color: T.text, fontFamily: T.mono, fontSize: 10.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.current}</span>
+            <span style={{ color: T.muted, fontFamily: T.mono, fontSize: 11 }}>{r.setting}</span>
+            <span style={{ color: T.text, fontFamily: T.mono, fontSize: 11, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.current}</span>
           </div>
         ))}
       </div>
@@ -126,7 +126,7 @@ function StandDownCard() {
             <Chip color={T.red} active>STAND DOWN</Chip>
             <span style={{ fontFamily: T.mono, fontSize: 11, color: T.text }}>{bannerMain(rec)}</span>
           </div>
-          <div style={{ fontSize: 10.5, color: T.muted }}>
+          <div style={{ fontSize: 11, color: T.muted }}>
             {rec.detail} · tripped {new Date(rec.tripped_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' })} IST
             · resets at the next session open (09:15 IST, {resetDateOf(rec.session)})
           </div>

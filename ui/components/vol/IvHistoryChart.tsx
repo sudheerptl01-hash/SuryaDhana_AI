@@ -82,7 +82,7 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
         <Chip color={T.violet} title={`${v2.definitions.iv_rank_252 ?? 'IV rank'} ${PCT_VS_RANK} Window: ${win} sessions on ${v2.rank.on}.`} aria-label="IV rank">
           IV RANK {rank != null ? fmtNum(rank, 0) : '—'}</Chip>
         <BadgeChip badge="arithmetic" note={PCT_VS_RANK} />
-        <span style={{ fontSize: 9.5, color: T.dim, fontFamily: T.mono }}>({win} sessions, {v2.rank.on})</span>
+        <span style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }}>({win} sessions, {v2.rank.on})</span>
         {toggle}
       </span>
     )
@@ -92,7 +92,7 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
           source={sourceOf(v2.as_of, { source: 'NSE F&O bhavcopy' })} badge={v2.badges.iv} right={chips}>
           {/* the strip names the window and the overlay; the IV levels themselves are in the chain header strip (one number,
               one place: PLAN §0.4), so the collapsed chart repeats none of them */}
-          <div style={{ fontSize: 10.5, color: T.muted, fontFamily: T.mono, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 11, color: T.muted, fontFamily: T.mono, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
             <span>IV30 (constant maturity) · ~1-month ATM line{hasVix ? ' · India VIX overlay' : ''} · results / series-roll markers</span>
             <span style={{ color: T.dim }}>{since} → {dayLabel(v2.as_of)} · {v2.sessions} sessions · ~1-month series {last.monthly_expiry ?? '—'} (first expiry 20–60 d)</span>
           </div>
@@ -158,7 +158,7 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
       return (
         <Panel title={`${symbol} implied volatility · history`} accent={T.violet} pad={6} style={{ marginBottom: 12 }}
           source={sourceOf(legacy.rows[legacy.rows.length - 1]?.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic" right={chips}>
-          <div style={{ fontSize: 10.5, color: T.muted, fontFamily: T.mono }}>near-expiry ATM IV (legacy series) · {legacy.rows[0].date} → {legacy.rows[legacy.rows.length - 1].date}{error ? <span style={{ color: T.amber }}> · IV store: {error} · backfill pending</span> : null}</div>
+          <div style={{ fontSize: 11, color: T.muted, fontFamily: T.mono }}>near-expiry ATM IV (legacy series) · {legacy.rows[0].date} → {legacy.rows[legacy.rows.length - 1].date}{error ? <span style={{ color: T.amber }}> · IV store: {error} · backfill pending</span> : null}</div>
         </Panel>
       )
     }

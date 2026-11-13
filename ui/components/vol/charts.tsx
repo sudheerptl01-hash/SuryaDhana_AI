@@ -264,7 +264,7 @@ export function XYChart({ series, height = 170, xLabel = '', yUnit = '%', ariaLa
           })}
           {cp != null && <Crosshair x={x(cp.x)} y={y(cp.y)} top={top} height={chartH} left={padL} width={plotW} />}
         </g>
-        {xLabel && <text x={W - padR} y={H - 3} fill={T.dim} fontSize={9.5} fontFamily={T.mono} textAnchor="end">{xLabel}</text>}
+        {xLabel && <text x={W - padR} y={H - 3} fill={T.dim} fontSize={10} fontFamily={T.mono} textAnchor="end">{xLabel}</text>}
       </svg>
     </div>
   )

@@ -831,7 +831,7 @@ function HomeContent() {
 
       {/* ── Status line (Bloomberg-style) ─────────────────────────────── */}
       <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 22, zIndex: Z.footer, display: 'flex',
-                       alignItems: 'center', gap: 14, padding: '0 12px', fontSize: 9.5, letterSpacing: 1.1, whiteSpace: 'nowrap',
+                       alignItems: 'center', gap: 14, padding: '0 12px', fontSize: 10, letterSpacing: 1.1, whiteSpace: 'nowrap',
                        borderTop: '1px solid var(--t-border)', background: '#07090d', color: 'var(--t-muted)' }}>
         <span className="sd-foot-chip" data-link={linkDown ? 'down' : 'up'} style={{ color: linkDown ? 'var(--t-red)' : 'var(--t-green)' }}
               title={linkDown ? 'ui-api unreachable: reconnecting' : 'terminal connected'}>
@@ -947,7 +947,7 @@ function RefreshPanel(p: RefreshPanelProps) {
           UPDATE DATA</span>
         <span style={{ color, fontWeight: 700, letterSpacing: 1 }}>{headline}</span>
         {st && !p.setupError && Number(st.total) > 0 && (
-          <span style={{ color: T.muted, fontSize: 10.5 }}>
+          <span style={{ color: T.muted, fontSize: 11 }}>
             {(st.done ?? 0).toLocaleString('en-IN')} downloaded · {(st.current ?? 0).toLocaleString('en-IN')} already current
             · {st.downloading ?? 0} active · {st.pending ?? 0} pending{st.errors > 0 ? ` · ${st.errors} errors` : ''}
           </span>
@@ -969,7 +969,7 @@ function RefreshPanel(p: RefreshPanelProps) {
             <button type="button" onClick={p.onBootstrap} disabled={p.bootstrapping}
               style={{ ...btn(T.green), cursor: p.bootstrapping ? 'wait' : 'pointer', opacity: p.bootstrapping ? 0.6 : 1 }}>
               {p.bootstrapping ? '↻ FETCHING…' : '▶ QUICK BOOTSTRAP (NIFTY 500)'}</button>
-            <details style={{ fontSize: 10.5, color: T.muted }}>
+            <details style={{ fontSize: 11, color: T.muted }}>
               <summary style={{ cursor: 'pointer' }}>manual setup (terminal)</summary>
               <div style={{ marginTop: 4, color: T.text, userSelect: 'text' }}>
                 scripts/nifty500_pipeline.py --mode universe1500<br />scripts/nifty500_pipeline.py --mode initial
@@ -977,7 +977,7 @@ function RefreshPanel(p: RefreshPanelProps) {
             </details>
           </div>
           {p.bootstrapResult && (
-            <div style={{ marginTop: 6, fontSize: 10.5, color: T.green }}>
+            <div style={{ marginTop: 6, fontSize: 11, color: T.green }}>
               ✓ {p.bootstrapResult.tickers} tickers loaded: downloading their daily prices now…</div>
           )}
         </div>
@@ -990,14 +990,14 @@ function RefreshPanel(p: RefreshPanelProps) {
       {st?.tickers && Object.keys(st.tickers).length > 0 && !p.setupError && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxHeight: 96, overflowY: 'auto', marginTop: 8 }}>
           {Object.entries(st.tickers as Record<string, string>).map(([t, v]) => (
-            <span key={t} title={v} style={{ fontSize: 9.5, letterSpacing: .4, padding: '0 4px', border: `1px solid ${T.border}`,
+            <span key={t} title={v} style={{ fontSize: 10, letterSpacing: .4, padding: '0 4px', border: `1px solid ${T.border}`,
                                              color: TICKER_TONE[v] ?? T.dim }}>{t}</span>
           ))}
         </div>
       )}
 
       {!st && p.refreshing && (
-        <div style={{ marginTop: 6, fontSize: 10.5, color: T.muted }}>
+        <div style={{ marginTop: 6, fontSize: 11, color: T.muted }}>
           Daily prices from Yahoo Finance: only the days missing from the database are fetched. Progress appears in a few seconds.
         </div>
       )}
@@ -1143,7 +1143,7 @@ function OverviewTab({ dashboard, dashError, onRetryDashboard, totalStocks, enri
                         title={loaded ? undefined : 'Waiting for the universe summary: the enrichment state is not known yet'}>
                      {enriching ? 'Enriching…' : !loaded ? '… ENRICH' : enriched === 0 ? '▶ Enrich now' : '↻ Re-enrich'}</Btn>}>
             {loaded && <Meter value={enrichPct / 100} color={T.violet} />}
-            <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}>
+            <div style={{ fontSize: 11, color: T.muted, marginTop: 6 }}>
               {loaded ? <>{enriched.toLocaleString('en-IN')} of {enrichTotal.toLocaleString('en-IN')} stocks have the snapshot (STOCKS columns).</>
                       : <>Snapshot coverage: {pending}.</>}
               {faCount != null && <> Quarterly financials from NSE&apos;s own results filings: <span style={{ color: T.text }}>{faCount.toLocaleString('en-IN')} companies</span>

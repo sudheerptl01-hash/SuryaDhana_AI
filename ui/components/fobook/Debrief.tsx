@@ -99,12 +99,12 @@ export function Debrief() {
             ? <Notice color={T.muted}>No paper structure closed between {data.from} and {data.to}. Closes land here with their realised money split Θ / Δ / ν.</Notice>
             : <div style={{ display: 'grid', gap: 6 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>CLOSED STRUCTURES · money split</span>
+                  <span style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>CLOSED STRUCTURES · money split</span>
                   <BadgeChip badge="arithmetic" note={data.attribution_method} />
-                  <span style={{ fontFamily: T.mono, fontSize: 9.5, color: T.dim }} title={data.attribution_method}>{data.attribution_label}</span>
+                  <span style={{ fontFamily: T.mono, fontSize: 10, color: T.dim }} title={data.attribution_method}>{data.attribution_label}</span>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 10.5 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
                     <thead><tr>
                       <th style={{ ...th, textAlign: 'left' }}>Structure</th><th style={{ ...th, textAlign: 'left' }}>Template</th>
                       <th style={th}>Closed</th><th style={th}>Θ</th><th style={th}>Δ</th><th style={th}>ν</th>
@@ -130,7 +130,7 @@ export function Debrief() {
                     </tbody>
                   </table>
                 </div>
-                <div style={{ fontSize: 9.5, color: T.dim, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 10, color: T.dim, lineHeight: 1.5 }}>
                   {data.attribution_label}: {data.attribution_method}
                 </div>
               </div>}
@@ -138,8 +138,8 @@ export function Debrief() {
           {/* ── template tally ── */}
           {data.by_template.length > 0 && (
             <div style={{ display: 'grid', gap: 4 }}>
-              <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>BY TEMPLATE</span>
-              <table style={{ borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 10.5, maxWidth: 520 }}>
+              <span style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>BY TEMPLATE</span>
+              <table style={{ borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11, maxWidth: 520 }}>
                 <thead><tr><th style={{ ...th, textAlign: 'left' }}>Template</th><th style={th}>closed</th><th style={th}>wins</th><th style={th}>win rate</th><th style={th}>realised</th></tr></thead>
                 <tbody>{data.by_template.map(t => (
                   <tr key={t.template} style={{ borderTop: `1px solid ${T.border}` }}>
@@ -150,14 +150,14 @@ export function Debrief() {
                   </tr>))}
                 </tbody>
               </table>
-              <div style={{ fontSize: 9.5, color: T.dim }}>{data.template_note}</div>
+              <div style={{ fontSize: 10, color: T.dim }}>{data.template_note}</div>
             </div>
           )}
 
           {/* ── discipline facts (owner's own rules from RSK › DISCIPLINE; facts only, no score — SPEC §7) ── */}
           <div style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>DISCIPLINE FACTS <Chip color={T.muted} style={{ fontSize: 9, padding: '1px 5px' }} title={data.facts_note}>your own rules</Chip></span>
-            <div style={{ fontFamily: T.mono, fontSize: 10.5, color: T.text, display: 'grid', gap: 2 }}>
+            <span style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>DISCIPLINE FACTS <Chip color={T.muted} style={{ fontSize: 9, padding: '1px 5px' }} title={data.facts_note}>your own rules</Chip></span>
+            <div style={{ fontFamily: T.mono, fontSize: 11, color: T.text, display: 'grid', gap: 2 }}>
               <span>{tradedDays.length} traded day(s) in the window · busiest day {busiest} action(s){maxTrades != null ? ` vs your ${maxTrades}/day rule` : ''}</span>
               {cap != null && withinCap != null
                 ? <span>{withinCap} of {tradedDays.length} traded day(s) ended within your daily loss cap ({fmtInr(cap, 0)})</span>
@@ -166,7 +166,7 @@ export function Debrief() {
                 <span style={{ color: T.amber }}>stand down tripped {standdownInWindow.session}: {standdownInWindow.detail} — your rule, set in RSK › DISCIPLINE</span>
               )}
             </div>
-            <div style={{ fontSize: 9.5, color: T.dim }}>{data.facts_note}. Counts the PAPER book only — log your real ICICI trades here (OSTR › Book paper) or these facts are incomplete.</div>
+            <div style={{ fontSize: 10, color: T.dim }}>{data.facts_note}. Counts the PAPER book only — log your real ICICI trades here (OSTR › Book paper) or these facts are incomplete.</div>
           </div>
 
           <div style={{ fontSize: 10, color: T.dim }}>{data.note}. Realised figures are {data.realised_basis}. Describes, does not predict.</div>

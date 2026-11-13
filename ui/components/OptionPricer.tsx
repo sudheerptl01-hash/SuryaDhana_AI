@@ -71,12 +71,12 @@ export function OptionPricer({ data, pick, onClose }: { data: OptionChain; pick:
         : sourceOf(data.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic" title={`Pricer · ${data.symbol} ${K} ${pick.side === 'call' ? 'CE' : 'PE'} · ${data.expiry}`} accent={T.violet} pad={10} style={{ marginBottom: 12 }}
       subtitle={`Black-76 on the chain's forward, r 6.5%, T = ${fmtDays(chainDays)} calendar days to 15:30 IST on expiry ÷ 365 (the model and clock behind OMON's IVs) · one long lot · edit IV or days to ask what-if`}
       right={<Btn size="sm" onClick={onClose}>✕ CLOSE</Btn>}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 16, fontFamily: T.mono, fontSize: 11.5 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 16, fontFamily: T.mono, fontSize: 12 }}>
         <div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <Input label="IV %" value={ivTxt} onChange={setIvTxt} width={70} />
             <Input label="Days left (to 15:30 IST expiry)" value={daysTxt} onChange={setDaysTxt} width={90} />
-            <div style={{ alignSelf: 'flex-end', fontSize: 10.5, color: T.dim }}>forward {n(F)} · lot {data.lot ?? '—'} · IV from {ivSource}</div>
+            <div style={{ alignSelf: 'flex-end', fontSize: 11, color: T.dim }}>forward {n(F)} · lot {data.lot ?? '—'} · IV from {ivSource}</div>
           </div>
           {kv('Model price', <span style={{ color: T.amber }}>₹{n(m.price)}</span>)}
           {kv('Market price', mkt != null ? `₹${n(mkt)}` : '—',
@@ -102,7 +102,7 @@ export function OptionPricer({ data, pick, onClose }: { data: OptionChain; pick:
             <text x={pad} y={H + 14} fontSize={10} fill={T.dim}>{n(curve[0].s, 0)}</text>
             <text x={W - pad} y={H + 14} fontSize={10} fill={T.dim} textAnchor="end">{n(curve[curve.length - 1].s, 0)}</text>
           </svg>
-          <div style={{ fontSize: 10.5, color: T.muted }}>
+          <div style={{ fontSize: 11, color: T.muted }}>
             P&L of one long lot: <span style={{ color: T.violet }}>at expiry</span> · <span style={{ color: T.cyan }}>today ({days} days left)</span>
             {' '}· max loss ₹{n(premium * lot, 0)} (the premium) · range ±2.5 standard deviations
           </div>

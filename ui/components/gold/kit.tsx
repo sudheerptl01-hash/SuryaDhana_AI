@@ -31,7 +31,7 @@ export function LagChipEl({ freshness, maxAgeDays, style }: { freshness: Freshne
   const col = toneColor(c.tone)
   return (
     <span title={c.title} data-lag={c.label.split(' ')[0]}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1, color: col,
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: T.mono, fontSize: 10, letterSpacing: 1, color: col,
                border: `1px solid ${col}55`, padding: '1px 6px', whiteSpace: 'nowrap', ...style }}>
       <Dot color={col} pulse={c.tone === 'green'} size={5} />{c.label}
     </span>
@@ -98,7 +98,7 @@ export function About({ row, title }: { row: CatalogRow | null | undefined; titl
       {open && (
         <div role="dialog" aria-label="about this data"
           style={{ position: 'absolute', top: 22, right: 0, width: 340, zIndex: 20, background: T.panel, border: `1px solid ${T.cyan}`, padding: '8px 10px',
-                   fontSize: 10.5, color: T.text, lineHeight: 1.5, boxShadow: '0 8px 24px rgba(0,0,0,.6)', textAlign: 'left', whiteSpace: 'normal' }}>
+                   fontSize: 11, color: T.text, lineHeight: 1.5, boxShadow: '0 8px 24px rgba(0,0,0,.6)', textAlign: 'left', whiteSpace: 'normal' }}>
           <div style={{ fontFamily: T.display, fontSize: 11, letterSpacing: 1.2, color: T.cyan, marginBottom: 4 }}>{(title ?? row?.name ?? 'ABOUT').toUpperCase()}</div>
           {!row && <div style={{ color: T.muted }}>No catalog row for this panel yet: the data dictionary is written by the ingest (gold_series_catalog).</div>}
           {row && <>
@@ -121,7 +121,7 @@ export function About({ row, title }: { row: CatalogRow | null | undefined; titl
 function Row({ k, v }: { k: string; v: ReactNode }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 6, padding: '2px 0', borderBottom: `1px dashed ${T.border}` }}>
-      <span style={{ color: T.muted, fontSize: 9.5, letterSpacing: .8, textTransform: 'uppercase' }}>{k}</span>
+      <span style={{ color: T.muted, fontSize: 10, letterSpacing: .8, textTransform: 'uppercase' }}>{k}</span>
       <span>{v}</span>
     </div>
   )
@@ -185,7 +185,7 @@ export function GoldPanel({ id, title, subtitle, badge, evidence, freshness, max
           </div>
         )}
         {copy && (
-          <div data-gold-copy={layer} style={{ padding: '5px 12px', fontSize: 10.5, color: T.muted, lineHeight: 1.5, borderBottom: `1px solid ${T.border}`, background: '#07090d' }}>
+          <div data-gold-copy={layer} style={{ padding: '5px 12px', fontSize: 11, color: T.muted, lineHeight: 1.5, borderBottom: `1px solid ${T.border}`, background: '#07090d' }}>
             <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: 1, color: layer === 'P' ? T.violet : T.cyan, marginRight: 6 }}>[{layer}]</span>{copy}
           </div>
         )}
@@ -205,7 +205,7 @@ export function Cell({ label, value, sub, color = T.text, title, mono = true, st
     <div title={title} style={{ minWidth: 0, ...style }}>
       <div style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase', color: T.muted, whiteSpace: 'nowrap' }}>{label}</div>
       <div style={{ fontFamily: mono ? T.mono : T.display, fontSize: 14, fontWeight: 600, color, marginTop: 2, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      {sub && <div style={{ fontSize: 9.5, color: T.dim, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: T.dim, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
     </div>
   )
 }

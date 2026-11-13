@@ -8,9 +8,11 @@ import { apiError } from '@/lib/errors'
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getResearchDoc, listResearch, researchFileUrl, type ResearchEntry } from '@/lib/api'
-import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, sourceOf, referenceSource } from '@/components/terminal'
+import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, Tabs, sourceOf, referenceSource, useSubView } from '@/components/terminal'
 import { Markdown } from '@/components/terminal/Markdown'
 import { downloadUrl, isDesktop } from '@/lib/platform'
+// R2-ASK (RATING §7 R9-R1): the cited read-only analyst as the RSCH ASK sub-view (GO alias ASK hands `?sub=ask` over)
+import { AskPanel } from '@/components/ask/AskPanel'
 
 export const VERDICT_COLOR: Record<string, string> = {
   ADOPTED: T.green, PASS: T.green, PROMISING: T.amber, FAIL: T.red, 'NO EDGE': T.red, REFERENCE: T.cyan,
@@ -35,6 +37,8 @@ export function ResearchLibrary() {
   const [verdict, setVerdict] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [nonce, setNonce] = useState(0)
+  // R2-ASK mount: LIBRARY | ASK in `?sub=` (the GO alias ASK hands `ask` over, like DERV › VOL)
+  const [sub, setSub] = useSubView(['library', 'ask'] as const, 'library')
 
   const load = useCallback(async () => {
     try {
@@ -64,8 +68,22 @@ export function ResearchLibrary() {
     (!q.trim() || `${r.title} ${r.area} ${r.takeaway}`.toLowerCase().includes(q.trim().toLowerCase()))), [list, verdict, q])
   const counts = useMemo(() => Object.fromEntries(VERDICTS.map(v => [v, (list ?? []).filter(r => r.verdict === v).length])), [list])
 
-  if (error && !list) return <div><PageHeader code="RSCH" title="Research Library" /><ErrorBox error={error} onRetry={load} /></div>
-  if (!list) return <div><PageHeader code="RSCH" title="Research Library" /><Loading label="Loading studies" /></div>
+  // R2-ASK: the ASK sub-view renders even when the study list is unavailable (its own reads degrade alone)
+  const subTabs = <Tabs items={[{ id: 'library' as const, label: 'LIBRARY · every study and its verdict' },
+                                { id: 'ask' as const, label: 'ASK · the cited read-only analyst' }]}
+    active={sub} onChange={setSub} />
+  if (sub === 'ask') {
+    return (
+      <div>
+        <PageHeader code="RSCH" title="Research Library"
+          subtitle="ASK · read-only answers from the 19:20 snapshot, every number cited · describes, does not predict" />
+        {subTabs}
+        <div style={{ marginTop: 12 }}><AskPanel /></div>
+      </div>
+    )
+  }
+  if (error && !list) return <div><PageHeader code="RSCH" title="Research Library" />{subTabs}<div style={{ marginTop: 12 }}><ErrorBox error={error} onRetry={load} /></div></div>
+  if (!list) return <div><PageHeader code="RSCH" title="Research Library" />{subTabs}<div style={{ marginTop: 12 }}><Loading label="Loading studies" /></div></div>
 
   return (
     <div>
@@ -79,7 +97,8 @@ export function ResearchLibrary() {
             </Chip>
           ))}
         </div>} />
-      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)', alignItems: 'start' }}>
+      {subTabs}
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)', alignItems: 'start', marginTop: 12 }}>
         <Panel source={referenceSource('reports/*/FINDINGS.md')} title="Studies" pad={0} style={{ position: 'sticky', top: 8 }}
           right={<Input value={q} onChange={setQ} placeholder="Search…" width={150} />}>
           <div style={{ maxHeight: 'calc(100vh - 230px)', overflowY: 'auto' }}>
@@ -94,12 +113,12 @@ export function ResearchLibrary() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
                     <span style={{ fontFamily: T.mono, fontSize: 9, fontWeight: 700, letterSpacing: 1, color: c,
                                    border: `1px solid ${c}`, padding: '1px 5px' }}>{r.verdict}</span>
-                    <span style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1, textTransform: 'uppercase' }}>{r.area}</span>
+                    <span style={{ fontSize: 10, color: T.dim, letterSpacing: 1, textTransform: 'uppercase' }}>{r.area}</span>
                     <span style={{ flex: 1 }} />
-                    <span style={{ fontSize: 9.5, color: T.dim }}>{ago(r.updated)}</span>
+                    <span style={{ fontSize: 10, color: T.dim }}>{ago(r.updated)}</span>
                   </div>
                   <div style={{ fontSize: 12, color: on ? T.bright : T.text, fontWeight: 600, lineHeight: 1.35 }}>{r.title}</div>
-                  {r.takeaway && <div style={{ fontSize: 10.5, color: T.muted, lineHeight: 1.5, marginTop: 3,
+                  {r.takeaway && <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5, marginTop: 3,
                                                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {r.takeaway}</div>}
                 </button>

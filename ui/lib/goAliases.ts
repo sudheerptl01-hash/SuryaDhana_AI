@@ -45,6 +45,8 @@ export const GO_ALIASES: Readonly<Record<string, readonly AliasTarget[]>> = Obje
   IMAP: [{ kind: 'page', id: 'memb' }],
   CONTRIB: [{ kind: 'page', id: 'memb' }],
   DATA: [{ kind: 'page', id: 'system', view: 'data' }],
+  // R2-ASK (RATING §7 R9-R1): the cited read-only analyst — RSCH › ASK (`?sub=ask`, like VOL / DATA)
+  ASK: [{ kind: 'page', id: 'research', view: 'ask' }],
 })
 
 // ── GO arguments (page review 5 Nov, M37): `TCS OMON 27NOV` · `NIFTY OSTR IC` · `ALRT TCS >3200` · `TCS VS INFY` ·

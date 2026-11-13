@@ -43,7 +43,7 @@ export function AccuracyStrip({ stats, rows, threshold }: { stats: GoldLogStatsX
   const cf = onVwap30Line(stats, threshold)
   return (
     <>
-    {(clean?.days || cf) ? <div data-gold-acc-live style={{ fontSize: 10.5, color: T.text, marginBottom: 6, lineHeight: 1.6 }}>
+    {(clean?.days || cf) ? <div data-gold-acc-live style={{ fontSize: 11, color: T.text, marginBottom: 6, lineHeight: 1.6 }}>
       {clean?.days ? <div>On the right session&apos;s settlement ({clean.days} day{clean.days === 1 ? '' : 's'}): median miss <b>{inr(clean.median_abs_error)}</b> · naive {inr(clean.naive_mean_abs_error)}{clean.days < 20 ? ' — too few days to size anything' : ''}</div> : null}
       {cf ? <div data-gold-acc-counterfactual style={{ color: T.muted }}>{cf}</div> : null}
     </div> : null}
@@ -85,7 +85,7 @@ export function GoldAccuracyLog({ threshold, layer = 'B', shared, catalog = null
   }
 
   const cols: Column<GoldLogRowX>[] = [
-    { key: 'date', label: 'Day', render: r => <span>{dayLabel(r.date)}{r.stale_baseline && <Chip color={T.amber} style={{ marginLeft: 6, fontSize: 8.5, padding: '0 4px' }} title={`${staleReasonWords(r.stale_reasons) || logCheckWords(r).text}`}>STALE BASE</Chip>}</span> },
+    { key: 'date', label: 'Day', render: r => <span>{dayLabel(r.date)}{r.stale_baseline && <Chip color={T.amber} style={{ marginLeft: 6, fontSize: 9, padding: '0 4px' }} title={`${staleReasonWords(r.stale_reasons) || logCheckWords(r).text}`}>STALE BASE</Chip>}</span> },
     { key: 'baseline', label: 'Settlement (as logged)', align: 'right', render: r => <span style={{ color: T.muted }} title={r.baseline_session ? `labelled ${dayLabel(r.baseline_session)} settlement · ${r.baseline_source ?? 'source not logged'}` : r.baseline_source ?? undefined}>{inr(r.baseline)}</span> },
     // D2: the row's settlement check, re-explained in its own words; the stored numbers beside it are never rewritten
     { key: 'check', label: 'Check vs VWAP30', align: 'right', render: r => { const c = logCheckWords(r)

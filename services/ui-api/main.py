@@ -79,6 +79,7 @@ from routers import quotes
 from routers import live as live_quotes   # live NSE program (LV-API): /api/live/quotes, /api/live/status
 from routers import desk
 from routers import research
+from routers import ask as ask_analyst  # R2-ASK (RATING §7 R9-R1): RSCH's cited read-only analyst, /api/ask/*
 from routers import costs
 from routers import alerts as price_alerts
 from routers import charts
@@ -207,6 +208,7 @@ app.include_router(live_quotes.router, prefix="/api/live", tags=["live"])
 app.include_router(desk.router, prefix="/api/desk", tags=["decision-desk"])
 app.include_router(markets.attribution_router, prefix="/api/desk", tags=["decision-desk"])  # PLAN 1.2: /api/desk/attribution (B3)
 app.include_router(research.router, prefix="/api/research", tags=["research"])
+app.include_router(ask_analyst.router, prefix="/api/ask", tags=["ask"])  # R2-ASK: 8 guardrails in ask_engine.py
 app.include_router(costs.router, prefix="/api/costs", tags=["costs"])
 app.include_router(price_alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(charts.router, prefix="/api/charts", tags=["charts"])

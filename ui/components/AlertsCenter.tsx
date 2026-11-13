@@ -68,6 +68,9 @@ export function AlertsCenter() {
   const [dryAt, setDryAt] = useState<string | null>(null)
   const [rf, setRf] = useState<DraftForm>(EMPTY_FORM)
   const [ruleMsg, setRuleMsg] = useState<string | null>(null)
+  // F-PROBE/F-TRADER: ＋ADD RULE with an empty VALUE was a silent no-op — the problem now renders
+  // inline beside the button (role=alert), not only in the strip below the QUICK row
+  const [ruleProblem, setRuleProblem] = useState<string | null>(null)
   const builderRef = useRef<HTMLDivElement | null>(null)
 
   const loadRules = useCallback(async () => {
@@ -193,7 +196,8 @@ export function AlertsCenter() {
   const addRule = async () => {
     if (!kinds) return
     const { draft, problem } = draftFromForm(rf, kinds)
-    if (!draft) { setRuleMsg(problem); return }
+    if (!draft) { setRuleProblem(problem || 'check the fields above'); return }
+    setRuleProblem(null)
     try {
       const r = (await postAlertRule(draft)).data
       setRuleMsg(`saved: ${r.summary ?? r.series}`)
@@ -279,11 +283,11 @@ export function AlertsCenter() {
     { key: 'holds', label: 'Condition', render: r => { const d = dry[r.id]
         // neutral tones only: a rule holding is not good or bad news (PLAN §0.1)
         if (!d || d.satisfied == null) return <span style={{ color: T.dim, fontSize: 10 }}>{d?.reason ? 'not measurable yet' : '—'}</span>
-        return <span style={{ color: d.satisfied ? T.amber : T.muted, fontSize: 10.5 }}>{d.satisfied ? 'holds now' : 'not now'}</span> } },
+        return <span style={{ color: d.satisfied ? T.amber : T.muted, fontSize: 11 }}>{d.satisfied ? 'holds now' : 'not now'}</span> } },
     { key: 'badge', label: 'Badge', render: r => <BadgeChip badge={r.badge ?? 'arithmetic'} /> },
     { key: 'state', label: 'State', render: r => r.origin === 'price'
-        ? <span style={{ color: T.muted, fontSize: 10.5 }}>{ruleStateText(r)}<span style={{ color: T.dim }}> · one-shot · legacy</span></span>
-        : <span style={{ color: r.status === 'active' ? T.text : T.muted, fontSize: 10.5 }}>{ruleStateText(r)}
+        ? <span style={{ color: T.muted, fontSize: 11 }}>{ruleStateText(r)}<span style={{ color: T.dim }}> · one-shot · legacy</span></span>
+        : <span style={{ color: r.status === 'active' ? T.text : T.muted, fontSize: 11 }}>{ruleStateText(r)}
         <span style={{ color: T.dim }}> · {r.repeat === 'once' ? 'one-shot' : r.cooldown_min ? `repeat, ${r.cooldown_min} min apart` : 'repeat'} · {CHANNEL_LABEL[(r.channel ?? 'both') as AlertChannel]}</span></span> },
     { key: 'last', label: 'Last fired', sort: r => r.last_fired_at ?? '', render: r => <span style={{ color: T.dim }}>{r.last_fired_at ? r.last_fired_at.replace('T', ' ').slice(0, 16) : '—'}</span> },
     { key: 'act', label: '', render: r => r.origin === 'price'
@@ -313,7 +317,7 @@ export function AlertsCenter() {
         subtitle="price alerts and typed rules over stored series, checked by the scheduler (terminal can be closed) · fired inbox · notifications" />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 460px), 1fr))', gap: 12, alignItems: 'start' }}>
         <Panel source={inputSource('your alert levels (the server checks them every minute in session)')} title={`Price alerts · ${rows.length}`} accent={T.amber} pad={0}
-          right={liveA.available && liveA.source ? <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 9.5, color: T.dim }}>PRICES <SourceChip info={liveA.source} /></span> : undefined}
+          right={liveA.available && liveA.source ? <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 10, color: T.dim }}>PRICES <SourceChip info={liveA.source} /></span> : undefined}
           subtitle="one-shot: a fired level is cleared">
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: 10, borderBottom: `1px solid ${T.border}`, flexWrap: 'wrap' }}>
             <Input label="Stock" value={form.sym} onChange={v => setForm({ ...form, sym: v })} placeholder={active?.symbol ?? 'TCS'} width={100} />
@@ -321,11 +325,15 @@ export function AlertsCenter() {
             <Input label="At or under ₹" value={form.below} onChange={v => setForm({ ...form, below: v })} width={90} />
             <Input label="Move ±%" value={form.move} onChange={v => setForm({ ...form, move: v })} width={80} />
             <Btn size="sm" onClick={submit}>＋ SET ALERT</Btn>
-            {msg && <span style={{ fontSize: 10.5, color: T.muted }}>{msg}</span>}
+            {msg && <span style={{ fontSize: 11, color: T.muted }}>{msg}</span>}
           </div>
-          <div style={SCROLL_X}>
+          {/* F-PROBE (one number once per page): the legacy levels used to print here AND as the merged
+              origin-'price' rows in the Rules table below — the E-DIFF T-22 merge left this list behind.
+              The merged table is now the one list; this fallback renders only while the typed engine is
+              down (an older ui-api, or the engine erroring), so the levels never show twice. */}
+          {engineDown && <div style={SCROLL_X}>
             <DataTable columns={cols} rows={rows} rowKey={r => r.sym} dense empty="No price alerts. Set one above, or with the bell in the Alert column on WTCH." initialSort={{ key: 'near', dir: 'asc' }} />
-          </div>
+          </div>}
         </Panel>
         <Panel source={firedSource(history[0]?.at ?? null, loaded)} title={`Fired · ${firedCount}`} accent={T.cyan} pad={0} subtitle="by symbol, newest first">
           {engineDown && priceHistory.length > 0 && !fires.length
@@ -348,7 +356,7 @@ export function AlertsCenter() {
                         <span style={{ color: T.dim, fontSize: 10 }}>{g.count} fire{g.count > 1 ? 's' : ''} · last {g.last_at.replace('T', ' ').slice(0, 16)}</span>
                       </div>
                       {g.fires.slice(0, 5).map(f => (
-                        <div key={f.seq} style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 10.5, lineHeight: 1.45, flexWrap: 'wrap' }}>
+                        <div key={f.seq} style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 11, lineHeight: 1.45, flexWrap: 'wrap' }}>
                           <span style={{ color: T.dim, whiteSpace: 'nowrap' }}>{f.at.replace('T', ' ').slice(5, 16)}</span>
                           <span style={{ color: T.text, flex: '1 1 220px', minWidth: 0, overflowWrap: 'anywhere' }}>{unicodeMinus(f.text)}</span>
                           <BadgeChip badge={f.badge ?? 'arithmetic'} />
@@ -391,12 +399,13 @@ export function AlertsCenter() {
             options={(['both', 'mac', 'telegram'] as AlertChannel[]).map(c => ({ value: c, label: CHANNEL_LABEL[c] }))} />
           <Input label="Note (optional)" value={rf.note} onChange={v => setRf({ ...rf, note: v })} width={180} />
           <Btn size="sm" onClick={addRule} disabled={!kinds?.length}>＋ ADD RULE</Btn>
+          {ruleProblem && <span role="alert" style={{ fontSize: 11, color: T.amber, alignSelf: 'center' }}>not saved — {ruleProblem}</span>}
         </div>
         <div style={{ padding: '6px 10px', borderBottom: `1px solid ${T.border}`, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1 }}>QUICK</span>
+          <span style={{ fontSize: 10, color: T.dim, letterSpacing: 1 }}>QUICK</span>
           {PRESETS.map(p => <Chip key={p.id} color={T.muted} onClick={() => preset(p.id)} title={p.needs === 'symbol' ? `on ${rf.params.symbol || active?.symbol || 'NIFTY'}` : undefined}>{p.label}</Chip>)}
         </div>
-        {(kindSpec || ruleMsg) && <div style={{ padding: '6px 10px', fontSize: 10.5, color: T.muted, lineHeight: 1.45, borderBottom: `1px solid ${T.border}`, overflowWrap: 'anywhere' }}>
+        {(kindSpec || ruleMsg) && <div style={{ padding: '6px 10px', fontSize: 11, color: T.muted, lineHeight: 1.45, borderBottom: `1px solid ${T.border}`, overflowWrap: 'anywhere' }}>
           {ruleMsg && <div style={{ color: T.amber }}>{ruleMsg}</div>}
           {kindSpec && <div>{kindSpec.definition} · <span style={{ color: T.dim }}>{kindSpec.source} · {kindSpec.cadence === 'live' ? 'checked every minute in session' : kindSpec.cadence === 'hourly' ? 'checked hourly' : 'stored daily: checked after each EOD step'}</span> <BadgeChip badge={kindSpec.badge} /></div>}
         </div>}

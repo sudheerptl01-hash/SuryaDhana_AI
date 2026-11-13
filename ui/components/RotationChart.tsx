@@ -88,7 +88,7 @@ export function RotationChart({ rows }: { rows: RotationRow[] }) {
                 const l = r.tail[r.tail.length - 1]
                 return (
                   <div key={r.industry} onMouseEnter={() => setFocus(r.industry)} onMouseLeave={() => setFocus(null)}
-                    style={{ display: 'flex', justifyContent: 'space-between', gap: 6, padding: '3px 10px', fontSize: 10.5,
+                    style={{ display: 'flex', justifyContent: 'space-between', gap: 6, padding: '3px 10px', fontSize: 11,
                              background: focus === r.industry ? T.panel3 : 'transparent', cursor: 'default' }}>
                     <span style={{ color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.industry}</span>
                     <span style={{ color: T.muted, fontFamily: T.mono, flex: 'none' }}>{l.x?.toFixed(1)} · {l.y?.toFixed(1)}</span>

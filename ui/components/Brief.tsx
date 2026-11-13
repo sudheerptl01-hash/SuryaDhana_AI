@@ -90,7 +90,7 @@ function Pending({ s, children }: { s: Load<unknown>; children: ReactNode }) {
 
 function Line({ k, v, c }: { k: ReactNode; v: ReactNode; c?: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '5px 0', borderBottom: `1px solid ${T.border}`, fontSize: 11.5 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '5px 0', borderBottom: `1px solid ${T.border}`, fontSize: 12 }}>
       <span style={{ color: T.muted }}>{k}</span><span style={{ color: c ?? T.text, fontFamily: T.mono, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{v}</span>
     </div>
   )
@@ -310,25 +310,25 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
         </div>} />
 
       {showNew && (
-        <div style={{ border: `1px solid ${T.cyan}55`, background: '#06101a', padding: '6px 12px', marginBottom: 8, fontSize: 11.5,
+        <div style={{ border: `1px solid ${T.cyan}55`, background: '#06101a', padding: '6px 12px', marginBottom: 8, fontSize: 12,
                       display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: T.display, fontSize: 10.5, letterSpacing: 1.4, color: T.cyan }}>NEW SINCE YOUR LAST VISIT</span>
+          <span style={{ fontFamily: T.display, fontSize: 11, letterSpacing: 1.4, color: T.cyan }}>NEW SINCE YOUR LAST VISIT</span>
           {WHATS_NEW.map(w => <Chip key={w.code} color={T.cyan} title={w.hint} onClick={w.go}>{w.code}</Chip>)}
           <span role="button" title="hide until the next release" onClick={() => { setShowNew(false); try { localStorage.setItem('suryadhana.whatsnew', WHATS_NEW_VERSION) } catch { /* private window */ } }}
-            style={{ marginLeft: 'auto', color: T.dim, cursor: 'pointer', fontSize: 10.5 }}>✕ GOT IT</span>
+            style={{ marginLeft: 'auto', color: T.dim, cursor: 'pointer', fontSize: 11 }}>✕ GOT IT</span>
         </div>)}
       {/* E-DIFF F-19b: what changed since the previous visit — neutral tones only (facts, never a direction) */}
       {!hideDiff && lastLook !== 'unread' && lastLook != null && changed.length > 0 && (
         <div data-brief-lastlook style={{ border: `1px solid ${T.border}`, background: '#0b0f16', padding: '6px 12px', marginBottom: 8,
-                      fontSize: 11.5, display: 'flex', gap: '2px 14px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontFamily: T.display, fontSize: 10.5, letterSpacing: 1.4, color: T.muted }}>SINCE YOUR LAST LOOK · {sinceLabel(lastLook.at)}</span>
+                      fontSize: 12, display: 'flex', gap: '2px 14px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: T.display, fontSize: 11, letterSpacing: 1.4, color: T.muted }}>SINCE YOUR LAST LOOK · {sinceLabel(lastLook.at)}</span>
           {changed.map(c => c.text
             ? <span key={c.label} style={{ color: T.text }}>{c.text}</span>
             : <span key={c.label} style={{ whiteSpace: 'nowrap' }}><span style={{ color: T.dim }}>{c.label}</span>{' '}
                 <span style={{ color: T.text, fontFamily: T.mono }}>{c.from}</span> <span style={{ color: T.dim }}>→</span>{' '}
                 <span style={{ color: T.text, fontFamily: T.mono }}>{c.to}</span></span>)}
           <span role="button" title="hide for this visit (the marker advances either way)" onClick={() => setHideDiff(true)}
-            style={{ marginLeft: 'auto', color: T.dim, cursor: 'pointer', fontSize: 10.5 }}>✕</span>
+            style={{ marginLeft: 'auto', color: T.dim, cursor: 'pointer', fontSize: 11 }}>✕</span>
         </div>
       )}
       {(() => {
@@ -340,16 +340,16 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
               fix: 'Approve or edit the proposed map in docs/IMPROVEMENT_LOG.md (Recommendations)' }] : [])]
         if (!items.length) return null
         return (
-          <div style={{ border: `1px solid ${T.amber}66`, background: '#120e04', padding: '8px 12px', marginBottom: 12, fontSize: 11.5 }}>
+          <div style={{ border: `1px solid ${T.amber}66`, background: '#120e04', padding: '8px 12px', marginBottom: 12, fontSize: 12 }}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: T.display, fontSize: 10.5, letterSpacing: 1.4, color: T.amber }}>NEEDS YOU · {items.length}</span>
+              <span style={{ fontFamily: T.display, fontSize: 11, letterSpacing: 1.4, color: T.amber }}>NEEDS YOU · {items.length}</span>
               {items.map(c => <span key={c.key} style={{ color: T.text }}>⚠ {c.title}</span>)}
-              <span role="button" onClick={() => setSetupOpen(o => !o)} style={{ color: T.cyan, cursor: 'pointer', marginLeft: 'auto', fontSize: 10.5 }}>{setupOpen ? 'HIDE' : 'HOW TO FIX ›'}</span>
+              <span role="button" onClick={() => setSetupOpen(o => !o)} style={{ color: T.cyan, cursor: 'pointer', marginLeft: 'auto', fontSize: 11 }}>{setupOpen ? 'HIDE' : 'HOW TO FIX ›'}</span>
             </div>
             {setupOpen && items.map(c => (
               <div key={c.key} style={{ marginTop: 6, paddingTop: 6, borderTop: `1px solid ${T.border}` }}>
                 <div style={{ color: T.text }}><b>{c.title}</b> <span style={{ color: T.muted }}>· {c.detail}</span></div>
-                {c.fix && <div style={{ color: T.dim, fontFamily: T.mono, fontSize: 10.5, marginTop: 2 }}>fix: {c.fix}</div>}
+                {c.fix && <div style={{ color: T.dim, fontFamily: T.mono, fontSize: 11, marginTop: 2 }}>fix: {c.fix}</div>}
               </div>))}
           </div>
         )
@@ -392,7 +392,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                         return v?.available && v.change_pct != null
                           ? <span key={sym} style={{ marginLeft: 7, whiteSpace: 'nowrap' }} title={spanNote(v) ? `change ${spanNote(v)} (holiday or a session the source skipped)` : undefined}>
                               <span style={{ color: T.dim }}>{label}</span> <span style={{ color: signTone(v.change_pct, 0.05) }}>{fmtPct(v.change_pct, 1)}</span>
-                              {spanNote(v) && <span style={{ color: T.dim, fontSize: 9.5 }}> {spanNote(v)!.replace('since ', '·')}</span>}</span>
+                              {spanNote(v) && <span style={{ color: T.dim, fontSize: 10 }}> {spanNote(v)!.replace('since ', '·')}</span>}</span>
                           : null
                       })}{fed.data?.next && (() => {
                         const d = Math.round((new Date(`${fed.data!.next!.end}T00:00:00`).getTime() - new Date(now.toDateString()).getTime()) / 86_400_000)
@@ -439,13 +439,13 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
               })()}
               {opt.data && (
                 <Line k={<span>NIFTY options{opt.data.live
-                        ? <SourceChip info={nseDelayedSource(opt.data.as_of ?? null, { marketOpen: true, now: now.getTime(), hint: 'NSE option chain (v3), refreshed by NSE about once a minute' })} style={{ marginLeft: 5, fontSize: 8.5 }} />
-                        : <span style={{ color: T.dim, fontSize: 9.5 }}> · F&O EOD {opt.data.date}</span>} <span role="button" onClick={() => onNavigate('options')} style={{ color: T.cyan, cursor: 'pointer', fontSize: 10 }}>OMON ›</span></span>}
+                        ? <SourceChip info={nseDelayedSource(opt.data.as_of ?? null, { marketOpen: true, now: now.getTime(), hint: 'NSE option chain (v3), refreshed by NSE about once a minute' })} style={{ marginLeft: 5, fontSize: 9 }} />
+                        : <span style={{ color: T.dim, fontSize: 10 }}> · F&O EOD {opt.data.date}</span>} <span role="button" onClick={() => onNavigate('options')} style={{ color: T.cyan, cursor: 'pointer', fontSize: 10 }}>OMON ›</span></span>}
                       v={<span>±{opt.data.expected_move_pct}% by {new Date(`${opt.data.expiry}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                         <span style={{ color: T.dim }}> · PCR {opt.data.pcr_oi} · walls </span>
                         <span style={{ color: T.red }}>{opt.data.resistance[0]?.toLocaleString('en-IN')}</span>/<span style={{ color: T.green }}>{opt.data.support[0]?.toLocaleString('en-IN')}</span></span>} />
               )}
-              <div style={{ fontSize: 10.5, color: T.muted, marginTop: 8 }}>
+              <div style={{ fontSize: 11, color: T.muted, marginTop: 8 }}>
                 {(() => {   // industries over the last month: best three and worst three (both can be negative in a falling market)
                   const ranked = [...m.sectors].filter(s => s.ret_21d_pct != null).sort((a, z) => z.ret_21d_pct! - a.ret_21d_pct!)
                   const item = (s: (typeof ranked)[number]) => <span key={s.industry} style={{ whiteSpace: 'nowrap' }}>{s.industry} <span style={{ color: tone(s.ret_21d_pct) }}>{pct(s.ret_21d_pct)}</span></span>
@@ -472,13 +472,13 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                 // not the book: an all-cash book never reads "INVESTED" (the old box rendered today's risk_on as the book)
                 const cl = crashLines(crash.data, d as DeskLike)
                 return (
-                  <div data-brief-crash style={{ border: `1px solid ${T.border}`, background: '#0b0f16', padding: '7px 10px', margin: '2px 0 6px', fontSize: 11.5, lineHeight: 1.6 }}>
+                  <div data-brief-crash style={{ border: `1px solid ${T.border}`, background: '#0b0f16', padding: '7px 10px', margin: '2px 0 6px', fontSize: 12, lineHeight: 1.6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, letterSpacing: 1, color: T.muted }}>
                       CRASH FILTER <BadgeChip badge="context" />
                     </div>
                     <div data-brief-crash-reading style={{ color: T.text }}>{cl.reading}</div>
                     <div data-brief-crash-book style={{ color: T.text }}>{cl.book}</div>
-                    <div style={{ color: T.dim, fontSize: 10.5 }}>
+                    <div style={{ color: T.dim, fontSize: 11 }}>
                       The signal is the close of the last weekday of the month (a holiday moves it a day earlier) · orders at the next open
                       {!crash.data.risk_on && crash.data.sessions_below ? ` · ${crash.data.sessions_below} sessions below the 200-DMA` : ''}
                     </div>
@@ -498,7 +498,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                     })()}</>} />
                   {hold.slice(0, 5).map((p: any) => (
                     <Line key={p.symbol} k={<TickerLink symbol={p.symbol} />} v={<span>
-                      {holdDay[String(p.symbol).toUpperCase()] != null && <span style={{ color: tone(holdDay[String(p.symbol).toUpperCase()]), marginRight: 10, fontSize: 10.5 }}>
+                      {holdDay[String(p.symbol).toUpperCase()] != null && <span style={{ color: tone(holdDay[String(p.symbol).toUpperCase()]), marginRight: 10, fontSize: 11 }}>
                         today {pct(holdDay[String(p.symbol).toUpperCase()])}</span>}
                       <span style={{ color: tone(p.pnl_percent) }}>{pct(p.pnl_percent)}</span></span>} />
                   ))}
@@ -534,7 +534,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                       })()}
                       {rows.map(r => (
                         <Line key={r.sym} k={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}><TickerLink symbol={r.sym} noFlag /><RiskChips flags={risk[r.sym]} max={1} /></span>} v={<span>
-                          {r.chg != null && <span style={{ color: tone(r.chg), marginRight: 10, fontSize: 10.5 }}>today {pct(r.chg)}</span>}
+                          {r.chg != null && <span style={{ color: tone(r.chg), marginRight: 10, fontSize: 11 }}>today {pct(r.chg)}</span>}
                           {r.pnl != null ? <span style={{ color: tone(r.pnl) }}>{pct(r.pnl / r.cost * 100)}</span> : <span style={{ color: T.dim }}>no quote</span>}</span>} />
                       ))}
                     </>
@@ -551,7 +551,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
             {(() => {   // breadth through the day (market internals, sampled every 2 min)
               const sm = internals.data?.summary
               if (!sm?.n500_adv) return null
-              return <div style={{ fontSize: 10.5, fontFamily: T.mono, color: T.muted, marginTop: 6, borderTop: `1px solid ${T.border}`, paddingTop: 5 }}>
+              return <div style={{ fontSize: 11, fontFamily: T.mono, color: T.muted, marginTop: 6, borderTop: `1px solid ${T.border}`, paddingTop: 5 }}>
                 {/* L-15 (E-DIFF): the breadth counts are neutral (MarketInternals' convention) */}
                 NIFTY 500 <span style={{ color: T.text }}>{sm.n500_adv} up</span> / <span style={{ color: T.text }}>{sm.n500_dec} down</span>
                 {sm.samples > 10 && sm.net_worst != null && <span style={{ color: T.dim }}> · net {fmtSigned(sm.net_worst, 0)} … +{Math.max(0, sm.net_best ?? 0)} {sessionDayLabel(internals.data?.day)}</span>}
@@ -565,14 +565,14 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
               const fmt = (m: (typeof ms)[number]) => <span key={m.symbol} style={{ whiteSpace: 'nowrap' }}><TickerLink symbol={m.symbol} />{' '}
                 <span style={{ color: m.points! >= 0 ? T.green : T.red }}>{fmtSigned(m.points!, 0)}</span></span>
               const up = ms.slice(0, 3).filter(m => m.points! > 0), dn = [...ms].reverse().slice(0, 2).filter(m => m.points! < 0)
-              return <div style={{ fontSize: 10.5, fontFamily: T.mono, color: T.muted, marginTop: 4 }}
+              return <div style={{ fontSize: 11, fontFamily: T.mono, color: T.muted, marginTop: 4 }}
                 title={liveContrib && liveContrib.liveMembers ? `${liveContrib.liveMembers} of ${liveContrib.members.length} members' moves from the live NSE quote service; weights from filings` : `NSE heatmap + allIndices (${contrib.data?.time ?? 'no stamp'}), re-polled every 2 min`}>
-                NIFTY points{liveContrib && liveContrib.liveMembers && contribLive.source ? <> <SourceChip info={contribLive.source} style={{ fontSize: 8.5 }} /></> : contrib.data?.time ? <span style={{ color: T.dim }}> ({contrib.data.time.slice(-5)} NSE)</span> : null} · {up.map((m, i) => <span key={m.symbol}>{i ? ' · ' : ''}{fmt(m)}</span>)}
+                NIFTY points{liveContrib && liveContrib.liveMembers && contribLive.source ? <> <SourceChip info={contribLive.source} style={{ fontSize: 9 }} /></> : contrib.data?.time ? <span style={{ color: T.dim }}> ({contrib.data.time.slice(-5)} NSE)</span> : null} · {up.map((m, i) => <span key={m.symbol}>{i ? ' · ' : ''}{fmt(m)}</span>)}
                 {dn.length > 0 && <> · drag {dn.map((m, i) => <span key={m.symbol}>{i ? ' · ' : ''}{fmt(m)}</span>)}</>}
               </div>
             })()}
             <div data-brief-gold style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, borderTop: `1px solid ${T.border}`, paddingTop: 5 }}>
-              <span style={{ fontSize: 10.5, fontFamily: T.mono, color: goldHealth.data ? T.muted : T.dim, flex: 1, minWidth: 0, whiteSpace: 'normal', lineHeight: 1.5 }}
+              <span style={{ fontSize: 11, fontFamily: T.mono, color: goldHealth.data ? T.muted : T.dim, flex: 1, minWidth: 0, whiteSpace: 'normal', lineHeight: 1.5 }}
                 title={goldHealth.data?.verdict?.line ?? goldHealth.error ?? 'gold health'}>
                 {goldHealth.loading && !goldHealth.data ? 'Gold: loading…' : goldHealth.error && !goldHealth.data ? `Gold: ${goldHealth.error}`
                   : goldLine.segments.map((s, i) => <span key={i} style={{ color: goldToneColor(s.tone), fontWeight: s.tone === 'muted' ? 400 : 600 }}>{s.text}</span>)}
@@ -590,7 +590,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
             {week.mine.length
               ? week.mine.map(e => <Line key={`${e.symbol}-${e.kind}`} k={<TickerLink symbol={e.symbol} />} v={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                   {e.kind !== 'RESULTS' && e.detail && !/has informed the exchange/i.test(e.detail) && (     // what the meeting is about
-                    <span style={{ color: T.muted, fontSize: 10.5, maxWidth: 360, textAlign: 'right' }}>{(() => { const t = e.detail.replace(/^To consider and approve (the )?/i, '').replace(/\b(\w+) s\b/g, "$1's"); return (t[0]?.toUpperCase() ?? '') + t.slice(1, 110) })()}</span>)}
+                    <span style={{ color: T.muted, fontSize: 11, maxWidth: 360, textAlign: 'right' }}>{(() => { const t = e.detail.replace(/^To consider and approve (the )?/i, '').replace(/\b(\w+) s\b/g, "$1's"); return (t[0]?.toUpperCase() ?? '') + t.slice(1, 110) })()}</span>)}
                   <EventBadge kind={e.kind} date={e.event_date} days={daysUntil(e.event_date)} typical={e.typical_move_pct} detail={e.detail} /></span>} />)
               : <div style={{ fontSize: 11, color: T.dim, padding: '4px 0 8px' }}>Nothing announced for your stocks this week.</div>}
             {(() => {   // results filed since the last close: live reaction in session, else what the numbers said (react at 09:15)
@@ -688,7 +688,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
               <Line key={p.symbol?.yahoo ?? p.raw_ticker}
                 k={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
                   {p.symbol?.region === 'IN' ? <TickerLink symbol={p.symbol.base} /> : <span style={{ color: T.amber, fontWeight: 600 }}>{p.symbol?.base ?? p.raw_ticker}</span>}
-                  <span style={{ color: T.muted, fontSize: 10.5, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.catalyst_category}</span>
+                  <span style={{ color: T.muted, fontSize: 11, maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.catalyst_category}</span>
                 </span>}
                 v={<span style={{ color: (p.conviction_score ?? 0) >= 6 ? T.green : T.muted }}>conv {p.conviction_score}</span>} />
             ))}
@@ -701,7 +701,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
             {(heads.data?.headlines ?? []).slice(0, 9).map(h => (
               <a key={h.link} href={h.link} target="_blank" rel="noreferrer"
                  style={{ display: 'grid', gridTemplateColumns: '64px 1fr auto', gap: 8, padding: '5px 0', borderBottom: `1px solid ${T.border}`,
-                          textDecoration: 'none', fontSize: 11.5 }}>
+                          textDecoration: 'none', fontSize: 12 }}>
                 <span style={{ fontFamily: T.mono, fontSize: 9, color: T.cyan, letterSpacing: .6, textTransform: 'uppercase', paddingTop: 2 }}>{h.topic}</span>
                 <span style={{ color: T.text, lineHeight: 1.4 }}>{h.title} <span style={{ color: T.dim, fontSize: 10 }}>· {h.publisher}</span></span>
                 <span style={{ color: T.dim, fontSize: 10, whiteSpace: 'nowrap' }}>{Math.max(1, Math.round((Date.now() - new Date(h.published_at).getTime()) / 3_600_000))}h</span>

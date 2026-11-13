@@ -79,7 +79,7 @@ export function ParticipantPositioning() {
           )}
         </div>
         <div style={{ borderLeft: `1px solid ${T.border}`, padding: '8px 10px' }}>
-          <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 4 }}>
+          <div style={{ fontSize: 11, color: T.muted, marginBottom: 4 }}>
             FII index-futures long ratio, 1 year · now <b style={{ color: (last?.long_pct ?? 50) >= 50 ? T.green : T.red }}>{last?.long_pct}%</b>
             <span style={{ color: T.dim }}> · 50% = balanced · tested: does not predict NIFTY over 5–20 sessions (RSCH)</span>
           </div>

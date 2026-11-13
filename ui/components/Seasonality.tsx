@@ -42,7 +42,7 @@ export function SeasonalityView({ symbol }: { symbol: string }) {
   const span = seagSpan(d.grid.map(r => ({ year: r.year, months: r.months })), d.months.map(m => m.month))
   return (
     <div style={{ fontFamily: T.mono }}>
-      <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 6 }}>
+      <div style={{ fontSize: 12, color: T.muted, marginBottom: 6 }}>
         <span style={{ color: T.amber }}>{d.symbol}</span> · {d.years} years of monthly returns ({span.first ?? d.from?.slice(0, 7)} → {span.last ?? d.to?.slice(0, 7)}<span title={`closes from ${d.from?.slice(0, 10) ?? '—'}: the first close only seeds the first return`} style={{ color: T.dim }}> · first close {d.from?.slice(0, 7)}</span>)
         {d.current && <> · <span style={{ color: T.text }}>{d.current.month} {d.current.year} so far</span>{' '}
           <span style={{ color: d.current.ret >= 0 ? T.green : T.red }}>{fmtPct(d.current.ret, 1)}</span>
@@ -60,7 +60,7 @@ export function SeasonalityView({ symbol }: { symbol: string }) {
               stroke={now ? T.amber : 'none'} strokeWidth={now ? 2 : 0} />
             <text x={x + w / 2} y={v >= 0 ? mid - h - 4 : mid + h + 12} textAnchor="middle" fontSize={11} fill={T.text}>{fmtPct(m.avg, 1)}</text>
             <text x={x + w / 2} y={H + 14} textAnchor="middle" fontSize={12} fill={now ? T.amber : T.muted} fontWeight={now ? 700 : 400}>{m.month}</text>
-            <text x={x + w / 2} y={H + 29} textAnchor="middle" fontSize={10.5} fill={(m.pct_up ?? 0) >= 65 ? T.green : (m.pct_up ?? 100) <= 35 ? T.red : T.dim}>{m.pct_up}% up</text>
+            <text x={x + w / 2} y={H + 29} textAnchor="middle" fontSize={11} fill={(m.pct_up ?? 0) >= 65 ? T.green : (m.pct_up ?? 100) <= 35 ? T.red : T.dim}>{m.pct_up}% up</text>
           </g>
         })}
       </svg>

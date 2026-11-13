@@ -102,7 +102,7 @@ function TermPanel({ hist, cone }: { hist: Load<IvHistory>; cone: Load<IvCone> }
             <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>today's expiries (stored surface)</div>
             {term.length ? (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
-                <thead><tr style={{ color: T.muted, fontSize: 9.5 }}><th style={{ textAlign: 'left', padding: '3px 6px' }}>EXPIRY</th><th style={{ textAlign: 'right', padding: '3px 6px' }}>DTE</th><th style={{ textAlign: 'right', padding: '3px 6px' }}>ATM IV</th></tr></thead>
+                <thead><tr style={{ color: T.muted, fontSize: 10 }}><th style={{ textAlign: 'left', padding: '3px 6px' }}>EXPIRY</th><th style={{ textAlign: 'right', padding: '3px 6px' }}>DTE</th><th style={{ textAlign: 'right', padding: '3px 6px' }}>ATM IV</th></tr></thead>
                 <tbody>{term.map(t => <tr key={t.expiry} style={{ borderTop: `1px solid ${T.border}` }}><td style={{ padding: '3px 6px' }}>{t.expiry}</td><td style={{ padding: '3px 6px', textAlign: 'right' }}>{fmtNum(t.dte, 0)}</td><td style={{ padding: '3px 6px', textAlign: 'right', color: T.text }}>{pct(t.atm_iv, 2)}</td></tr>)}</tbody>
               </table>
             ) : <div style={{ fontSize: 11, color: T.muted }}>no per-expiry rows stored for today</div>}
@@ -130,7 +130,7 @@ function ConePanel({ cone }: { cone: Load<IvCone> }) {
       subtitle="min / 25 / 50 / 75 / max of stored IV by tenor, over 1 / 3 / 5 years; ● = today">
       {!d ? <Degraded what="IV cone" note={cone.error ?? storeNote(cone.data)} /> : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
-          <thead><tr style={{ color: T.muted, fontSize: 9.5 }}>
+          <thead><tr style={{ color: T.muted, fontSize: 10 }}>
             <th style={{ textAlign: 'left', padding: '3px 6px' }}>WINDOW</th><th style={{ textAlign: 'left', padding: '3px 6px' }}>TENOR</th>
             {['MIN', 'P25', 'P50', 'P75', 'MAX', 'N'].map(h => <th key={h} style={{ textAlign: 'right', padding: '3px 6px' }}>{h}</th>)}
             <th style={{ textAlign: 'right', padding: '3px 6px' }}>TODAY</th><th style={{ textAlign: 'left', padding: '3px 6px' }}>WHERE</th>
@@ -176,7 +176,7 @@ function PaidPanel({ hist, symbol }: { hist: Load<IvHistory>; symbol: string }) 
       {!ledger.length ? <Degraded what="The monthly ledger" note={note} /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(220px, 1fr)', gap: 12 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }} data-paid-ledger>
-            <thead><tr style={{ color: T.muted, fontSize: 9.5 }}>
+            <thead><tr style={{ color: T.muted, fontSize: 10 }}>
               {['MONTHLY EXPIRY', 'ENTRY (DTE) → EXPIRY', 'IV PAID', 'RV DELIVERED (CC)', 'PAID − DELIVERED'].map((h, i) => <th key={h} style={{ textAlign: i < 2 ? 'left' : 'right', padding: '3px 6px' }}>{h}</th>)}
             </tr></thead>
             <tbody>{ledger.map(l => (
@@ -195,7 +195,7 @@ function PaidPanel({ hist, symbol }: { hist: Load<IvHistory>; symbol: string }) 
           </div>
         </div>
       )}
-      {skipped.length > 0 && <div style={{ fontSize: 10.5, color: T.amber, marginTop: 6 }} data-paid-skipped>
+      {skipped.length > 0 && <div style={{ fontSize: 11, color: T.amber, marginTop: 6 }} data-paid-skipped>
         Not in the ledger: {skippedRuns(skipped).join(' · ')}</div>}
       {ledger.length > 0 && <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>{paid.data?.definition ?? ''} · a description of past months; describes, does not predict</div>}
     </Panel>
@@ -231,7 +231,7 @@ export function VolScreener({ onPick }: { onPick?: (sym: string) => void }) {
       render: r => <span style={{ color: T.muted }}>{r.iv_minus_rv20_yz == null ? '—' : signed(r.iv_minus_rv20_yz, 1)}</span> },
     { key: 'term', label: 'Term 30→90', align: 'right', sort: r => r.term_slope_30_90 ?? -99, title: `${d?.definitions?.term_slope_30_90 ?? ''} "—" for a stock: its third monthly is too thin for an ATM IV, so 90 days is not bracketed (see near→next).`, render: r => (r.term_slope_30_90 == null ? '—' : signed(r.term_slope_30_90, 1)) },
     { key: 'termnn', label: 'Term near→next', align: 'right', sort: r => r.term_near_next ?? -99, title: d?.definitions?.term_near_next,
-      render: r => (r.term_near_next == null ? '—' : <span title={`${pct(r.near_atm_iv, 1)} at ${fmtNum(r.near_dte, 0)} d → ${pct(r.next_atm_iv, 1)} at ${fmtNum(r.next_dte, 0)} d`}>{signed(r.term_near_next, 1)} <span style={{ color: T.dim, fontSize: 9.5 }}>{fmtNum(r.near_dte, 0)}→{fmtNum(r.next_dte, 0)}d</span></span>) },
+      render: r => (r.term_near_next == null ? '—' : <span title={`${pct(r.near_atm_iv, 1)} at ${fmtNum(r.near_dte, 0)} d → ${pct(r.next_atm_iv, 1)} at ${fmtNum(r.next_dte, 0)} d`}>{signed(r.term_near_next, 1)} <span style={{ color: T.dim, fontSize: 10 }}>{fmtNum(r.near_dte, 0)}→{fmtNum(r.next_dte, 0)}d</span></span>) },
     { key: 'skew', label: '25Δ skew', align: 'right', sort: r => r.skew_25d_30 ?? -99, title: d?.definitions?.skew_25d_30, render: r => (r.skew_25d_30 == null ? '—' : signed(r.skew_25d_30, 1)) },
     { key: 'results', label: 'Next results', sort: r => r.next_results ?? 'zz', render: r => <span style={{ color: T.muted }}>{r.next_results ?? '—'}{r.results_in_days != null ? ` · ${r.results_in_days}d` : ''}</span> },
     { key: 'mwpl', label: '% MWPL', align: 'right', sort: r => r.mwpl_pct ?? -1, title: 'futures-equivalent open interest as a share of the market-wide position limit (NSE combined-OI files; the ban starts above 95 % and ends below 80 %) · context',

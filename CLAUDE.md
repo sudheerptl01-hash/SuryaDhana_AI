@@ -259,6 +259,7 @@ $P -m pytest tests -q                       # core (unit + integration)
 $P -m pytest scripts/tests -q               # controller, Telegram bot, studies' helpers
 $P -m pytest services/ui-api/tests -q       # ui-api routers
 $P -m pytest services/execution-service/tests -q
+$P -m pytest services/data-service/tests -q   # job queue (R2, 13 Nov 2026)
 (cd alpha_lab && $P -m pytest tests -q)     # strategy lab (vendored-drift + engine + shadow)
 (cd ui && npx tsc --noEmit)                 # frontend types
 

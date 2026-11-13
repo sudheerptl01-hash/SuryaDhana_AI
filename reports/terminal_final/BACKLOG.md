@@ -35,3 +35,8 @@ like" (4 Nov), RATING_20261105.md, page_review synth/05_issues.md, IMPROVEMENT_L
 ## Known-good to PRESERVE (regression gates)
 Honesty engineering (badges, dated numbers, FAIL banners), 43/43 page audits both engines, p95 < 250 ms, PAPER-only
 enforcement, gold program behaviours, GO bar, atomic UI releases + rollback, watchdog hang detection, dead-man ping.
+
+## R2 follow-ups (13 Nov night)
+- F-23 (W1) data/job_queue.sqlite + data/ask_audit.sqlite into db_backup FAMILIES (builder-flagged).
+- F-24 (W1) R2-QUEUE test_error_is_persisted timing flake under parallel load (1-in-10; de-flake).
+- F-25 (RSCH) ASK: wire a local Ollama model + the nightly eval run; MINOR-1 detector is pattern-based — the describe-only prompt stays the real fence.

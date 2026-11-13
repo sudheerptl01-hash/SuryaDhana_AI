@@ -61,6 +61,7 @@ import { noteNsePrint } from '@/lib/liveEvidence'
 import { MAX_STRIP, addToStrip, isDefaultStrip, moveInStrip, removeFromStrip, slotDigit, slotForDigitCode, slotKeyHint, splitMenus } from '@/components/shell/stripOrder'
 import { useStripOrder } from '@/components/shell/useStripOrder'
 import { openSettingsImport, useImportOffer } from '@/components/shell/SettingsImport'
+import { WorkspaceMenu } from '@/components/desktop/WorkspaceMenu'
 
 // ── IST clock + session state ─────────────────────────────────────────────────
 
@@ -81,10 +82,10 @@ const HeaderClock = memo(function HeaderClock() {
     <div className="sd-h-clock" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', borderLeft: `1px solid ${T.border}`, height: '100%', flex: 'none' }}>
       <span title={s.label === 'MUHURAT' || s.label === 'SPECIAL' ? `NSE special session: ${s.holiday} (timings per NSE circular)`
                     : s.holiday ? `NSE closed: ${s.holiday}` : undefined}
-            style={{ fontSize: 9.5, letterSpacing: 1.2, color, border: `1px solid ${color === T.muted ? T.border : color}`,
+            style={{ fontSize: 10, letterSpacing: 1.2, color, border: `1px solid ${color === T.muted ? T.border : color}`,
                      padding: '2px 6px', whiteSpace: 'nowrap' }}>{s.label}</span>
       <span style={{ fontSize: 13, fontWeight: 600, color: T.bright, whiteSpace: 'nowrap' }}>{p.time}</span>
-      <span className="t-hide-xl" style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1, whiteSpace: 'nowrap' }}>
+      <span className="t-hide-xl" style={{ fontSize: 10, color: T.dim, letterSpacing: 1, whiteSpace: 'nowrap' }}>
         {IST_DATE.format(now).toUpperCase()} IST
       </span>
     </div>
@@ -347,7 +348,7 @@ function PageMenu({ title, pages, active, onChange, badges = {}, extra = [], hea
               style={{ display: 'grid', gridTemplateColumns: '52px 1fr auto', gap: 8, width: '100%', textAlign: 'left', padding: '6px 12px',
                        background: p.id === active ? '#121a26' : 'transparent', border: 'none', cursor: 'pointer', alignItems: 'baseline' }}>
               <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: T.amber }}>{p.code}</span>
-              <span style={{ minWidth: 0 }}><span style={{ fontSize: 11.5, color: T.text }}>{p.label}</span>
+              <span style={{ minWidth: 0 }}><span style={{ fontSize: 12, color: T.text }}>{p.label}</span>
                 <span style={{ display: 'block', fontSize: 10, color: T.dim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                       title={p.hint}>{p.hint}</span></span>
               {badges[p.id] ? <span style={{ fontSize: 9, color: T.bg, background: T.cyan, padding: '0 5px' }}>{badges[p.id]}</span> : <span />}
@@ -380,7 +381,7 @@ function ArrangeStrip({ strip, pages, onWrite, onClose, desktop }: {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  const b = (c: string) => ({ fontFamily: T.mono, fontSize: 10.5, color: c, background: 'transparent', border: `1px solid ${T.border}`,
+  const b = (c: string) => ({ fontFamily: T.mono, fontSize: 11, color: c, background: 'transparent', border: `1px solid ${T.border}`,
                               padding: '2px 8px', cursor: 'pointer', minWidth: 30 } as const)
   return (
     <div onMouseDown={onClose} role="dialog" aria-label="Arrange the page strip" data-sd-arrange-strip=""
@@ -395,7 +396,7 @@ function ArrangeStrip({ strip, pages, onWrite, onClose, desktop }: {
           <span style={{ flex: 1 }} />
           <button type="button" onClick={onClose} style={b(T.muted)}>ESC</button>
         </div>
-        <div style={{ padding: '6px 14px 2px', fontSize: 10.5, color: T.muted, lineHeight: 1.5 }}>
+        <div style={{ padding: '6px 14px 2px', fontSize: 11, color: T.muted, lineHeight: 1.5 }}>
           Alt+1 … 0 open the first ten{desktop ? '; ⌘1 … 9 follow the Go menu (the default order)' : ''}. Saved to your settings: every window and the app follow.
         </div>
         <div style={{ padding: '6px 14px' }}>
@@ -405,7 +406,7 @@ function ArrangeStrip({ strip, pages, onWrite, onClose, desktop }: {
             return (
               <div key={id} data-sd-strip-row={id} style={{ display: 'grid', gridTemplateColumns: '22px 52px 1fr auto', gap: 8, alignItems: 'center',
                                                           padding: '4px 0', borderBottom: `1px solid ${T.border}` }}>
-                <span style={{ fontSize: 9.5, color: T.dim, textAlign: 'center', border: d ? `1px solid ${T.border}` : 'none' }}>{d ?? ''}</span>
+                <span style={{ fontSize: 10, color: T.dim, textAlign: 'center', border: d ? `1px solid ${T.border}` : 'none' }}>{d ?? ''}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: T.amber }}>{p?.code ?? id}</span>
                 <span style={{ fontSize: 11, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p?.label ?? ''}</span>
                 <span style={{ display: 'flex', gap: 4 }}>
@@ -502,10 +503,11 @@ function PageStrip({ tabs, pages, active, onChange, desktop, badges }: {
       <div className="sd-pstrip-end" style={{ position: 'sticky', right: 0, display: 'flex', flex: 'none', background: '#0b0f16' }}>
       {research.length > 0 && <PageMenu title="RESEARCH" heading="Research and legacy pages" pages={research} active={active} onChange={onChange} badges={badges} />}
       {(more.length > 0 || extra.length > 0) && <PageMenu title="MORE" heading="More pages" pages={more} active={active} onChange={onChange} badges={badges} extra={extra} />}
+      <WorkspaceMenu active={active} onPage={onChange} />{/* R2 workspaces: saved layouts (lib/workspaces.ts; LAYOUT on GO) */}
       <button className="sd-pstrip-tab" onClick={() => window.dispatchEvent(new Event('suryadhana:command'))} title={`Command bar — type a ticker or function code (/ or ${desktop ? '⌘K' : 'Ctrl+K'})`}
         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', flex: 'none',
                  background: '#0b0f16', border: 'none', borderLeft: `1px solid ${T.borderHi}`, cursor: 'pointer' }}>
-        <span style={{ fontFamily: T.display, fontSize: 11.5, fontWeight: 700, letterSpacing: 1.2, color: T.amber }}>⌕ GO</span>
+        <span style={{ fontFamily: T.display, fontSize: 12, fontWeight: 700, letterSpacing: 1.2, color: T.amber }}>⌕ GO</span>
         <span className="sd-h-kbd" style={{ fontSize: 9, color: T.dim, border: `1px solid ${T.border}`, padding: '0 4px', lineHeight: '14px' }}>/</span>
       </button>
       </div>
@@ -535,7 +537,7 @@ function Light({ name, ok, detail, onClick }: { name: string; ok: boolean | null
   const c = ok === true ? T.green : ok === false ? T.red : T.dim
   return (
     <span title={detail || name} role={onClick ? 'button' : undefined} onClick={onClick}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 9.5, cursor: onClick ? 'pointer' : 'default',
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, cursor: onClick ? 'pointer' : 'default',
                    letterSpacing: 1.1, color: ok === false ? T.red : T.muted }}>
       <span style={{ width: 6, height: 6, borderRadius: 6, background: c, boxShadow: ok ? `0 0 6px ${c}` : 'none' }} />
       {name}
@@ -590,7 +592,7 @@ export function MarketCommandHeader({ onRefresh, refreshing, totalStocks, latest
                            overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
               ◉ SURYADHANA <span style={{ color: T.dim }}>▸</span> <span style={{ color: T.bright }}>{page.toUpperCase()}</span>
             </span>
-            <span className="t-hide-xl" style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1, whiteSpace: 'nowrap' }}>
+            <span className="t-hide-xl" style={{ fontSize: 10, color: T.dim, letterSpacing: 1, whiteSpace: 'nowrap' }}>
               {totalStocks ? `${totalStocks.toLocaleString('en-IN')} NSE` : ''}{latestDate ? ` · DATA ${latestDate}` : ''}
             </span>
           </div>
@@ -680,16 +682,16 @@ function UpdateDataButton({ refreshing, onConfirm }: { refreshing: boolean; onCo
             years back. Only days that are not in the database yet are fetched. It runs in data-service for several
             minutes; progress shows under the header.
           </p>
-          <p style={{ margin: '6px 0 0', fontSize: 10.5, lineHeight: 1.5, color: T.muted }}>
+          <p style={{ margin: '6px 0 0', fontSize: 11, lineHeight: 1.5, color: T.muted }}>
             To reload just this page&apos;s numbers, use the page&apos;s own ↻ REFRESH instead.
           </p>
           {eod && (
-            <p style={{ margin: '6px 0 0', fontSize: 10.5, lineHeight: 1.5, color: T.amber }}>
+            <p style={{ margin: '6px 0 0', fontSize: 11, lineHeight: 1.5, color: T.amber }}>
               The EOD pipeline runs 18:30–21:15 IST: a download now competes with it for data-service.
             </p>
           )}
           {readOnly && (
-            <p style={{ margin: '6px 0 0', fontSize: 10.5, lineHeight: 1.5, color: T.amber }}>
+            <p style={{ margin: '6px 0 0', fontSize: 11, lineHeight: 1.5, color: T.amber }}>
               DB READ-ONLY: the store holds a write lock, so ingest is paused and this download cannot run.
               It re-enables by itself when the lock clears (the header strip shows the state).
             </p>

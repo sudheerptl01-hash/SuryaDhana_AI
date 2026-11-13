@@ -108,7 +108,7 @@ export function PreOpen() {
   ]
   const mini = (title: string, list: PreOpenRow[], accent: string, show: (r: PreOpenRow) => ReactNode) => (
     <Panel source={preSrc} title={title} accent={accent} pad={0}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11.5 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 12 }}>
         <tbody>
           {list.map(r => (
             <tr key={r.symbol} style={{ borderBottom: `1px solid ${T.border}` }}>

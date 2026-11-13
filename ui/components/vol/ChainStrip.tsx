@@ -38,7 +38,7 @@ function Cell({ label, value, sub, title, color = T.text }: { label: string; val
     <div title={title} style={{ minWidth: 0, padding: '6px 10px', borderRight: `1px solid ${T.border}` }}>
       <div style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase', color: T.muted, whiteSpace: 'nowrap' }}>{label}</div>
       <div style={{ fontFamily: T.mono, fontSize: 13, fontWeight: 600, color, marginTop: 2, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      {sub && <div style={{ fontSize: 9.5, color: T.dim, marginTop: 1, lineHeight: 1.35 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: T.dim, marginTop: 1, lineHeight: 1.35 }}>{sub}</div>}
     </div>
   )
 }

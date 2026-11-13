@@ -62,7 +62,7 @@ export function DailyWrap() {
                   style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 12px', border: 'none', cursor: 'pointer',
                            borderBottom: `1px solid ${T.border}`, borderLeft: `2px solid ${w.date === day ? T.amber : 'transparent'}`,
                            background: w.date === day ? '#0e131c' : 'transparent' }}>
-                  <div style={{ fontFamily: T.mono, fontSize: 11.5, color: w.date === day ? T.amber : T.text }}>{label(w.date)}</div>
+                  <div style={{ fontFamily: T.mono, fontSize: 12, color: w.date === day ? T.amber : T.text }}>{label(w.date)}</div>
                   <div style={{ fontSize: 10, color: T.dim, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{unicodeMinus(String(w.teaser ?? ''))}</div>
                 </button>
               ))}

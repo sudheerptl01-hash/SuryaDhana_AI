@@ -325,7 +325,7 @@ export function StockDetailModal({ ticker, onClose, focus, onNewWindow }: StockD
                     <span aria-hidden style={{ width: 6, height: 6, borderRadius: 6, flex: 'none', background: px.marker === 'LIVE' ? '#16d98a' : '#5c6678' }} />
                     ₹{livePrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     {px.chg != null && px.pct != null && (
-                      <span style={{ fontSize: 11.5, fontWeight: 600, color: px.chg >= 0 ? '#16d98a' : '#ff4d5e' }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: px.chg >= 0 ? '#16d98a' : '#ff4d5e' }}>
                         {px.chg >= 0 ? '▲' : '▼'} {Math.abs(px.chg).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         {' '}({px.pct >= 0 ? '+' : '−'}{Math.abs(px.pct).toFixed(2)}%)</span>
                     )}

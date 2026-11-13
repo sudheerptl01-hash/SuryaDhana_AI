@@ -64,7 +64,7 @@ def _note_breeze_error(exc: Exception) -> None:
 from storage import DuckDBStore
 import ingest
 from instruments import classify_universe
-from jobs import JobManager
+from job_queue import DurableJobManager, default_db_path as _job_db_path  # R2-QUEUE: persisted queue with leases
 import live_ticks as live_ticks_mod
 from eod_steps import run_steps as run_eod_steps  # EOD step isolation (15 Oct incident)
 import tick_store as tick_store_mod
@@ -75,7 +75,10 @@ logger = get_logger(__name__)
 _store: DuckDBStore | None = None
 _yfinance: DirectYahooProvider | None = None
 _live: LiveDataProvider | None = None
-_jobs = JobManager()
+# R2-QUEUE (RATING R9-A2): every /jobs POST is a persisted row in data/job_queue.sqlite with a heartbeat lease;
+# a crash mid-job leaves a leased row that the next start re-queues (adopted by the catch-up's re-POST — the
+# ingest jobs resume after the last stored date, so the re-run is idempotent). Same surface as the old JobManager.
+_jobs = DurableJobManager(_job_db_path(Path(get_settings().duckdb_path).resolve().parent))
 
 
 def _data_dir(settings: Settings) -> Path:
@@ -557,7 +560,7 @@ def _nse_official_index_closes(store: DuckDBStore) -> dict[str, float]:
 @app.post("/jobs/nse-index-closes")
 def nse_index_closes() -> dict:
     """Write today's official NSE closes for NIFTY 50 and India VIX (also run inside the EOD refresh)."""
-    return {"written": _nse_official_index_closes(get_store())}
+    return _jobs.record_sync("nse_index_closes", lambda: {"written": _nse_official_index_closes(get_store())})
 
 
 def _run_build(progress) -> dict:
@@ -1690,13 +1693,17 @@ def fii_dii_backfill(req: FiiDiiBackfillRequest | None = None, store: DuckDBStor
     import fii_dii
     from bhavcopy import HEADERS
     req = req or FiiDiiBackfillRequest()
-    with store.reader() as con:
-        stored = [str(r[0])[:10] for r in con.execute("SELECT DISTINCT date FROM nse_fii_dii_cash").fetchall()]
-        since = req.since or (min(stored) if stored else date.today().isoformat())
-        sessions = fii_dii.session_calendar(con, since)
-    return fii_dii.backfill(stored, sessions, store.upsert_fii_dii_cash,
-                            fetch_latest=(lambda: fii_dii.fetch(HEADERS)) if req.fetch_latest else None,
-                            csv_text=req.csv_text, since=since)
+
+    def _run() -> dict:
+        with store.reader() as con:
+            stored = [str(r[0])[:10] for r in con.execute("SELECT DISTINCT date FROM nse_fii_dii_cash").fetchall()]
+            since = req.since or (min(stored) if stored else date.today().isoformat())
+            sessions = fii_dii.session_calendar(con, since)
+        return fii_dii.backfill(stored, sessions, store.upsert_fii_dii_cash,
+                                fetch_latest=(lambda: fii_dii.fetch(HEADERS)) if req.fetch_latest else None,
+                                csv_text=req.csv_text, since=since)
+
+    return _jobs.record_sync("fii_dii_backfill", _run)
 
 
 _nse_live: Any = None
@@ -2578,6 +2585,13 @@ def bhavcopy_meta(store: DuckDBStore = Depends(get_store)) -> dict:
 @app.get("/jobs")
 def list_jobs() -> dict:
     return {"jobs": _jobs.list()}
+
+
+@app.get("/jobs/recent")
+def recent_jobs(n: int = Query(50, ge=1, le=200)) -> dict:
+    """Compact newest-first job history from the persisted queue (R2-QUEUE; no result payloads)."""
+    rows = _jobs.recent(n)
+    return {"jobs": rows, "count": len(rows)}
 
 
 @app.get("/jobs/{job_id}")

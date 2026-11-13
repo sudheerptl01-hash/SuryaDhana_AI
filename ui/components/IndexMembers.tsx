@@ -27,6 +27,7 @@ import { useLiveQuotes } from '@/lib/liveQuotes'
 import { liveLevel } from '@/components/liveModel'
 import { ConcentrationChart, DriverRegimeStrip, DriversEmpty, DriversTabNotice, FitChip, HorizonPicker, MonthlyLeaderboard, SectorContribution, TabGrey, isDriverIndex, useDrivers, useTimelines } from '@/components/drivers/DriversView'
 import { HORIZON_LABEL, fmtPts, fmtShare, type Horizon } from '@/components/drivers/api'
+import { IntradayDrivers } from '@/components/drivers/IntradayDrivers'
 import { flagCell, flagWords, tabView } from '@/components/drivers/driversModel'
 
 /** The route's additive fields (D-DATA, 6 Nov) on top of lib/api's IndexMemb: per-member heuristic flags, their badge
@@ -124,7 +125,7 @@ export function IndexMembers() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, marginBottom: 12 }}>
           <Stat label={index} value={fmtIdx(lvl.last)} color={tone(lvl.change_pct)}
             sub={<span>{fmtPct(lvl.change_pct, 2)} · {lvlChange != null ? `${fmtSigned(lvlChange, 1)} pts` : ''}
-              {lvl.fromService && liveM.source ? <> <SourceChip info={liveM.sourceFor(index) ?? liveM.source} style={{ fontSize: 8.5 }} /></> : null}</span>} />
+              {lvl.fromService && liveM.source ? <> <SourceChip info={liveM.sourceFor(index) ?? liveM.source} style={{ fontSize: 9 }} /></> : null}</span>} />
           <Stat label="Breadth today" value={`${breadth?.up ?? s.up} / ${breadth?.down ?? s.down}`} color={(breadth?.up ?? s.up) >= (breadth?.down ?? s.down) ? T.green : T.red} sub={`up / down of ${s.members}`} />
           <Stat label="Top 5 weight" value={`${s.top5_weight_pct}%`} color={T.amber} sub="of the index in five stocks" />
           <Stat label="Weight-implied P/E" value={s.implied_pe != null ? `${s.implied_pe}×` : '—'} color={T.text}
@@ -151,6 +152,9 @@ export function IndexMembers() {
             <span><span style={{ color: T.amber }}>⚑</span> {nFlagged} member{nFlagged === 1 ? '' : 's'} flagged: {ext.flag_rule ?? 'a filing figure outside the usual range: read the filing first'}</span>
           </div>}
         </Panel>
+        {/* FINAL R2-DRIV (RATING R9-I3): the within-day contribution timeline — live tick store, not the nightly fit,
+            so it is never greyed by the stored-history tab state */}
+        {isDriverIndex(index) && <div style={{ marginTop: 12 }}><IntradayDrivers index={index} /></div>}
         {isDriverIndex(index) && (
           <TabGrey tab={tab}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', gap: 12, marginTop: 12 }}>

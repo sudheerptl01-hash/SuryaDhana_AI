@@ -77,7 +77,7 @@ export function IndexContribution({ onSource }: { onSource?: (s: SourceInfo | nu
       <div style={{ display: 'flex', gap: 4, marginBottom: 6, alignItems: 'center', flexWrap: 'wrap' }}>
         {['NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY NEXT 50'].map(ix => <Chip key={ix} color={T.cyan} active={index === ix} onClick={() => setIndex(ix)}>{ix.replace('NIFTY ', '')}</Chip>)}
         <span style={{ flex: 1 }} />
-        {d && <span style={{ fontSize: 10.5, fontFamily: T.mono, color: T.muted }}>
+        {d && <span style={{ fontSize: 11, fontFamily: T.mono, color: T.muted }}>
           {lc && (lc.liveMembers > 0 || lc.indexLive)
             ? <span data-contrib-stamp="live" title={`index ${lc.indexLive ? 'and ' : 'from NSE; '}${lc.liveMembers} of ${lc.members.length} members from the live NSE quote service (Breeze websocket, NSE's website when a name is not streaming); weights from filings, every 2 min`}>
                 index {live.lineFor(lc.index) ?? 'from NSE'} · {lc.liveMembers}/{lc.members.length} members on live quotes · </span>

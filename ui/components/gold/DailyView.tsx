@@ -223,11 +223,11 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
         </>}>
         {/* Kitco's timeframes and units */}
         <div data-gold-kitco-controls style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 6px', alignItems: 'center', marginBottom: 6 }}>
-          <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>WINDOW</span>
+          <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted }}>WINDOW</span>
           {KITCO_TIMEFRAMES.map(t => <Chip key={t.key} color={T.amber} active={tf === t.key} onClick={() => setTf(t.key)} title={t.source === '1m' ? 'stored 1-minute bars' : 'stored daily closes'}>
             <span data-gold-kitco-tf={t.key}>{t.label}</span></Chip>)}
           <span style={{ flex: 1 }} />
-          <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>UNIT</span>
+          <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted }}>UNIT</span>
           {KITCO_UNITS.map(u => <Chip key={u} color={T.cyan} active={kUnit === u} onClick={() => setKUnit(u)}><span data-gold-kitco-unit={u}>{KITCO_UNIT_LABEL[u]}</span></Chip>)}
           {rupee && <>
             <Chip color={T.violet} active={duty === 'ex_duty'} onClick={() => setDuty('ex_duty')} title="landed: COMEX × USD/INR, no import duty"><span data-gold-kitco-duty="ex_duty">ex-duty</span></Chip>
@@ -235,7 +235,7 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
           </>}
         </div>
         {/* the window's numbers: high · low · change · previous close */}
-        <div data-gold-kitco-stats style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 16px', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginBottom: 4 }}>
+        <div data-gold-kitco-stats style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 16px', fontFamily: T.mono, fontSize: 11, color: T.muted, marginBottom: 4 }}>
           {kstats ? <>
             <span>{tfDef.label} high <b style={{ color: T.text }}>{fmtKitco(kstats.hi, kdp, kUnit)}</b> {whenLabel(kstats.hiMs)}</span>
             <span>low <b style={{ color: T.text }}>{fmtKitco(kstats.lo, kdp, kUnit)}</b> {whenLabel(kstats.loMs)}</span>
@@ -254,7 +254,7 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
               {sz => <IntradayChart box={sz} groups={groups24} usDst={usDst} ukDst={ukDst} conv={kconv} unitLabel={kLabel} dp={kdp} settle={settle} settleValue={serverSettle ? undefined : prevCloseK} settleLabel={settleLabel}
                 showPrev={showPrev} showBands={showBands} mode="24h" live={live} sge={sgePts} />}
             </ExpandableChart>
-            <div data-gold-legend style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 14px', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginTop: 4 }}>
+            <div data-gold-legend style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 14px', fontFamily: T.mono, fontSize: 11, color: T.muted, marginTop: 4 }}>
               {kitcoLegend(groups, daily, live, closeIn, kdp, serverSettle ? null : prevClose?.date ?? null, kUnit).map(l => <span key={l}>{l}</span>)}
               {showBands && <span style={{ color: T.dim }}>bands: Sydney/Tokyo · Shanghai (SGE) · London · New York · hatched = CME maintenance 17:00–18:00 ET</span>}
             </div>
@@ -265,7 +265,7 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
               hi={kstats ? { v: kstats.hi, ms: kstats.hiMs } : null} lo={kstats ? { v: kstats.lo, ms: kstats.loMs } : null} />}
           </ExpandableChart>}
           {kNotes.length > 0 && <div data-gold-kitco-notes style={{ fontSize: 10, color: T.muted, marginTop: 4, lineHeight: 1.5 }}>{kNotes.map(n => <div key={n}>· {n}</div>)}</div>}
-          <div style={{ fontSize: 9.5, color: T.dim, marginTop: 4 }}>COMEX front future (GC=F), not spot: it runs a few dollars above Kitco&apos;s spot price (carry to the front month). Source: the terminal&apos;s store (Yahoo, via data-service), never kitco.com.</div>
+          <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>COMEX front future (GC=F), not spot: it runs a few dollars above Kitco&apos;s spot price (carry to the front month). Source: the terminal&apos;s store (Yahoo, via data-service), never kitco.com.</div>
         </Pending>
       </GoldPanel>
 

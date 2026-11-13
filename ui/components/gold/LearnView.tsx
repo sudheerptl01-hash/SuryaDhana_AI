@@ -75,8 +75,8 @@ export function LearnView(props: GoldSubViewProps) {
           <div style={{ display: 'grid', gap: 6 }} data-routines={routines.live ? 'live' : 'bundled'}>
             {routines.list.map(r => (
               <details key={r.id} open={r.id === 'daily'} data-routine={r.id}>
-                <summary style={{ cursor: 'pointer', fontSize: 11.5, color: T.bright }}>{r.title} <span style={{ color: T.muted }}>· {r.when}</span></summary>
-                <ol style={{ margin: '6px 0 0', paddingLeft: 20, fontSize: 11.5, lineHeight: 1.7, color: T.text }}>
+                <summary style={{ cursor: 'pointer', fontSize: 12, color: T.bright }}>{r.title} <span style={{ color: T.muted }}>· {r.when}</span></summary>
+                <ol style={{ margin: '6px 0 0', paddingLeft: 20, fontSize: 12, lineHeight: 1.7, color: T.text }}>
                   {r.steps.map((s, i) => (
                     <li key={i} data-routine-step>
                       {/* panel ids become titles a novice can read; the id stays in the title= of each (C-BEGINNER-8); the view
@@ -88,7 +88,7 @@ export function LearnView(props: GoldSubViewProps) {
                     </li>
                   ))}
                 </ol>
-                {r.evening && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 4 }}>{r.evening}</div>}
+                {r.evening && <div style={{ fontSize: 11, color: T.muted, marginTop: 4 }}>{r.evening}</div>}
               </details>
             ))}
           </div>
@@ -142,7 +142,7 @@ export function LearnView(props: GoldSubViewProps) {
         {/* bloomberg map */}
         <GPanel id="learn.bbg" title="What a Bloomberg gold trader looks at → where it is here" series={[]} catalog={catalog} subtitle="CURRICULUM Appendix F (G-KITCO Appendix C; public guides, unverified on a terminal), with deep links" pad={0} layer={layer}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-            <thead><tr style={{ color: T.muted, fontSize: 9.5, textAlign: 'left' }}><th style={{ padding: '5px 10px' }}>FUNCTION</th><th>WHAT</th><th style={{ padding: '5px 10px' }}>HERE</th></tr></thead>
+            <thead><tr style={{ color: T.muted, fontSize: 10, textAlign: 'left' }}><th style={{ padding: '5px 10px' }}>FUNCTION</th><th>WHAT</th><th style={{ padding: '5px 10px' }}>HERE</th></tr></thead>
             <tbody>
               {BBG_MAP.map(r => (
                 <tr key={r.fn} style={{ borderTop: `1px solid ${T.border}` }}>
@@ -157,7 +157,7 @@ export function LearnView(props: GoldSubViewProps) {
 
         {/* part 8 rename map */}
         <GPanel id="learn.rename" title="Where each panel went (Part 8 → panel ids)" series={[]} catalog={catalog} pad={0} layer={layer}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', fontSize: 10.5 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', fontSize: 11 }}>
             {PART8_RENAME.map(([from, to]) => (
               <div key={from} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '3px 10px', borderBottom: `1px dashed ${T.border}` }}>
                 <span style={{ color: T.muted }}>{from}</span><span style={{ fontFamily: T.mono, color: T.text, textAlign: 'right' }}>{to}</span>
@@ -173,9 +173,9 @@ export function LearnView(props: GoldSubViewProps) {
           <Degraded error={health.error} what="health rules" />
           {h ? (
             <>
-              <div style={{ fontSize: 11.5, color: T.text, marginBottom: 6 }} data-health-line>{line}</div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10.5, fontFamily: T.mono }}>
-                <thead><tr style={{ color: T.muted, fontSize: 9.5, textAlign: 'left' }}><th>RULE</th><th>SERIES</th><th style={{ textAlign: 'right' }}>VALUE</th><th style={{ textAlign: 'right' }}>THRESHOLD</th><th>CLAUSE</th></tr></thead>
+              <div style={{ fontSize: 12, color: T.text, marginBottom: 6 }} data-health-line>{line}</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: T.mono }}>
+                <thead><tr style={{ color: T.muted, fontSize: 10, textAlign: 'left' }}><th>RULE</th><th>SERIES</th><th style={{ textAlign: 'right' }}>VALUE</th><th style={{ textAlign: 'right' }}>THRESHOLD</th><th>CLAUSE</th></tr></thead>
                 <tbody>
                   {h.verdict.clauses.map(c => (
                     <tr key={c.rule_id} style={{ borderTop: `1px solid ${T.border}` }}>
@@ -189,7 +189,7 @@ export function LearnView(props: GoldSubViewProps) {
               </table>
             </>
           ) : !health.error && <Loading label="Health rules" />}
-          <div style={{ fontSize: 10.5, color: T.muted, marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: T.muted, marginTop: 8 }}>
             Vocabulary: <Term t="evidence badge">signal · context · arithmetic · heuristic</Term>; no composite score, no “N of 7”; a badge changes only by a PASS row in FINDINGS.md from a pre-registered, <Term t="point-in-time" /> study.
           </div>
         </GPanel>

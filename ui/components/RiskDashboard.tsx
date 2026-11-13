@@ -223,7 +223,7 @@ export function RiskDashboard(_: { isDark?: boolean }) {
       title: 'P&L over the covered value: each holding’s ACTUAL return in the window',
       // review m108: a replay that covers part of the basket says so next to its headline
       render: s => <span><span style={{ color: tone(s.portfolio_pct), fontWeight: 700 }}>{fmtSignedPct(s.portfolio_pct, 1)}</span>
-        {s.partial && <div style={{ color: T.amber, fontSize: 9.5 }} data-rsk-partial>on {s.names_covered} of {s.names_total} names ({s.covered_value_pct.toFixed(0)}% of value)</div>}</span> },
+        {s.partial && <div style={{ color: T.amber, fontSize: 10 }} data-rsk-partial>on {s.names_covered} of {s.names_total} names ({s.covered_value_pct.toFixed(0)}% of value)</div>}</span> },
     { key: 'pnl', label: 'P&L', align: 'right', sort: s => s.pnl_inr, title: 'on the covered names only; excluded names are never guessed',
       render: s => <span style={{ color: tone(s.pnl_inr) }}>{fmtInr(s.pnl_inr)}{s.partial && <span style={{ color: T.dim }}> ᶜ</span>}</span> },
     { key: 'cov', label: 'Covered', align: 'right', sort: s => s.covered_value_pct,

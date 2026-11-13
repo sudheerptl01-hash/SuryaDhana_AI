@@ -174,7 +174,7 @@ export function PhysicalView(props: GoldSubViewProps) {
                 <Stat label="reference leg" value={usd(sh.london_pm_usd ?? sh.comex_at_1415_bj, 1)} color={contextTone} big={false} sub={`${sh.london_pm_usd != null ? 'LBMA PM (WGC-served, PROVISIONAL until O-1)' : 'COMEX at 14:15 Beijing'} · ${istLabel(pairing.refDate)}`} />
               </Grid>
               {/* M-C: the premium printed must equal SGE $/oz − the reference leg printed beside it (to $0.10) */}
-              {shRec.ok === false && <div data-shanghai-reconcile="mismatch" style={{ fontSize: 10.5, color: T.amber, marginTop: 6 }}>
+              {shRec.ok === false && <div data-shanghai-reconcile="mismatch" style={{ fontSize: 11, color: T.amber, marginTop: 6 }}>
                 ⚠ the printed legs do not reproduce this premium: SGE $/oz − reference = {signed(shRec.legs, 2)} $/oz — the premium was derived with another USDCNY vintage; read the sign from the legs until it is re-derived</div>}
               {sh.recompute_note && <div data-shanghai-recompute style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>{sh.recompute_note}</div>}
               <div data-two-timestamps data-shanghai-pairing={pairing.sameDate ? 'same-date' : 'cross-date'} style={{ fontSize: 10, color: pairing.sameDate ? T.muted : T.amber, marginTop: 6 }}>
@@ -232,7 +232,7 @@ export function PhysicalView(props: GoldSubViewProps) {
                 excluded: {official.excluded.map(r => `${r.country} (${r.month}) — ${r.excluded}`).join('; ')}
               </div>
             )}
-            {official.rows.some(r => r.scaled) && <div data-official-scaled style={{ fontSize: 9.5, color: T.dim, marginBottom: 6 }}>IMF values arrived in troy ounces and are shown in Moz (÷ 1e6) and tonnes (× 31.1034768) here</div>}
+            {official.rows.some(r => r.scaled) && <div data-official-scaled style={{ fontSize: 10, color: T.dim, marginBottom: 6 }}>IMF values arrived in troy ounces and are shown in Moz (÷ 1e6) and tonnes (× 31.1034768) here</div>}
             <KV items={[
               [<span key="k" title={tip('pboc_streak')}>PBoC latest</span>, pboc ? `${num(pboc.oz_mn, 2)} Moz = ${num(pboc.tonnes, 0)} t (${monthLabel(pboc.month)}) · Δ ${signed(pboc.chg_oz_mn, 2)} Moz m/m` : '—', contextTone],
               [<span key="k" title={tip('rbi_gold_usd')}>RBI gold (WSS)</span>, f?.rbi?.usd_mn != null ? `$${num(f.rbi.usd_mn, 0)} mn · wk ${istLabel(f.rbi.week ?? null)}` : '—', contextTone],

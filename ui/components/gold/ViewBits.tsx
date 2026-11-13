@@ -54,7 +54,7 @@ const ATTRIB: Record<AttributionSource, string> = {
 /** The visible attribution line (one per source) under a panel that shows a publisher's numbers. */
 export function Attribution({ sources, extra }: { sources: AttributionSource[]; extra?: ReactNode }) {
   return (
-    <div data-attribution={sources.join(',')} style={{ fontSize: 9.5, color: T.dim, lineHeight: 1.5, marginTop: 8, borderTop: `1px dashed ${T.border}`, paddingTop: 4 }}>
+    <div data-attribution={sources.join(',')} style={{ fontSize: 10, color: T.dim, lineHeight: 1.5, marginTop: 8, borderTop: `1px dashed ${T.border}`, paddingTop: 4 }}>
       {sources.map(s => <div key={s}>Source: {ATTRIB[s]}</div>)}
       {extra}
     </div>
@@ -136,9 +136,9 @@ export function LinkTile({ name, url, what, why }: { name: string; url: string; 
       style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center', padding: '6px 10px', textDecoration: 'none',
                border: `1px solid ${T.border}`, color: T.text }}>
       <span>
-        <span style={{ fontSize: 11.5, color: T.text }}>{name}</span>
+        <span style={{ fontSize: 12, color: T.text }}>{name}</span>
         {what && <span style={{ fontSize: 10, color: T.muted }}> · {what}</span>}
-        {why && <div style={{ fontSize: 9.5, color: T.dim }}>{why}</div>}
+        {why && <div style={{ fontSize: 10, color: T.dim }}>{why}</div>}
       </span>
       <Chip color={T.cyan} style={{ cursor: 'pointer' }}>↗ OPEN</Chip>
     </a>
@@ -176,7 +176,7 @@ export function CoverageNote({ cov, links }: { cov?: FeedCoverage | null; links?
   if (!cov?.note) return null
   const amber = coverageIsAmber(cov)
   return (
-    <div data-coverage-note={cov.state ?? ''} style={{ fontSize: 10.5, color: amber ? T.amber : T.dim, lineHeight: 1.5, marginBottom: 6 }}>
+    <div data-coverage-note={cov.state ?? ''} style={{ fontSize: 11, color: amber ? T.amber : T.dim, lineHeight: 1.5, marginBottom: 6 }}>
       {amber ? '▲ ' : ''}{cov.note}{links ? <> {links}</> : null}
     </div>
   )
@@ -187,5 +187,5 @@ export { coverageSubtitle, type FeedCoverage } from './feedModel'
 /** Error line that keeps the panel's last values visible (degrade-honest, never blank). */
 export function Degraded({ error, what }: { error: string | null; what: string }) {
   if (!error) return null
-  return <div data-degraded style={{ fontSize: 10.5, color: T.amber, marginBottom: 8 }}>▲ {what} unavailable: {error} — showing the last stored values where there are any.</div>
+  return <div data-degraded style={{ fontSize: 11, color: T.amber, marginBottom: 8 }}>▲ {what} unavailable: {error} — showing the last stored values where there are any.</div>
 }

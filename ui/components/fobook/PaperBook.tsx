@@ -33,7 +33,7 @@ function GreeksTable({ g }: { g: BookPayload['greeks'] }) {
   const th = { color: T.dim, fontWeight: 400, textAlign: 'right' as const, padding: '3px 6px' }
   const td = { textAlign: 'right' as const, padding: '3px 6px', fontVariantNumeric: 'tabular-nums' as const }
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 10.5 }} data-fobook-greeks>
+    <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }} data-fobook-greeks>
       <thead><tr>
         <th style={{ ...th, textAlign: 'left' }}>Underlying</th><th style={th}>Δ units</th><th style={th}>Δ lots</th><th style={th}>₹ per 1 %</th>
         <th style={th} title="½·Γ·(1 % of the forward)²: the P&L a 1 % move adds through gamma">Γ P&L of 1 %</th><th style={th}>Θ ₹/day</th><th style={th}>ν ₹/vol pt</th>
@@ -136,7 +136,7 @@ function StructureCard({ s, onChanged }: { s: BookStructure; onChanged: () => vo
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <span style={{ color: T.amber, fontWeight: 600, fontFamily: T.mono, fontSize: 11 }}>#{s.id} {s.name}</span>
         <Chip color={T.violet}>PAPER</Chip>
-        <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>
+        <span style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>
           {sm.net_label} {fmtInr(Math.abs(sm.entry_cashflow), 0)} · P&L <span style={{ color: pnlColor(sm.pnl_gross) }}>{fmtInr(sm.pnl_gross, 0)}</span>
           {' '}− costs {fmtInr(sm.costs, 0)} = <span style={{ color: pnlColor(sm.pnl_net), fontWeight: 600 }}>{fmtInr(sm.pnl_net, 0)}</span>
           {sm.pct_of_max_profit != null && <> · {n(sm.pct_of_max_profit, 0)}% of max profit</>}
@@ -153,7 +153,7 @@ function StructureCard({ s, onChanged }: { s: BookStructure; onChanged: () => vo
         </>}
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 10.5 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
           <thead><tr style={{ color: T.dim }}>
             <th /><th style={{ textAlign: 'left', fontWeight: 400 }}>Side</th><th style={{ textAlign: 'left', fontWeight: 400 }}>Contract</th>
             <th style={{ textAlign: 'left', fontWeight: 400 }}>Expiry</th><th style={{ fontWeight: 400, textAlign: 'right' }}>Lots</th>
@@ -239,7 +239,7 @@ export function PaperBook({ refreshKey }: { refreshKey?: number }) {
                 {/* risk/SPEC.md §4: scenario strip over the open book (reads /api/risk/fo itself; hides when empty) */}
                 {data.open_positions > 0 && <ScenarioStrip />}
                 <GreeksTable g={data.greeks} />
-                <div style={{ fontFamily: T.mono, fontSize: 10.5, color: T.muted }}>
+                <div style={{ fontFamily: T.mono, fontSize: 11, color: T.muted }}>
                   Book P&L <span style={{ color: pnlColor(data.totals.pnl_gross) }}>{fmtInr(data.totals.pnl_gross, 0)}</span> − costs {fmtInr(data.totals.costs, 0)} =
                   {' '}<span style={{ color: pnlColor(data.totals.pnl_net), fontWeight: 600 }}>{fmtInr(data.totals.pnl_net, 0)}</span>
                   {' '}(realised {fmtInr(data.totals.pnl_realised, 0)}) · Greeks at {data.time_convention}

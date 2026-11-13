@@ -135,11 +135,11 @@ function ValuationHistoryChart({ index, todayPe }: { index: string; todayPe: num
         <path d={vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')} fill="none" stroke={T.amber} strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
         {hover != null && <line x1={x(hover)} x2={x(hover)} y1={0} y2={H} stroke={T.muted} vectorEffect="non-scaling-stroke" />}
       </svg>
-      {hv && <div style={{ position: 'absolute', top: 2, left: `${Math.min(85, (hover! / (pts.length - 1)) * 100)}%`, fontSize: 10.5, fontFamily: T.mono,
+      {hv && <div style={{ position: 'absolute', top: 2, left: `${Math.min(85, (hover! / (pts.length - 1)) * 100)}%`, fontSize: 11, fontFamily: T.mono,
         background: T.panel, border: `1px solid ${T.border}`, padding: '2px 6px', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
         {hv.date} · <span style={{ color: T.amber }}>{hv.v.toFixed(2)}{u}</span></div>}
     </div>
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 9.5, color: T.dim }}><span>{pts[0].date.slice(0, 7)}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 10, color: T.dim }}><span>{pts[0].date.slice(0, 7)}</span>
       <span style={{ textAlign: 'center' }}>weekly · as NSE publishes it{breakAt > 0 ? ` · dotted line: NSE moved P/E and yield to consolidated figures (${fmtMonth(pts[breakAt].date)}); earlier readings are on a different basis and not compared` : ''} · {clipped ? 'axis clipped at the 2nd–98th percentile (loss years) · ' : ''}describes the past, not a forecast</span>
       <span>{pts[pts.length - 1].date.slice(0, 7)}</span></div>
   </div>
@@ -161,7 +161,7 @@ export function YieldGapPanel() {
   return (
     <Panel source={undatedSource('NSE + FRED (monthly)', d?.bond_through ? `bond yield through ${d.bond_through}` : null)} badge="context" title="Equity vs bonds · NIFTY earnings yield − India 10-year yield" accent={T.cyan} pad={10} style={{ marginBottom: 12 }}
       subtitle={`monthly since ${pts[0].month} · higher = equities cheaper relative to bonds · bond yield: OECD monthly average via FRED, published with a lag (latest ${d!.bond_through ?? last.month})`}>
-      <div style={{ fontSize: 11.5, fontFamily: T.mono, color: T.muted, marginBottom: 4 }}>
+      <div style={{ fontSize: 12, fontFamily: T.mono, color: T.muted, marginBottom: 4 }}>
         {last.month}: earnings yield <span style={{ color: T.text }}>{last.ey.toFixed(2)}%</span> − 10Y <span style={{ color: T.text }}>{last.y10.toFixed(2)}%</span> ={' '}
         <span style={{ color: T.amber }}>{fmtSigned(last.gap, 2)} pts</span>
         {s && <>, <span style={{ color: s.pctl >= 80 ? T.green : s.pctl <= 20 ? T.red : T.text }}>{ordinal(s.pctl)} percentile</span>
@@ -180,11 +180,11 @@ export function YieldGapPanel() {
           <path d={pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.gap).toFixed(1)}`).join('')} fill="none" stroke={T.cyan} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
           {hover != null && <line x1={x(hover)} x2={x(hover)} y1={0} y2={H} stroke={T.muted} vectorEffect="non-scaling-stroke" />}
         </svg>
-        {hv && <div style={{ position: 'absolute', top: 2, left: `${Math.min(80, (hover! / (pts.length - 1)) * 100)}%`, fontSize: 10.5, fontFamily: T.mono,
+        {hv && <div style={{ position: 'absolute', top: 2, left: `${Math.min(80, (hover! / (pts.length - 1)) * 100)}%`, fontSize: 11, fontFamily: T.mono,
           background: T.panel, border: `1px solid ${T.border}`, padding: '2px 6px', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
           {hv.month} · EY {hv.ey.toFixed(2)}% − 10Y {hv.y10.toFixed(2)}% = <span style={{ color: T.cyan }}>{hv.gap.toFixed(2)}</span></div>}
       </div>
-      <div style={{ fontSize: 9.5, color: T.dim, marginTop: 3 }}>
+      <div style={{ fontSize: 10, color: T.dim, marginTop: 3 }}>
         dotted line: NSE moved index P/E to consolidated earnings (Mar 2021), which raised the earnings yield, so only later months are compared ·
         context, not a timing signal: the gap can stay wide or narrow for years
       </div>

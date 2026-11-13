@@ -18,6 +18,8 @@
  *     GOLD COT                a GOLD sub-view                 BANKNIFTY DERV    a page on that underlying
  *   Every underlying GO opens is written to the active-symbol store (lib/activeSymbol.ts, M34), so OSTR / DERV /
  *   CHRT / COMP / DEAL open on the symbol you were on. IMPORT opens the settings import (components/shell/SettingsImport).
+ *   Workspaces (R2, lib/workspaces.ts): LAYOUT SAVE <name> saves the current layout (strip order, page, symbol,
+ *   sub-view), LAYOUT <name> restores it, LAYOUT LIST lists them (max 8; synced like every other setting).
  *
  * Arrow keys pick, Enter runs, Shift+Enter (or Shift+click) opens the pick in a NEW WINDOW (contract K4), Esc
  * closes. Typing a ticker character anywhere outside a text box opens the bar seeded with it (type-to-GO,
@@ -42,6 +44,8 @@ import { ALRT_PREFILL_EVENT, ALRT_PREFILL_KEY, GO_ARG_HINTS, OSTR_TEMPLATE_EVENT
   parseGoCommand, sanitizeSymbolRows, type AliasTarget, type GoCommand } from '@/lib/goAliases'
 import { writeActiveSymbol } from '@/lib/activeSymbolCore'
 import { openSettingsImport } from '@/components/shell/SettingsImport'
+import { MAX_WORKSPACES, describeWorkspace, findWorkspace, loadWorkspace, matchWorkspaces, parseLayoutCommand,
+  readWorkspaces, saveCurrentWorkspace } from '@/lib/workspaces'
 
 export interface CommandPage { id: string; code: string; label: string; hint: string }
 
@@ -57,6 +61,8 @@ type Item =
   | { kind: 'cmd'; key: string; code: string; label: string; hint: string; cmd: Exclude<GoCommand, { kind: 'invalid' }> }
   | { kind: 'hint'; key: string; code: string; label: string; hint: string }
   | { kind: 'import'; key: string; code: string; label: string; hint: string }
+  | { kind: 'layoutSave'; key: string; code: string; label: string; hint: string; name: string }
+  | { kind: 'layoutLoad'; key: string; code: string; label: string; hint: string; name: string }
 
 type Action = 'open' | 'tv' | 'yf' | 'watch' | 'des' | 'fa' | 'ern' | 'hp' | 'seag'
 const ACTIONS: Record<string, Action> = { DES: 'des', GP: 'open', TV: 'tv', YF: 'yf', Y: 'yf', W: 'watch', WL: 'watch', FA: 'fa', ERN: 'ern', HP: 'hp', SEAG: 'seag' }
@@ -129,6 +135,34 @@ function cmdItem(cmd: Exclude<GoCommand, { kind: 'invalid' }>): Item {
       return { kind: 'cmd', key: `cmd:comp:${cmd.syms.join(',')}`, code: 'COMP', label: `Compare ${cmd.syms.join(' vs ')}`, hint: 'vs NIFTY 50 · rebased to 100', cmd }
     case 'goldSub':
       return { kind: 'cmd', key: `cmd:gold:${cmd.sub}`, code: `GOLD ${cmd.sub === 'positioning' ? 'COT' : cmd.sub.toUpperCase().slice(0, 8)}`, label: `Gold terminal · ${cmd.sub}`, hint: 'GOLD sub-view', cmd }
+  }
+}
+
+/** Items for the LAYOUT commands (R2 workspaces, lib/workspaces.ts): LAYOUT SAVE <name> · LAYOUT <name> · LAYOUT LIST. */
+function layoutItems(raw: string, codeOf: (id: string) => string): Item[] {
+  const cmd = parseLayoutCommand(raw)
+  if (!cmd) return []
+  const list = readWorkspaces()
+  const hintRow = (label: string): Item => ({ kind: 'hint', key: 'lay-hint', code: '?', label, hint: 'not run' })
+  const loadItem = (w: NonNullable<ReturnType<typeof findWorkspace>>): Item =>
+    ({ kind: 'layoutLoad', key: `lay:${w.name}`, code: `LAYOUT ${w.name}`, label: `Workspace · ${w.name}`,
+       hint: describeWorkspace(w, codeOf), name: w.name })
+  switch (cmd.kind) {
+    case 'invalid': return [hintRow(cmd.reason)]
+    case 'layoutList':
+      return list.length ? list.map(loadItem)
+        : [hintRow(`no layouts saved yet · LAYOUT SAVE <name> stores the strip, page, symbol and view (0/${MAX_WORKSPACES})`)]
+    case 'layoutSave': {
+      const replaced = !!findWorkspace(list, cmd.name)
+      if (!replaced && list.length >= MAX_WORKSPACES) return [hintRow(`${MAX_WORKSPACES} layouts saved: reuse a name or remove one in the LAYOUT ▾ menu`)]
+      return [{ kind: 'layoutSave', key: `laysave:${cmd.name}`, code: 'LAYOUT SAVE', label: `Save this layout as "${cmd.name}"`,
+                hint: `${replaced ? 'replaces the saved layout' : `${list.length + 1}/${MAX_WORKSPACES}`} · strip + page + symbol + view`, name: cmd.name }]
+    }
+    case 'layoutLoad': {
+      const m = matchWorkspaces(list, cmd.name)
+      return m.length ? m.map(loadItem)
+        : [hintRow(`no saved layout named ${cmd.name} · LAYOUT LIST shows them · LAYOUT SAVE ${cmd.name} saves the current one`)]
+    }
   }
 }
 
@@ -278,6 +312,11 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
     if (!raw) {
       return [...recent.map(t => stockItem(t, 'open')), ...pageItems, news, helpItem]
     }
+    // R2 workspaces: LAYOUT SAVE <name> · LAYOUT <name> · LAYOUT LIST (lib/workspaces.ts; run() loads/saves)
+    if (head === 'LAYOUT') {
+      const lay = layoutItems(raw, id => pages.find(p => p.id === id)?.code ?? id.toUpperCase())
+      if (lay.length) return lay
+    }
     // GO arguments (M37): TCS OMON 27NOV · NIFTY OSTR IC · ALRT TCS >3200 · TCS VS INFY · GOLD COT · BANKNIFTY DERV.
     // A ticker + DES / FA / TV … keeps its action (ACTIONS), and `COMP A B` its list, below.
     const parsed = rest.length && !ACTIONS[rest.join(' ')] && !(head === 'COMP' && rest.length > 1) ? parseGoCommand(raw, istToday(), codeToId) : null
@@ -358,6 +397,14 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
     if (it.kind === 'back') { if (canGoBack(window.history.state)) window.history.back(); return }
     if (it.kind === 'hint') return
     if (it.kind === 'import') return void openSettingsImport()
+    // R2 workspaces: save stores strip + page + symbol + view; load restores them, then opens the page
+    if (it.kind === 'layoutSave') return void saveCurrentWorkspace(it.name, currentTab ?? 'brief', pages.map(p => p.id))
+    if (it.kind === 'layoutLoad') {
+      const w = findWorkspace(readWorkspaces(), it.name)
+      const page = w ? loadWorkspace(w, pages.map(p => p.id)) : null
+      if (page) { if (inNewWindow) return void newWindow(page); return onPage(page) }
+      return
+    }
     if (it.kind === 'cmd') return runCommand(it.cmd, inNewWindow, onPage)
     // M34: every underlying GO opens becomes the active symbol (OSTR / DERV / CHRT / COMP / DEAL follow it)
     if (it.kind === 'omon' || it.kind === 'deal') setActive(it.sym)
@@ -402,12 +449,13 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
     else if (it.action === 'des') openTicker(it.t, 'profile')
     else if (it.action === 'fa' || it.action === 'ern' || it.action === 'hp' || it.action === 'seag') openTicker(it.t, it.action)
     else onTicker(it.t)
-  }, [q, onPage, onTicker, isWatched, addToWatchlist, removeFromWatchlist, currentTab])
+  }, [q, onPage, onTicker, isWatched, addToWatchlist, removeFromWatchlist, currentTab, pages])
 
   if (help && !open) return <HelpCard pages={pages} desktop={desktop} onClose={() => setHelp(false)} onPage={id => { setHelp(false); onPage(id) }} />
   if (!open) return null
   const kindColor = (i: Item) => (i.kind === 'stock' ? T.amber : i.kind === 'hint' ? T.dim
-    : i.kind === 'news' || i.kind === 'help' || i.kind === 'back' || i.kind === 'import' ? T.violet : i.kind === 'comp' || i.kind === 'omon' || i.kind === 'cmd' ? T.green : T.cyan)
+    : i.kind === 'news' || i.kind === 'help' || i.kind === 'back' || i.kind === 'import' || i.kind === 'layoutSave' || i.kind === 'layoutLoad' ? T.violet
+    : i.kind === 'comp' || i.kind === 'omon' || i.kind === 'cmd' ? T.green : T.cyan)
   return (
     <div onMouseDown={() => setOpen(false)} role="dialog" aria-label="Command bar"
       style={{ position: 'fixed', inset: 0, zIndex: Z.commandbar, background: 'rgba(2,3,6,.72)', backdropFilter: 'blur(2px)',
@@ -491,6 +539,9 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
             <button key={ex} type="button" title={what} onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setQ(ex) }}
               style={{ font: 'inherit', color: T.cyan, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{ex}</button>
           ))}
+          <button type="button" title="saved workspaces: LAYOUT SAVE <name> stores strip + page + symbol + view · LAYOUT <name> loads it"
+            onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setQ('LAYOUT LIST') }}
+            style={{ font: 'inherit', color: T.cyan, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>LAYOUT LIST</button>
         </div>
       </div>
     </div>
@@ -525,8 +576,8 @@ function HelpCard({ pages, desktop, onClose, onPage }: { pages: CommandPage[]; d
             {pages.map(p => (
               <div key={p.id} onClick={() => onPage(p.id)} className="nt-row"
                 style={{ display: 'grid', gridTemplateColumns: '64px 1fr', gap: 10, padding: '4px 0', cursor: 'pointer', borderBottom: `1px solid ${T.border}` }}>
-                <span style={{ fontFamily: T.mono, fontSize: 11.5, fontWeight: 700, color: T.cyan }}>{p.code}</span>
-                <span style={{ fontSize: 11.5, color: T.text }}>{p.label} <span style={{ color: T.dim, fontSize: 10 }}>· {p.hint}</span></span>
+                <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: T.cyan }}>{p.code}</span>
+                <span style={{ fontSize: 12, color: T.text }}>{p.label} <span style={{ color: T.dim, fontSize: 10 }}>· {p.hint}</span></span>
               </div>
             ))}
           </div>
@@ -536,14 +587,14 @@ function HelpCard({ pages, desktop, onClose, onPage }: { pages: CommandPage[]; d
             {keys.map(([k, v]) => (
               <div key={k} style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '5px 0', borderBottom: `1px solid ${T.border}` }}>
                 <span style={{ fontFamily: T.mono, fontSize: 11, color: T.amber }}>{k}</span>
-                <span style={{ fontSize: 11.5, color: T.text }}>{v}</span>
+                <span style={{ fontSize: 12, color: T.text }}>{v}</span>
               </div>
             ))}
             <div style={{ fontFamily: T.display, fontSize: 10, letterSpacing: 1.6, color: T.muted, margin: '14px 0 6px' }}>GO ARGUMENTS</div>
-            {GO_ARG_HINTS.map(([k, v]) => (
+            {[...GO_ARG_HINTS, ['LAYOUT SAVE DESK', 'save this layout (strip + page + symbol + view) · LAYOUT DESK loads it · LAYOUT LIST'] as const].map(([k, v]) => (
               <div key={k} style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '4px 0', borderBottom: `1px solid ${T.border}` }}>
                 <span style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan }}>{k}</span>
-                <span style={{ fontSize: 11.5, color: T.text }}>{v}</span>
+                <span style={{ fontSize: 12, color: T.text }}>{v}</span>
               </div>
             ))}
             <div style={{ fontFamily: T.display, fontSize: 10, letterSpacing: 1.6, color: T.muted, margin: '14px 0 6px' }}>READING THE SCREENS</div>

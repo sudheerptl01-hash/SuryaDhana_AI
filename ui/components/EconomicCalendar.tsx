@@ -79,12 +79,12 @@ export function EconomicCalendar() {
     { key: 'time', label: 'IST', render: e => <span style={{ color: T.muted }}>{e.time ?? '—'}</span> },
     { key: 'when', label: 'When', render: e => <span style={{ color: e.date < today ? T.dim : dayDiff(e.date, today) <= 2 ? T.amber : T.muted, whiteSpace: 'nowrap' }}>{ecoWhen(e.date, today)}</span> },
     { key: 'ctry', label: '', render: e => <span style={{ color: T.dim, fontSize: 10 }}>{e.country === 'USD' ? 'US' : e.country}</span> },
-    { key: 'kind', label: 'Type', sort: e => e.kind, render: e => { const k = ecoKindSpec(e); return <span style={{ color: k.color, fontSize: 10.5, letterSpacing: 0.8, fontWeight: 700 }}>{k.label}</span> } },
+    { key: 'kind', label: 'Type', sort: e => e.kind, render: e => { const k = ecoKindSpec(e); return <span style={{ color: k.color, fontSize: 11, letterSpacing: 0.8, fontWeight: 700 }}>{k.label}</span> } },
     { key: 'what', label: 'Release', render: e => <span style={{ color: e.date < today ? T.muted : T.text, display: 'inline-block', maxWidth: 620, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}
         title={`${e.what}\n${ecoKindSpec(e).why}${e.source ? `\nsource: ${e.source}` : ''}`}>{e.what}
         {(e.moved || e.shifted) && <span style={{ color: T.dim, fontSize: 10 }} title="planned on a weekend or holiday: released the next working day (an expiry: the session before)"> · moved</span>}
         {e.circular && <span style={{ color: T.dim, fontSize: 10 }}> · {e.circular}</span>}</span> },
-    ...(hasImpact ? [{ key: 'impact', label: 'Impact', render: (e: Row) => <span style={{ color: (e.impact ?? '').toLowerCase() === 'high' ? T.text : T.dim, fontSize: 10.5 }}>{e.impact ?? ''}</span> }] as Column<Row>[] : []),
+    ...(hasImpact ? [{ key: 'impact', label: 'Impact', render: (e: Row) => <span style={{ color: (e.impact ?? '').toLowerCase() === 'high' ? T.text : T.dim, fontSize: 11 }}>{e.impact ?? ''}</span> }] as Column<Row>[] : []),
     ...(hasConsensus ? [
       { key: 'fc', label: 'Forecast', align: 'right' as const, render: (e: Row) => <span style={{ color: T.muted }}>{e.forecast ?? ''}</span> },
       { key: 'prev', label: 'Previous', align: 'right' as const, render: (e: Row) => <span style={{ color: T.dim }}>{e.previous ?? ''}</span> },
@@ -92,7 +92,7 @@ export function EconomicCalendar() {
     // m012: a past release shows its print when the calendar stores one; otherwise it says so (no silent blank)
     // (a future row's forecast is printed once, in its own column: "the same number once per page")
     { key: 'print', label: 'Print', align: 'right', render: e => { const p = ecoPrint(e, today); return <span style={{ color: p.known ? T.bright : T.dim, fontSize: p.known ? 11.5 : 10 }}>{p.known || e.date < today ? p.text : ''}</span> } },
-    { key: 'why', label: 'Why it matters', render: e => <span style={{ color: T.dim, fontSize: 10.5, display: 'inline-block', maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }} title={ecoKindSpec(e).why}>{ecoKindSpec(e).why}</span> },
+    { key: 'why', label: 'Why it matters', render: e => <span style={{ color: T.dim, fontSize: 11, display: 'inline-block', maxWidth: 360, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }} title={ecoKindSpec(e).why}>{ecoKindSpec(e).why}</span> },
     { key: 'src', label: 'Source', render: e => <span style={{ color: T.dim, fontSize: 10, display: 'inline-block', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }} title={e.source ?? ''}>{e.source}</span> },
   ]
   const fams = FAMILY_ORDER.filter(f => events.some(e => ecoFamily(e) === f))
@@ -115,7 +115,7 @@ export function EconomicCalendar() {
         </div>}>
         <DataTable columns={cols} rows={rows} rowKey={ecoKey} dense exportName="eco_calendar"
           rowStyle={e => (e.date === today ? { background: 'rgba(245,158,11,0.07)' } : undefined)} />
-        <div style={{ padding: '8px 10px', fontSize: 10.5, color: T.dim, lineHeight: 1.5, borderTop: `1px solid ${T.border}` }}>
+        <div style={{ padding: '8px 10px', fontSize: 11, color: T.dim, lineHeight: 1.5, borderTop: `1px solid ${T.border}` }}>
           Last 30 days and the next 4 months · hover a release for why it matters. {data.note} {Object.entries(data.sources).map(([k, u]) => <a key={k} href={u} target="_blank" rel="noreferrer" style={{ color: T.cyan, marginRight: 10 }}>{k} calendar ↗</a>)}
           {!data.fed_available && <span style={{ color: T.amber }}> · Fed calendar unreachable right now: Fed dates missing.</span>}
           {' '}Market holidays come from NSE; a government release falls on its planned day unless the government is

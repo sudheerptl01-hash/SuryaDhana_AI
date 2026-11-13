@@ -159,7 +159,7 @@ export function IntradayChart({ groups, usDst, ukDst, conv, unitLabel, dp, settl
         {yAxis.ticks.map(t => (
           <g key={t}>
             <line x1={padL} x2={padL + plotW} y1={y(t)} y2={y(t)} stroke={T.border} strokeDasharray="2 4" />
-            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={9.5} fill={T.muted} fontFamily={T.mono}>{fmtKitco(t, yAxis.dp, unitLabel)}</text>
+            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={10} fill={T.muted} fontFamily={T.mono}>{fmtKitco(t, yAxis.dp, unitLabel)}</text>
           </g>
         ))}
         <text x={4} y={padT - 1} textAnchor="start" fontSize={9} fill={T.dim} fontFamily={T.mono}>{unitLabel}</text>
@@ -177,7 +177,7 @@ export function IntradayChart({ groups, usDst, ukDst, conv, unitLabel, dp, settl
         {mode === '24h' && last && lastV != null && (
           <g>
             <circle cx={x(last.pos)} cy={y(lastV)} r={3} fill={T.amber} />
-            <text x={Math.min(x(last.pos) + 6, padL + plotW - textWidth('0,00,000.00', 9.5))} y={y(lastV) - 6} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>{fmtKitco(lastV, dp, unitLabel)}</text>
+            <text x={Math.min(x(last.pos) + 6, padL + plotW - textWidth('0,00,000.00', 9.5))} y={y(lastV) - 6} fontSize={10} fill={T.amber} fontFamily={T.mono}>{fmtKitco(lastV, dp, unitLabel)}</text>
           </g>
         )}
         {cur != null && <Crosshair x={x(cur.pos)} y={curY != null ? y(curY) : null} top={padT} height={plotH} left={padL} width={plotW} />}
@@ -186,12 +186,12 @@ export function IntradayChart({ groups, usDst, ukDst, conv, unitLabel, dp, settl
         {xt.map(t => (
           <g key={t.pos}>
             <line x1={x(t.pos)} x2={x(t.pos)} y1={padT + plotH} y2={padT + plotH + 3} stroke={T.borderHi} />
-            <text x={x(t.pos)} y={padT + plotH + 13} textAnchor="middle" fontSize={9.5} fill={T.text} fontFamily={T.mono}>{fmtHM(t.ist)}</text>
+            <text x={x(t.pos)} y={padT + plotH + 13} textAnchor="middle" fontSize={10} fill={T.text} fontFamily={T.mono}>{fmtHM(t.ist)}</text>
             <text x={x(t.pos)} y={padT + plotH + 24} textAnchor="middle" fontSize={9} fill={T.dim} fontFamily={T.mono}>{fmtHM(istToNy(t.ist, usDst))}</text>
           </g>
         ))}
         {ia.zoomed && xt.length < 2 && (
-          <g fontSize={9.5} fontFamily={T.mono} fill={T.text}>
+          <g fontSize={10} fontFamily={T.mono} fill={T.text}>
             <text x={padL} y={padT + plotH + 13}>{fmtHM(istFromPos(view.min))}</text>
             <text x={padL + plotW} y={padT + plotH + 13} textAnchor="end">{fmtHM(istFromPos(view.max))}</text>
           </g>
@@ -268,7 +268,7 @@ export function TimeChart({ pts, dp, unitLabel, prevClose, prevCloseLabel, hi, l
         {yAxis.ticks.map(t => (
           <g key={t}>
             <line x1={padL} x2={padL + plotW} y1={y(t)} y2={y(t)} stroke={T.border} strokeDasharray="2 4" />
-            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={9.5} fill={T.muted} fontFamily={T.mono}>{fmtKitco(t, yAxis.dp, unitLabel)}</text>
+            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={10} fill={T.muted} fontFamily={T.mono}>{fmtKitco(t, yAxis.dp, unitLabel)}</text>
           </g>
         ))}
         <text x={4} y={padT - 2} textAnchor="start" fontSize={9} fill={T.dim} fontFamily={T.mono}>{unitLabel}</text>
@@ -288,12 +288,12 @@ export function TimeChart({ pts, dp, unitLabel, prevClose, prevCloseLabel, hi, l
           <circle cx={x(last.ms)} cy={y(last.v)} r={3} fill={T.amber} />
           {cur != null && <Crosshair x={x(cur.ms)} y={y(cur.v)} top={padT} height={plotH} left={padL} width={plotW} />}
         </g>
-        <text x={padL + plotW + 4} y={y(last.v) + 3} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>{fmtKitco(last.v, dp, unitLabel)}</text>
+        <text x={padL + plotW + 4} y={y(last.v) + 3} fontSize={10} fill={T.amber} fontFamily={T.mono}>{fmtKitco(last.v, dp, unitLabel)}</text>
         <line x1={padL} x2={padL + plotW} y1={padT + plotH} y2={padT + plotH} stroke={T.borderHi} />
         {xt.map(t => (
           <g key={t.ms}>
             <line x1={x(t.ms)} x2={x(t.ms)} y1={padT + plotH} y2={padT + plotH + 3} stroke={T.borderHi} />
-            <text x={x(t.ms)} y={padT + plotH + 14} textAnchor="middle" fontSize={9.5} fill={T.text} fontFamily={T.mono}>{t.label}</text>
+            <text x={x(t.ms)} y={padT + plotH + 14} textAnchor="middle" fontSize={10} fill={T.text} fontFamily={T.mono}>{t.label}</text>
           </g>
         ))}
         <text x={padL - 6} y={padT + plotH + 14} textAnchor="end" fontSize={9} fill={T.muted} fontFamily={T.mono}>IST</text>

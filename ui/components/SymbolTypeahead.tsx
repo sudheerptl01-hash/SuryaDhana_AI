@@ -110,7 +110,7 @@ export function SymbolTypeahead({ value, options, onPick, width = 148, 'aria-lab
                    background: T.panel, border: `1px solid ${T.border}`, maxHeight: 264, overflowY: 'auto',
                    boxShadow: '0 8px 20px rgba(0,0,0,.45)' }}>
           {!query && recents.length > 0 && (
-            <div style={{ fontFamily: T.mono, fontSize: 8.5, color: T.dim, letterSpacing: 1.2, padding: '4px 8px 2px' }}>RECENT FIRST</div>
+            <div style={{ fontFamily: T.mono, fontSize: 9, color: T.dim, letterSpacing: 1.2, padding: '4px 8px 2px' }}>RECENT FIRST</div>
           )}
           {matches.map((m, i) => (
             <div key={m} role="option" aria-selected={i === hi}

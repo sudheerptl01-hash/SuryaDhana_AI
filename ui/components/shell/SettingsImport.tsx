@@ -163,7 +163,7 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
   const copy = async (url: string) => {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500) } catch { setCopied(false) }
   }
-  const btn = (c: string, solid = false) => ({ fontFamily: T.mono, fontSize: 10.5, fontWeight: 700, letterSpacing: 1.2, color: solid ? T.bg : c,
+  const btn = (c: string, solid = false) => ({ fontFamily: T.mono, fontSize: 11, fontWeight: 700, letterSpacing: 1.2, color: solid ? T.bg : c,
     background: solid ? c : 'transparent', border: `1px solid ${c}`, padding: '6px 12px', cursor: 'pointer' } as const)
   const waiting = st?.state === 'waiting' && st.url
   return (
@@ -179,7 +179,7 @@ function ImportDialog({ onClose }: { onClose: () => void }) {
           <span style={{ flex: 1 }} />
           <button type="button" onClick={onClose} aria-label="Close" style={{ ...btn(T.muted), padding: '2px 8px', fontWeight: 400 }}>ESC</button>
         </div>
-        <div style={{ padding: '12px 14px', fontSize: 11.5, lineHeight: 1.6 }}>
+        <div style={{ padding: '12px 14px', fontSize: 12, lineHeight: 1.6 }}>
           <p style={{ margin: 0, color: T.muted }}>
             Your watchlist, pins and page settings from before the app live only in the browser that opened
             http://localhost:3000. START opens a one-time import page on that address (served by ui-api for 10 minutes; no

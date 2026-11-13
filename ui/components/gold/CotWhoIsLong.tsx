@@ -50,23 +50,23 @@ export function CotWhoIsLong({ groups, oi, tips }: { groups: CotGroup[]; oi: num
           const words = g.who_did?.length ? g.who_did : whoDidWords(g.chg_long, g.chg_short)
           return (
             <g key={g.key} data-cot-group={g.key}>
-              <text x={4} y={y + 13} fontSize={10.5} fontFamily={T.mono} fill={T.text}>{(LABEL[g.key] ?? g.label).slice(0, 30)}</text>
+              <text x={4} y={y + 13} fontSize={11} fontFamily={T.mono} fill={T.text}>{(LABEL[g.key] ?? g.label).slice(0, 30)}</text>
               <text x={4} y={y + 25} fontSize={9} fontFamily={T.mono} fill={T.dim}>net {signed(g.net)} · {oi ? pct(g.net_pct_oi ?? ((g.net ?? 0) / oi) * 100, 1) : '—'} of OI</text>
               <rect x={cx - sx(S)} y={y + 5} width={sx(S)} height={10} fill={T.muted} opacity={0.75}><title>{`${g.label} short ${num(S)}`}</title></rect>
               <rect x={cx} y={y + 5} width={sx(L)} height={10} fill={T.violet} opacity={0.85}><title>{`${g.label} long ${num(L)}`}</title></rect>
               <text x={cx - sx(S) - 4} y={y + 13} textAnchor="end" fontSize={9} fontFamily={T.mono} fill={T.muted}>{num(S)} {deltaArrow(g.chg_short)}</text>
               <text x={cx + sx(L) + 4} y={y + 13} fontSize={9} fontFamily={T.mono} fill={T.text}>{num(L)} {deltaArrow(g.chg_long)}</text>
-              <text x={cx - sx(S) - 4} y={y + 25} textAnchor="end" fontSize={8.5} fontFamily={T.mono} fill={T.dim}>Δ {signed(g.chg_short)}</text>
-              <text x={cx + sx(L) + 4} y={y + 25} fontSize={8.5} fontFamily={T.mono} fill={T.dim}>Δ {signed(g.chg_long)}</text>
+              <text x={cx - sx(S) - 4} y={y + 25} textAnchor="end" fontSize={9} fontFamily={T.mono} fill={T.dim}>Δ {signed(g.chg_short)}</text>
+              <text x={cx + sx(L) + 4} y={y + 25} fontSize={9} fontFamily={T.mono} fill={T.dim}>Δ {signed(g.chg_long)}</text>
               <foreignObject x={w - chipW} y={y} width={chipW} height={ROW_H - 2}>
                 <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'flex-start', lineHeight: 1.1 }} title={tips('who_did')}>
-                  {words.length ? words.map(wd => <Chip key={wd} color={T.muted} style={{ fontSize: 8.5, padding: '1px 5px', whiteSpace: 'nowrap' }}>{wd}</Chip>) : <Chip color={T.dim} style={{ fontSize: 8.5, padding: '1px 5px' }}>unchanged</Chip>}
+                  {words.length ? words.map(wd => <Chip key={wd} color={T.muted} style={{ fontSize: 9, padding: '1px 5px', whiteSpace: 'nowrap' }}>{wd}</Chip>) : <Chip color={T.dim} style={{ fontSize: 9, padding: '1px 5px' }}>unchanged</Chip>}
                 </div>
               </foreignObject>
             </g>
           )
         })}
-        <text x={cx} y={h - 3} textAnchor="middle" fontSize={8.5} fontFamily={T.mono} fill={T.dim}>0</text>
+        <text x={cx} y={h - 3} textAnchor="middle" fontSize={9} fontFamily={T.mono} fill={T.dim}>0</text>
       </svg>
     </div>
   )

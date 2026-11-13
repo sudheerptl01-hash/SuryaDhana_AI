@@ -37,7 +37,7 @@ function Box({ title, sub, children, accent = T.amber, id }: { title: string; su
 
 function Row({ k, v, c, hint }: { k: ReactNode; v: ReactNode; c?: string; hint?: string }) {
   return (
-    <div title={hint} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderBottom: `1px solid ${T.border}`, fontSize: 11.5 }}>
+    <div title={hint} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '4px 0', borderBottom: `1px solid ${T.border}`, fontSize: 12 }}>
       <span style={{ color: T.muted }}>{k}</span><span style={{ color: c ?? T.text, fontFamily: T.mono, textAlign: 'right' }}>{v}</span>
     </div>
   )
@@ -136,7 +136,7 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       {avoid.get(p.symbol) && (() => { const a = avoid.get(p.symbol)!; return (
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 10px', border: `1px solid ${T.red}66`, background: '#14070a', fontSize: 11.5 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '8px 10px', border: `1px solid ${T.red}66`, background: '#14070a', fontSize: 12 }}>
           <AvoidFlag r={a} />
           <span style={{ color: T.text }}>
             Results reaction <b style={{ color: T.red }}>{a.vs_nifty_pct?.toFixed(1)}% vs NIFTY</b> on {a.reaction_date} ({a.sessions_since} sessions ago).
@@ -150,7 +150,7 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
             <span key={`${e.kind}-${e.event_date}`} style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 11, color: T.text }}>
               <EventBadge kind={e.kind} date={e.event_date} days={daysUntil(e.event_date)} detail={(e as { detail?: string | null }).detail} />
               {e.kind === 'RESULTS' && ern?.summary.avg_abs_move_pct != null && (
-                <span style={{ color: T.amber, fontFamily: T.mono, fontSize: 10.5 }}
+                <span style={{ color: T.amber, fontFamily: T.mono, fontSize: 11 }}
                       title={`Average absolute move on the last ${ern.summary.quarters} results`}>
                   typically ±{ern.summary.avg_abs_move_pct.toFixed(1)}% on results
                 </span>
@@ -176,7 +176,7 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
               {Object.entries(px.returns).map(([k, v]) => (
                 <div key={k} style={{ textAlign: 'center', border: `1px solid ${T.border}`, padding: '4px 0' }}>
                   <div style={{ fontSize: 9, color: T.dim, letterSpacing: 1 }}>{k}</div>
-                  <div style={{ fontFamily: T.mono, fontSize: 11.5, color: tone(v) }}>{pct(v, 1)}</div>
+                  <div style={{ fontFamily: T.mono, fontSize: 12, color: tone(v) }}>{pct(v, 1)}</div>
                 </div>
               ))}
             </div>
@@ -211,10 +211,10 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
           const r = risk.stocks[0], n = risk.nifty!
           return (
             <Box title="Risk" sub={`1 year vs NIFTY 50 · split-adjusted · to ${day(risk.window.end ?? '')}`} accent={T.red}>
-              <Row k="Volatility (annualised)" v={<>{r.vol!.toFixed(0)}% <span style={{ color: T.dim, fontSize: 10.5 }}>NIFTY {n.vol.toFixed(0)}% · {(r.vol! / n.vol).toFixed(1)}×</span></>}
+              <Row k="Volatility (annualised)" v={<>{r.vol!.toFixed(0)}% <span style={{ color: T.dim, fontSize: 11 }}>NIFTY {n.vol.toFixed(0)}% · {(r.vol! / n.vol).toFixed(1)}×</span></>}
                    c={r.vol! > 2 * n.vol ? T.amber : undefined} hint="Standard deviation of daily returns × √252" />
               <Row k="Beta to NIFTY" v={r.beta != null ? r.beta.toFixed(2) : '—'} hint="1.0 = moves one-for-one with NIFTY; 1.5 = 50% more" />
-              <Row k="Max drawdown" v={<><span style={{ color: T.red }}>{pct(r.max_dd, 1)}</span> <span style={{ color: T.dim, fontSize: 10.5 }}>NIFTY {pct(n.max_dd, 1)}</span></>}
+              <Row k="Max drawdown" v={<><span style={{ color: T.red }}>{pct(r.max_dd, 1)}</span> <span style={{ color: T.dim, fontSize: 11 }}>NIFTY {pct(n.max_dd, 1)}</span></>}
                    hint="Worst peak-to-trough fall over the year" />
               <Row k="Position at 1% portfolio risk" v={r.vol ? `${Math.min(100, (1 / (r.vol / Math.sqrt(252) * 2)) * 100).toFixed(0)}% of capital` : '—'}
                    hint="Size so that a 2-standard-deviation day costs about 1% of the portfolio: 1% ÷ (2 × daily vol). A sizing guide, not a rule." />
@@ -228,10 +228,10 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
               <Row key={k} k={label} v={<>
                 <Trend values={quarters.map(q => q[k])} color={c} />
                 {own.quarters[0][k] != null ? `${own.quarters[0][k]!.toFixed(2)}%` : '—'}
-                <span style={{ color: tone(own.change_over_window[k]), marginLeft: 8, fontSize: 10.5 }}>{own.change_over_window[k] != null ? `${fmtSigned(own.change_over_window[k]!, 2)} pp` : ''}</span>
+                <span style={{ color: tone(own.change_over_window[k]), marginLeft: 8, fontSize: 11 }}>{own.change_over_window[k] != null ? `${fmtSigned(own.change_over_window[k]!, 2)} pp` : ''}</span>
               </>} />
             ))}
-            <Row k="Shareholders" v={<>{num(own.quarters[0].total_holders)} <span style={{ color: T.muted, fontSize: 10.5, marginLeft: 6 }}>{pct(own.holders_change_pct)}</span></>}
+            <Row k="Shareholders" v={<>{num(own.quarters[0].total_holders)} <span style={{ color: T.muted, fontSize: 11, marginLeft: 6 }}>{pct(own.holders_change_pct)}</span></>}
                  hint="Rising shareholder counts with falling institutional share often means stock moving to retail" />
             <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>Latest filing: quarter ended {day(own.quarters[0].period_end)} · pp = percentage points over the window</div>
           </>}
@@ -248,7 +248,7 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
             onClick={() => { try { localStorage.setItem('suryadhana.omon.v1', p.symbol) } catch { /* blocked */ }
                              window.dispatchEvent(new Event('suryadhana:omon')); goToPage('options') }}>OPTION CHAIN ›</span></span> : 'F&O · margin funding'}>
           {p.derivatives ? <>
-            <Row k="Futures OI (near month)" v={<>{num(p.derivatives.fut_oi)} <span style={{ color: tone(p.derivatives.fut_oi_chg_20d_pct), fontSize: 10.5 }}>{pct(p.derivatives.fut_oi_chg_20d_pct)} 20d</span></>} />
+            <Row k="Futures OI (near month)" v={<>{num(p.derivatives.fut_oi)} <span style={{ color: tone(p.derivatives.fut_oi_chg_20d_pct), fontSize: 11 }}>{pct(p.derivatives.fut_oi_chg_20d_pct)} 20d</span></>} />
             <Row k="Futures basis" v={pct(p.derivatives.basis_pct, 2)} hint="Futures premium over spot: unusually high = leveraged longs" />
             <Row k="Put / call open interest" v={p.derivatives.pcr_oi?.toFixed(2) ?? '—'} />
             <Row k="Expiry" v={p.derivatives.near_expiry ? day(p.derivatives.near_expiry) : '—'} />
@@ -275,7 +275,7 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
         </Box>
         <Box title="Bulk & block deals" sub={`last 6 months · net ${cr(p.deals.net_value_cr)}`} accent={T.amber}>
           {p.deals.short.days > 0 && (
-            <div style={{ fontSize: 10.5, color: T.muted, marginBottom: 6 }}>
+            <div style={{ fontSize: 11, color: T.muted, marginBottom: 6 }}>
               Short sales disclosed on {p.deals.short.days} day{p.deals.short.days > 1 ? 's' : ''} · {num(p.deals.short.qty)} shares in total
             </div>
           )}
@@ -437,14 +437,14 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
               <span style={{ fontFamily: T.mono, fontSize: 10, color: T.dim }}>
                 {new Date(h.published_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })}
               </span>
-              <a href={h.link} target="_blank" rel="noreferrer" style={{ color: T.text, textDecoration: 'none', fontSize: 11.5 }}>
+              <a href={h.link} target="_blank" rel="noreferrer" style={{ color: T.text, textDecoration: 'none', fontSize: 12 }}>
                 {h.title} <span style={{ color: T.dim, fontSize: 10 }}>· {h.publisher} ↗</span>
               </a>
             </div>))}
       </Box>
 
       {past.length > 0 && (
-        <div style={{ fontSize: 10.5, color: T.dim }}>
+        <div style={{ fontSize: 11, color: T.dim }}>
           Recent events: {past.map(e => `${e.kind.toLowerCase()} ${day(e.event_date)}`).join(' · ')}
         </div>
       )}
@@ -529,7 +529,7 @@ function CompanyFilingsBox({ symbol }: { symbol: string }) {
           {items.map((f, i) => (
             <div key={`${f.seq}-${i}`} style={{ display: 'grid', gridTemplateColumns: '92px 70px 1fr auto', gap: 8, padding: '4px 0', borderBottom: `1px solid ${T.border}`, fontSize: 11, alignItems: 'baseline' }}>
               <span style={{ color: T.dim, fontFamily: T.mono, fontSize: 10 }}>{(f.time ?? '').slice(5, 16)}</span>
-              <span style={{ color: CAT_COLOR[f.category] ?? T.muted, fontSize: 9.5, textTransform: 'uppercase', letterSpacing: 0.8 }}>{f.category}</span>
+              <span style={{ color: CAT_COLOR[f.category] ?? T.muted, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8 }}>{f.category}</span>
               <span style={{ color: T.text, lineHeight: 1.4 }} title={f.text}>{f.subject}<span style={{ color: T.dim }}> · {f.text.replace(/^.*?has (informed|submitted) (to )?the Exchange,? ?(about|regarding|that)? ?/i, '').slice(0, 140)}</span></span>
               {f.pdf ? <a href={f.pdf} target="_blank" rel="noopener noreferrer" style={{ color: T.cyan, fontSize: 10 }}>PDF ↗</a> : <span />}
             </div>))}
@@ -576,7 +576,7 @@ function ActionsBox({ symbol }: { symbol: string }) {
           {d.items.map((i, n) => (
             <div key={`${i.ex_date}-${n}`} style={{ display: 'grid', gridTemplateColumns: '84px 70px 1fr auto', gap: 8, padding: '3px 0', borderBottom: `1px solid ${T.border}`, fontSize: 11 }}>
               <span style={{ color: T.dim, fontFamily: T.mono, fontSize: 10 }}>{i.ex_date}</span>
-              <span style={{ color: KC[i.kind], fontSize: 9.5, textTransform: 'uppercase', letterSpacing: 0.8 }}>{i.kind}{i.special ? ' +sp' : ''}</span>
+              <span style={{ color: KC[i.kind], fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8 }}>{i.kind}{i.special ? ' +sp' : ''}</span>
               <span style={{ color: T.text }}>{i.subject}</span>
               <span style={{ color: T.muted, fontFamily: T.mono }}>{i.rs_per_share != null ? `₹${i.rs_per_share}` : ''}</span>
             </div>))}
@@ -616,7 +616,7 @@ function PeHistoryChart({ symbol }: { symbol: string }) {
         <path d={path} fill="none" stroke={T.amber} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
         <circle cx={x(vals.length - 1)} cy={y(vals[vals.length - 1])} r={3} fill={tone} />
       </svg>
-      <div style={{ fontSize: 9.5, color: T.dim, marginTop: 2 }}>
+      <div style={{ fontSize: 10, color: T.dim, marginTop: 2 }}>
         Point-in-time: each day uses only results filed by then · split/bonus-adjusted price × today&apos;s shares · shaded = middle half, dashed = median · describes the past, not a forecast
       </div>
     </div>

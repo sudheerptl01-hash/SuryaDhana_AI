@@ -49,7 +49,7 @@ const pnlColor = (v: number | null | undefined) => v == null || v === 0 ? T.text
 /** the context chips of one journal row — recorded facts, every chip neutral (never a directional colour) */
 function CtxChips({ ctx }: { ctx: JournalCtx | undefined }) {
   if (!ctx || (!ctx.market && !ctx.client)) {
-    return <span style={{ color: T.dim, fontSize: 9.5 }}>no context recorded with this row (pre-journal-context, or a settlement — its context is the settlement itself)</span>
+    return <span style={{ color: T.dim, fontSize: 10 }}>no context recorded with this row (pre-journal-context, or a settlement — its context is the settlement itself)</span>
   }
   const m = ctx.market
   const c = ctx.client
@@ -69,7 +69,7 @@ function CtxChips({ ctx }: { ctx: JournalCtx | undefined }) {
   if (c?.margin_total != null) chips.push({ key: 'mgn', text: `MARGIN ${fmtInr(c.margin_total, 0)}${c.margin_source ? ` · ${c.margin_source}` : ''}`, title: 'the margin shown at booking, with its source' })
   if (c?.event_hint) chips.push({ key: 'evt', text: `EVENT ${c.event_hint}`.slice(0, 60), title: c.event_hint })
   if (m?.note) chips.push({ key: 'note', text: '◌ partial capture', title: m.note })
-  if (!chips.length) return <span style={{ color: T.dim, fontSize: 9.5 }}>context captured, nothing stored for it{m?.note ? ` — ${m.note}` : ''}</span>
+  if (!chips.length) return <span style={{ color: T.dim, fontSize: 10 }}>context captured, nothing stored for it{m?.note ? ` — ${m.note}` : ''}</span>
   return (
     <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
       {chips.map(ch => <Chip key={ch.key} color={T.muted} title={ch.title} style={{ fontSize: 9, padding: '1px 5px' }}>{ch.text}</Chip>)}
@@ -113,7 +113,7 @@ export function Journal({ refreshKey }: { refreshKey?: number }) {
             const realised = rowRealised(r)
             return (
               <div key={r.id} style={{ display: 'grid', gap: 3, padding: '6px 8px', border: `1px solid ${T.border}`, background: T.panel2 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontFamily: T.mono, fontSize: 10.5 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontFamily: T.mono, fontSize: 11 }}>
                   <span style={{ color: T.dim }}>{String(r.ts).slice(0, 16).replace('T', ' ')}</span>
                   <Chip color={ACTION_COLOR[r.action] ?? T.muted} style={{ fontSize: 9, padding: '1px 6px' }}>{r.action.toUpperCase()}</Chip>
                   <span style={{ color: T.amber }}>

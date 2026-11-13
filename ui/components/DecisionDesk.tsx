@@ -67,8 +67,8 @@ function BookChart({ nav }: { nav: NavRow[] }) {
       ))}
       <path d={path(b)} fill="none" stroke={T.muted} strokeWidth={1.2} strokeDasharray="5 4" />
       <path d={path(a)} fill="none" stroke={T.green} strokeWidth={1.8} />
-      <text x={w - R + 6} y={y(ea) + 3} fontSize={10.5} fill={T.green} fontFamily={T.mono}>BOOK {pctOf(ea)}</text>
-      <text x={w - R + 6} y={y(eb) + (Math.abs(y(eb) - y(ea)) < 12 ? 14 : 3)} fontSize={10.5} fill={T.muted} fontFamily={T.mono}>NIFTY {pctOf(eb)}</text>
+      <text x={w - R + 6} y={y(ea) + 3} fontSize={11} fill={T.green} fontFamily={T.mono}>BOOK {pctOf(ea)}</text>
+      <text x={w - R + 6} y={y(eb) + (Math.abs(y(eb) - y(ea)) < 12 ? 14 : 3)} fontSize={11} fill={T.muted} fontFamily={T.mono}>NIFTY {pctOf(eb)}</text>
       <text x={L} y={h - 5} fontSize={9} fill={T.dim} fontFamily={T.mono}>{day(nav[0].date)}</text>
       <text x={w - R} y={h - 5} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>{day(nav[nav.length - 1].date)}</text>
     </svg>
@@ -337,7 +337,7 @@ export function DecisionDesk(_: { isDark?: boolean }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}>
             <Panel title="Holdings" pad={0}
-              right={status?.positions.length && liveB.available ? <span style={{ fontSize: 9.5, color: T.dim, fontFamily: T.mono }} title="the Desk's own marks (system of record) are end of day">MARK EOD {markDay ?? '—'}</span> : undefined}
+              right={status?.positions.length && liveB.available ? <span style={{ fontSize: 10, color: T.dim, fontFamily: T.mono }} title="the Desk's own marks (system of record) are end of day">MARK EOD {markDay ?? '—'}</span> : undefined}
               source={status?.positions.length && liveB.available && liveB.source ? liveB.source
                 : { state: 'delayed', source: 'Desk marks', asOf: markDay,
                     hint: `desk marks at last close${markDay ? ` (${markDay})` : ''}${liveB.status === 'missing' ? '; live NSE quote service not deployed' : liveB.status === 'error' ? '; live NSE quote service not answering' : ''}` }}>

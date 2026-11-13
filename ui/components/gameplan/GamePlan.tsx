@@ -44,7 +44,7 @@ function Row({ k, v, title }: { k: React.ReactNode; v: React.ReactNode; title?: 
   return (
     <div title={title} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '3px 0',
                                 borderBottom: `1px solid ${T.border}22`, fontSize: 12 }}>
-      <span style={{ color: T.muted, fontSize: 10.5, letterSpacing: 0.6, textTransform: 'uppercase' }}>{k}</span>
+      <span style={{ color: T.muted, fontSize: 11, letterSpacing: 0.6, textTransform: 'uppercase' }}>{k}</span>
       <span style={{ fontFamily: T.mono, color: T.text, textAlign: 'right' }}>{v}</span>
     </div>
   )
@@ -174,7 +174,7 @@ export function GamePlan() {
                   <Row key={i} k={`${e.kind ?? ''} · ${day(e.date)}${e.time ? ` ${e.time}` : ''}`} v={e.what ?? ''} />
                 ))}
                 {corp && (
-                  <div style={{ color: T.muted, fontSize: 10.5, marginTop: 6 }}>
+                  <div style={{ color: T.muted, fontSize: 11, marginTop: 6 }}>
                     corporate calendar: {corp.count ?? 0} rows today
                     {(corp.rows ?? []).length > 0 && ` — ${(corp.rows ?? []).slice(0, 6).map(r => r.symbol).filter(Boolean).join(', ')}`}
                   </div>
@@ -189,7 +189,7 @@ export function GamePlan() {
                 <Row k="watchlist" v={watchlistLine(focus.watchlist as string[])} />
                 <Row k={`alert fires since ${day(fires?.since) || 'prior close'} 15:30`} v={String(fires?.count ?? 0)} />
                 {(fires?.rows ?? []).slice(0, 6).map((f, i) => (
-                  <div key={i} style={{ color: T.muted, fontSize: 10.5, padding: '2px 0' }}>
+                  <div key={i} style={{ color: T.muted, fontSize: 11, padding: '2px 0' }}>
                     {f.text ?? `${f.symbol ?? ''} ${f.series ?? ''}`}
                   </div>
                 ))}

@@ -95,7 +95,7 @@ export default function GlobalError({
           </div>
           {details && (
             <pre style={{ marginTop: 12, maxHeight: 280, overflow: 'auto', background: BG, border: '1px solid #2a3448', padding: 12,
-                          fontSize: 10.5, lineHeight: 1.5, color: '#aab3c2', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                          fontSize: 11, lineHeight: 1.5, color: '#aab3c2', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {msg}{'\n\n'}{error?.stack || '(no stack)'}{'\n\n'}digest: {error?.digest ?? 'none'}
             </pre>
           )}

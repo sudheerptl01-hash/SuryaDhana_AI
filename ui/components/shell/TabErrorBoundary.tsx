@@ -224,7 +224,7 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, State> {
     if (variant === 'bar') {
       return (
         <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 12, height: 30, padding: '0 12px', background: '#170609',
-                                   borderBottom: `1px solid ${C.red}`, fontFamily: C.mono, fontSize: 10.5, color: C.text, whiteSpace: 'nowrap',
+                                   borderBottom: `1px solid ${C.red}`, fontFamily: C.mono, fontSize: 11, color: C.text, whiteSpace: 'nowrap',
                                    overflow: 'hidden' }}>
           <span style={{ color: C.red, fontWeight: 700, letterSpacing: '.14em' }}>{this.props.name} FAILED TO RENDER</span>
           <span style={{ color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis' }}>{msg}</span>
@@ -250,11 +250,11 @@ export class TabErrorBoundary extends Component<TabErrorBoundaryProps, State> {
           <button type="button" onClick={() => this.setState(s => ({ details: !s.details }))} aria-expanded={this.state.details}
             style={btn(C.muted)}>{this.state.details ? 'DETAILS ▴' : 'DETAILS ▾'}</button>
         </div>
-        <p style={{ margin: '10px 0 0', fontSize: 11.5, color: C.text, lineHeight: 1.5 }}>
+        <p style={{ margin: '10px 0 0', fontSize: 12, color: C.text, lineHeight: 1.5 }}>
           This page hit an unexpected error and was stopped. The rest of the terminal keeps working: switch pages, use GO,
           or retry this one. {this.state.report === undefined ? '' : deliveryText(this.state.report)}
         </p>
-        <p style={{ margin: '6px 0 0', fontSize: 10.5, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        <p style={{ margin: '6px 0 0', fontSize: 11, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
            title={msg}>{msg}</p>
         {this.state.details && (
           <div style={{ marginTop: 10 }}>

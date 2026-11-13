@@ -37,15 +37,15 @@ export function DeskAttribution() {
       {d && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }} data-desk-attr={d.risk_off ? 'cash' : 'book'}>
           <div>
-            <div style={{ fontSize: 9.5, letterSpacing: 1.2, color: T.muted, fontFamily: T.mono, marginBottom: 4 }}>THE BOOK</div>
+            <div style={{ fontSize: 10, letterSpacing: 1.2, color: T.muted, fontFamily: T.mono, marginBottom: 4 }}>THE BOOK</div>
             {d.risk_off ? (
-              <div style={{ fontSize: 11.5, color: T.text, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 12, color: T.text, lineHeight: 1.6 }}>
                 Book = liquid fund since {d.since ? dayMon(d.since) : '—'}; nothing to attribute. The crash filter keeps the Desk in cash
                 (the book value is in the Desk header); this panel lists names only when the paper book holds real lots.
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
-                <thead><tr style={{ color: T.muted, fontSize: 9.5 }}>{['STOCK', 'QTY', 'CLOSE FROM → TO', 'P&L', 'PP OF NAV'].map((h, i) =>
+                <thead><tr style={{ color: T.muted, fontSize: 10 }}>{['STOCK', 'QTY', 'CLOSE FROM → TO', 'P&L', 'PP OF NAV'].map((h, i) =>
                   <th key={h} style={{ textAlign: i < 1 ? 'left' : 'right', padding: '3px 6px', borderBottom: `1px solid ${T.border}` }}>{h}</th>)}</tr></thead>
                 <tbody>{d.rows.map(r => (
                   <tr key={r.symbol} style={{ borderBottom: `1px solid ${T.border}` }}>
@@ -61,7 +61,7 @@ export function DeskAttribution() {
             )}
           </div>
           <div>
-            <div style={{ fontSize: 9.5, letterSpacing: 1.2, color: T.muted, fontFamily: T.mono, marginBottom: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.2, color: T.muted, fontFamily: T.mono, marginBottom: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
               NIFTY 50, SAME SESSIONS <BadgeChip badge={d.badges?.nifty ?? 'arithmetic'} /></div>
             {!nifty ? <div style={{ fontSize: 11, color: T.muted }}>No stored contribution rows for these sessions · backfill pending.</div> : (
               <div style={{ fontFamily: T.mono, fontSize: 11, display: 'grid', gap: 3 }}>

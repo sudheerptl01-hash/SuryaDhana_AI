@@ -349,7 +349,7 @@ export function McxGoldDesk() {
             )}
             {/* 3. the COMEX × rupee overlay, one line (PLAN §b): no implied-premium prose; the ladder is on GOLD › PHYSICAL */}
             <div data-mcx-overlay style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: `1px solid ${T.border}`, paddingTop: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>COMEX × RUPEE</span>
+              <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted }}>COMEX × RUPEE</span>
               <span style={{ fontFamily: T.mono, fontSize: 11, color: T.text, flex: 1, minWidth: 0 }}
                     title={overlay?.fields?.settlement_session_label ? `fair value against the ${overlay.fields.settlement_session_label} (${settlementSourceWords(overlay.fields.settlement_source)} — proxy); live vs fair only against a live broker price, never against the model itself` : 'live vs fair appears when a live broker quote exists — never computed against the model itself'}>
                 {overlayText(overlay)}

@@ -132,7 +132,7 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={12} textAnchor="middle" fontSize={11} fontWeight={700} fill="#cbd5e1" fontFamily="monospace">{payload.value}</text>
-        <text x={0} y={0} dy={26} textAnchor="middle" fontSize={8.5} fill={T.muted} fontFamily="monospace">[{datum?.range}]</text>
+        <text x={0} y={0} dy={26} textAnchor="middle" fontSize={9} fill={T.muted} fontFamily="monospace">[{datum?.range}]</text>
       </g>
     )
   }

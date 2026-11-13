@@ -86,7 +86,7 @@ export const tone = (v: number | null | undefined): string =>
 
 export function Label({ children, color = T.muted, style }: { children: ReactNode; color?: string; style?: CSSProperties }) {
   return (
-    <span style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', color, ...style }}>
+    <span style={{ fontFamily: T.mono, fontSize: 'var(--t-fs-micro)', letterSpacing: 1.4, textTransform: 'uppercase', color, ...style }}>
       {children}
     </span>
   )
@@ -107,7 +107,7 @@ export function Chip({ children, color = T.muted, active = false, onClick, title
   const Tag = onClick ? 'button' : 'span'
   return (
     <Tag onClick={onClick} title={title} aria-label={ariaLabel}
-      style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1, padding: '3px 8px', borderRadius: 2,
+      style={{ fontFamily: T.mono, fontSize: 'var(--t-fs-micro)', letterSpacing: 1, padding: '3px 8px', borderRadius: 2,
                border: `1px solid ${active ? color : T.border}`, color: active ? T.bg : color,
                background: active ? color : 'transparent', cursor: onClick ? 'pointer' : 'default',
                whiteSpace: 'nowrap', lineHeight: 1.4, display: 'inline-flex', alignItems: 'center', gap: 5, ...style }}>
@@ -131,7 +131,7 @@ export function Btn({ children, onClick, variant = 'ghost', disabled, title, typ
   const p = palette[variant]
   return (
     <button type={type} onClick={onClick} disabled={disabled} title={title}
-      style={{ fontFamily: T.mono, fontSize: size === 'sm' ? 10 : 11, letterSpacing: 1.2, textTransform: 'uppercase',
+      style={{ fontFamily: T.mono, fontSize: size === 'sm' ? 'var(--t-fs-micro)' : 'var(--t-fs-data)', letterSpacing: 1.2, textTransform: 'uppercase',
                fontWeight: 600, padding: size === 'sm' ? '3px 8px' : '6px 12px', borderRadius: 2,
                border: `1px solid ${p.bd}`, color: p.fg, background: p.bg,
                cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.45 : 1,
@@ -152,12 +152,12 @@ export function PageHeader({ code, title, subtitle, right, status }: {
       style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', padding: '10px 14px',
                border: `1px solid ${T.border}`, background: 'linear-gradient(90deg, #0b0f16 0%, #07090d 70%)',
                marginBottom: 12 }}>
-      <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: T.bg,
+      <span style={{ fontFamily: T.mono, fontSize: 'var(--t-fs-micro)', fontWeight: 700, letterSpacing: 1.5, color: T.bg,
                      background: T.amber, padding: '3px 7px' }}>{code}</span>
-      <span style={{ fontFamily: T.display, fontSize: 18, fontWeight: 700, letterSpacing: 1.6, color: T.bright,
+      <span style={{ fontFamily: T.display, fontSize: 'var(--t-fs-title)', fontWeight: 700, letterSpacing: 1.6, color: T.bright,
                      textTransform: 'uppercase' }}>{title}</span>
       {status}
-      {subtitle && <span style={{ fontSize: 11, color: T.muted }}>{subtitle}</span>}
+      {subtitle && <span style={{ fontSize: 'var(--t-fs-data)', color: T.muted }}>{subtitle}</span>}
       <span style={{ flex: 1 }} />
       {right}
     </div>
@@ -177,13 +177,16 @@ export function Panel({ title, subtitle, right, children, pad = 12, style, bodyS
     <section className={className ?? 't-fade-up'} data-sd-source={source?.state}
       style={{ border: `1px solid ${T.border}`, background: T.panel, display: 'flex', flexDirection: 'column',
                minWidth: 0, ...style }}>
+      {/* R2-TYPE (F-DESIGN defect 4): the header wraps instead of clipping its chips in a narrow
+          grid cell (GPLN 4-col at 1440 cut the source chip to "EOD…") — chips get a whole row
+          before they get scissors. Chips themselves carry flex:none so they never shrink mid-text. */}
       {(title || right || source || badge) && (
-        <header style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px',
+        <header style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, rowGap: 4, padding: '7px 12px',
                          borderBottom: `1px solid ${T.border}`, background: '#080b10', minHeight: 32 }}>
           <span style={{ width: 3, height: 12, background: accent, flex: 'none' }} />
-          {title && <span style={{ fontFamily: T.display, fontSize: 12, fontWeight: 600, letterSpacing: 1.6,
+          {title && <span style={{ fontFamily: T.display, fontSize: 'var(--t-fs-body)', fontWeight: 600, letterSpacing: 1.6,
                                    color: accent, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{title}</span>}
-          {subtitle && <span style={{ fontSize: 10, color: T.muted, letterSpacing: .5, minWidth: 140, flex: '0 1 auto' }}>{subtitle}</span>}
+          {subtitle && <span style={{ fontSize: 'var(--t-fs-micro)', color: T.muted, letterSpacing: .5, minWidth: 140, flex: '0 1 auto' }}>{subtitle}</span>}
           <span style={{ flex: 1 }} />
           {right}
           {badge && <BadgeChip badge={badge} />}
@@ -219,7 +222,7 @@ export function Stat({ label, value, sub, color = T.text, accent, big = true }: 
       <div style={{ fontFamily: T.mono, fontSize: big ? 22 : 16, fontWeight: 600, color, marginTop: 4,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-      {sub && <div style={{ fontSize: 10, color: T.muted, marginTop: 3 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 'var(--t-fs-micro)', color: T.muted, marginTop: 3 }}>{sub}</div>}
     </div>
   )
 }
@@ -230,8 +233,8 @@ export function KV({ items, cols = 1 }: { items: [ReactNode, ReactNode, string?]
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, columnGap: 18 }}>
       {items.map(([k, v, c], i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '4px 0',
-                              borderBottom: `1px dashed ${T.border}`, fontSize: 11 }}>
-          <span style={{ color: T.muted, textTransform: 'uppercase', letterSpacing: .8, fontSize: 10 }}>{k}</span>
+                              borderBottom: `1px dashed ${T.border}`, fontSize: 'var(--t-fs-data)' }}>
+          <span style={{ color: T.muted, textTransform: 'uppercase', letterSpacing: .8, fontSize: 'var(--t-fs-micro)' }}>{k}</span>
           <span style={{ color: c ?? T.text, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{v}</span>
         </div>
       ))}
@@ -311,7 +314,7 @@ export function Tabs<K extends string>({ items, active, onChange }: {
         const on = it.id === active
         return (
           <button key={it.id} onClick={() => onChange(it.id)}
-            style={{ fontFamily: T.mono, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase',
+            style={{ fontFamily: T.mono, fontSize: 'var(--t-fs-data)', letterSpacing: 1.2, textTransform: 'uppercase',
                      padding: '8px 14px', background: on ? '#0d1119' : 'transparent', cursor: 'pointer',
                      color: on ? T.amber : T.muted, border: 'none', borderBottom: `2px solid ${on ? T.amber : 'transparent'}` }}>
             {it.label}{it.count != null && <span style={{ color: T.dim }}> ({it.count})</span>}
@@ -328,8 +331,8 @@ export function Empty({ title, hint, icon = '◇' }: { title: ReactNode; hint?: 
   return (
     <div style={{ padding: '28px 12px', textAlign: 'center', color: T.muted }}>
       <div style={{ fontSize: 20, color: T.dim, marginBottom: 6 }}>{icon}</div>
-      <div style={{ fontSize: 12, color: T.text, letterSpacing: .8, textTransform: 'uppercase' }}>{title}</div>
-      {hint && <div style={{ fontSize: 11, marginTop: 6, maxWidth: 620, marginInline: 'auto', lineHeight: 1.6 }}>{hint}</div>}
+      <div style={{ fontSize: 'var(--t-fs-body)', color: T.text, letterSpacing: .8, textTransform: 'uppercase' }}>{title}</div>
+      {hint && <div style={{ fontSize: 'var(--t-fs-data)', marginTop: 6, maxWidth: 620, marginInline: 'auto', lineHeight: 1.6 }}>{hint}</div>}
     </div>
   )
 }
@@ -370,7 +373,7 @@ export function ErrorBox({ error, onRetry, asOf }: { error: unknown; onRetry?: (
   if (isUpstreamDown(error)) {
     return (
       <div data-sd-error="upstream" style={{ border: `1px solid ${T.border}`, background: '#080b10', padding: '8px 12px',
-                    display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: T.muted }}>
+                    display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--t-fs-data)', color: T.muted }}>
         <span>● waiting for the data service — retries by itself{asOf ? ` · last data ${asOf}` : ''}</span>
         <span style={{ flex: 1 }} />
         {onRetry && <Btn size="sm" onClick={onRetry}>Retry</Btn>}
@@ -379,7 +382,7 @@ export function ErrorBox({ error, onRetry, asOf }: { error: unknown; onRetry?: (
   }
   return (
     <div data-sd-error="error" style={{ border: `1px solid ${T.red}55`, background: 'rgba(255,77,94,.07)', padding: '8px 12px',
-                  display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: T.red }}>
+                  display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--t-fs-data)', color: T.red }}>
       <span>▲ {errorText(error)}</span>
       <span style={{ flex: 1 }} />
       {onRetry && <Btn size="sm" onClick={onRetry}>Retry</Btn>}
@@ -389,7 +392,7 @@ export function ErrorBox({ error, onRetry, asOf }: { error: unknown; onRetry?: (
 
 export function Notice({ children, color = T.amber }: { children: ReactNode; color?: string }) {
   return (
-    <div style={{ borderLeft: `2px solid ${color}`, background: `${color}10`, padding: '8px 12px', fontSize: 12,
+    <div style={{ borderLeft: `2px solid ${color}`, background: `${color}10`, padding: '8px 12px', fontSize: 'var(--t-fs-body)',
                   color: T.text, lineHeight: 1.55 }}>
       {children}
     </div>
@@ -476,11 +479,11 @@ export function DataTable<R>({ columns, rows, rowKey, onRowClick, maxHeight, emp
     {hover && rows.length > 0 && (
       <span role="button" title="Download this table as CSV (what is shown, in the current sort)"
         onClick={e => { e.stopPropagation(); if (tableRef.current) downloadCsv(tableRef.current, exportName) }}
-        style={{ position: 'absolute', top: 3, right: 4, zIndex: Z.raised + 1, fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1,
+        style={{ position: 'absolute', top: 3, right: 4, zIndex: Z.raised + 1, fontFamily: T.mono, fontSize: 'var(--t-fs-micro)', letterSpacing: 1,
                  color: T.cyan, background: '#080b10', border: `1px solid ${T.border}`, padding: '1px 6px', cursor: 'pointer' }}>⤓ CSV</span>
     )}
     <div style={{ overflow: 'auto', maxHeight }}>
-      <table ref={tableRef} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5, fontVariantNumeric: 'tabular-nums' }}>
+      <table ref={tableRef} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--t-fs-body)', fontVariantNumeric: 'tabular-nums' }}>
         <thead>
           <tr>
             {columns.map(c => {
@@ -491,7 +494,7 @@ export function DataTable<R>({ columns, rows, rowKey, onRowClick, maxHeight, emp
                                                                          : { key: c.key, dir: 'desc' }) : undefined}
                   style={{ position: 'sticky', top: 0, zIndex: Z.raised, background: '#080b10', textAlign: c.align ?? 'left',
                            padding: `7px 10px`, borderBottom: `1px solid ${T.border}`, width: c.width,
-                           fontFamily: T.mono, fontSize: 9.5, fontWeight: 500, letterSpacing: 1.2,
+                           fontFamily: T.mono, fontSize: 'var(--t-fs-micro)', fontWeight: 500, letterSpacing: 1.2,
                            textTransform: 'uppercase', color: on ? T.amber : T.muted, whiteSpace: 'nowrap',
                            cursor: c.sort ? 'pointer' : 'default', userSelect: 'none' }}>
                   {c.label}{c.sort ? <span style={{ color: on ? T.amber : T.dim }}> {on ? (sort!.dir === 'asc' ? '▲' : '▼') : '↕'}</span> : null}
@@ -536,7 +539,7 @@ export function Input({ value, onChange, placeholder, type = 'text', style, auto
     <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type}
       autoComplete={autoComplete} aria-label={ariaLabel}
       style={{ width: width ?? '100%', background: '#07090d', color: T.text, border: `1px solid ${T.border}`,
-               fontFamily: T.mono, fontSize: 12, padding: '6px 8px', borderRadius: 0, outline: 'none', ...style }} />
+               fontFamily: T.mono, fontSize: 'var(--t-fs-body)', padding: '6px 8px', borderRadius: 0, outline: 'none', ...style }} />
   )
   if (!label) return box
   return (
@@ -553,7 +556,7 @@ export function Select<V extends string>({ value, onChange, options, style, labe
   const box = (
     <select value={value} onChange={e => onChange(e.target.value as V)}
       style={{ background: '#07090d', color: T.text, border: `1px solid ${T.border}`, fontFamily: T.mono,
-               fontSize: 11, padding: '5px 6px', borderRadius: 0, ...style }}>
+               fontSize: 'var(--t-fs-data)', padding: '5px 6px', borderRadius: 0, ...style }}>
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   )
@@ -636,10 +639,10 @@ function HoverCard({ symbol, at }: { symbol: string; at: DOMRect }) {
   const line = q ? live.lineFor(sym) : lq ? live.lineFor(sym) : needFallback ? (fb ? `${fallbackLine(fb)} · live NSE service ${live.status === 'missing' ? 'not deployed' : 'not answering'}` : fb === null ? 'no quote' : null) : null
   return createPortal(
     <div role="tooltip" data-sd-hover={sym} style={{ position: 'fixed', left, width: W, zIndex: Z.commandbar, background: T.panel ?? '#0b0f16', border: `1px solid ${T.amber}`,
-                                 boxShadow: '0 8px 24px rgba(0,0,0,.6)', padding: '8px 10px', fontFamily: T.mono, fontSize: 11, pointerEvents: 'none', ...pos }}>
+                                 boxShadow: '0 8px 24px rgba(0,0,0,.6)', padding: '8px 10px', fontFamily: T.mono, fontSize: 'var(--t-fs-data)', pointerEvents: 'none', ...pos }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ color: T.amber, fontWeight: 700 }}>{sym}</span>
-        <span style={{ color: T.dim, fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stored?.name ?? 'NSE'}</span>
+        <span style={{ color: T.dim, fontSize: 'var(--t-fs-micro)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stored?.name ?? 'NSE'}</span>
       </div>
       {price == null ? <div style={{ color: T.dim, marginTop: 6 }}>{waiting || fb === undefined && needFallback ? 'loading…' : `${line ?? 'no quote'} · click to open`}</div>
         : <>
@@ -650,25 +653,25 @@ function HoverCard({ symbol, at }: { symbol: string; at: DOMRect }) {
             {hist && hist.spark.length > 1 && <span title={`last ${hist.spark.length} daily closes (NSE bhavcopy, adjusted) to ${hist.last_date ?? '—'}: not today's intraday path`}
               style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end' }}>
               <Spark values={hist.spark} width={70} height={20} />
-              <span data-sd-spark="daily" style={{ fontSize: 8.5, color: T.dim, letterSpacing: .4 }}>1M DAILY CLOSES</span></span>}
+              <span data-sd-spark="daily" style={{ fontSize: 'var(--t-fs-nano)', color: T.dim, letterSpacing: .4 }}>1M DAILY CLOSES</span></span>}
           </div>
-          <div style={{ color: T.muted, marginTop: 4, fontSize: 10.5 }}>day {fmtPx(dayLo)} – {fmtPx(dayHi)}</div>
-          {hist && <div style={{ color: T.muted, fontSize: 10.5 }} title="52-week range on adjusted NSE closes (bhavcopy, end of day)">52w {fmtPx(hist.low_52w)} – {fmtPx(hist.high_52w)}
+          <div style={{ color: T.muted, marginTop: 4, fontSize: 'var(--t-fs-data)' }}>day {fmtPx(dayLo)} – {fmtPx(dayHi)}</div>
+          {hist && <div style={{ color: T.muted, fontSize: 'var(--t-fs-data)' }} title="52-week range on adjusted NSE closes (bhavcopy, end of day)">52w {fmtPx(hist.low_52w)} – {fmtPx(hist.high_52w)}
             {price != null && hist.high_52w != null && price > hist.high_52w ? <span style={{ color: T.green }}> · above it today</span>
               : price != null && hist.low_52w != null && price < hist.low_52w ? <span style={{ color: T.red }}> · below it today</span>
               : pos52 != null && <span style={{ color: pos52 > 0.9 ? T.green : pos52 < 0.1 ? T.red : T.dim }}> · {(pos52 * 100).toFixed(0)}% of range</span>}
             <span style={{ color: T.dim }}> · EOD {shortDay(hist.last_date)}</span></div>}
           {stored?.fin && (stored.fin.pe != null || stored.fin.revenue_yoy != null) && (() => {
             const f = stored.fin!, qn = fiscalQuarter(f.period_end)
-            return <div style={{ color: T.muted, fontSize: 10.5, marginTop: 3, borderTop: `1px solid ${T.border}`, paddingTop: 3 }}>
+            return <div style={{ color: T.muted, fontSize: 'var(--t-fs-data)', marginTop: 3, borderTop: `1px solid ${T.border}`, paddingTop: 3 }}>
               {f.pe != null && <>P/E <span style={{ color: T.amber }}>{f.pe.toFixed(1)}×</span> · </>}
               {qn} rev <span style={{ color: tone(f.revenue_yoy) }}>{fmtPct(f.revenue_yoy, 0)}</span> · profit{' '}
               {f.pat_yoy_turn ? <span style={{ color: f.pat_yoy_turn === 'to profit' ? T.green : T.red }}>{f.pat_yoy_turn}</span>
                 : <span style={{ color: tone(f.pat_yoy) }}>{fmtPct(f.pat_yoy, 0)}</span>} y/y</div>
           })()}
           <div data-sd-hover-line={info?.state ?? (needFallback ? 'fallback' : 'none')} title={info?.hint ?? undefined}
-            style={{ color: q ? lineColor : T.amber, fontSize: 9.5, marginTop: 4 }}>{line ?? '—'}</div>
-          <div style={{ color: T.dim, fontSize: 9.5 }}>click for chart & profile</div>
+            style={{ color: q ? lineColor : T.amber, fontSize: 'var(--t-fs-micro)', marginTop: 4 }}>{line ?? '—'}</div>
+          <div style={{ color: T.dim, fontSize: 'var(--t-fs-micro)' }}>click for chart & profile</div>
         </>}
     </div>, document.body)
 }
@@ -720,7 +723,7 @@ export function TickerLink({ symbol, style, noFlag }: { symbol: string; style?: 
       onMouseEnter={e => { const el = e.currentTarget; timer.current = setTimeout(() => setAt(el.getBoundingClientRect()), 450) }}
       onMouseLeave={clear}
       style={{ color: T.amber, fontWeight: 600, cursor: 'pointer', ...style }}>{symbol}
-      {flag && <span title={`NSE surveillance: ${flag.join(', ')}`} style={{ color: flag.some(c => SERIOUS.test(c)) ? T.red : T.amber, fontSize: 9, marginLeft: 3, fontWeight: 400 }}>⚑</span>}
+      {flag && <span title={`NSE surveillance: ${flag.join(', ')}`} style={{ color: flag.some(c => SERIOUS.test(c)) ? T.red : T.amber, fontSize: 'var(--t-fs-nano)', marginLeft: 3, fontWeight: 400 }}>⚑</span>}
       {at && <HoverCard symbol={symbol} at={at} />}</span>
   )
 }
@@ -732,7 +735,7 @@ export function EventBadge({ kind, date, days, typical, detail }: { kind: string
   const label = new Date(`${date}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }).toUpperCase()
   return (
     <span title={`${kind} on ${date}${days === 0 ? ' (today)' : days === 1 ? ' (tomorrow)' : ` (in ${days} days)`}${typical != null ? ` · typically moves ±${typical.toFixed(1)}% on results` : ''}${detail ? `\n${detail}` : ''}`}
-      style={{ fontFamily: T.mono, fontSize: 9.5, color: c, border: `1px solid ${c}66`, padding: '1px 5px', whiteSpace: 'nowrap',
+      style={{ fontFamily: T.mono, fontSize: 'var(--t-fs-micro)', color: c, border: `1px solid ${c}66`, padding: '1px 5px', whiteSpace: 'nowrap',
                letterSpacing: .5 }}>
       {kind === 'OTHER' ? 'BOARD MTG' : kind} {label}{days <= 1 ? (days === 0 ? ' · TODAY' : ' · TMRW') : ` · ${days}d`}
     </span>
@@ -743,15 +746,15 @@ export function EventBadge({ kind, date, days, typical, detail }: { kind: string
 export function ResearchNote({ verdict, children, report }: { verdict: 'FAIL' | 'NO EDGE' | 'PROMISING' | 'PASS' | 'ADOPTED' | 'REFERENCE'; children: ReactNode; report: string }) {
   const c = verdict === 'FAIL' || verdict === 'NO EDGE' ? T.red : verdict === 'PROMISING' ? T.amber : verdict === 'REFERENCE' ? T.cyan : T.green
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', marginBottom: 12, fontSize: 11.5,
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', marginBottom: 12, fontSize: 'var(--t-fs-body)',
                   border: `1px solid ${c}44`, borderLeft: `3px solid ${c}`, background: '#080b10', color: T.text }}>
-      <span style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: c, border: `1px solid ${c}`, padding: '1px 5px', flex: 'none' }}>
+      <span style={{ fontFamily: T.mono, fontSize: 'var(--t-fs-micro)', fontWeight: 700, letterSpacing: 1, color: c, border: `1px solid ${c}`, padding: '1px 5px', flex: 'none' }}>
         RESEARCH · {verdict}
       </span>
       <span style={{ flex: 1 }}>{children}</span>
       <span role="button" tabIndex={0} onClick={() => goToPage('research', { research: report })}
         onKeyDown={e => { if (e.key === 'Enter') goToPage('research', { research: report }) }}
-        style={{ color: T.cyan, cursor: 'pointer', fontSize: 10.5, whiteSpace: 'nowrap' }}>READ THE STUDY ›</span>
+        style={{ color: T.cyan, cursor: 'pointer', fontSize: 'var(--t-fs-data)', whiteSpace: 'nowrap' }}>READ THE STUDY ›</span>
     </div>
   )
 }
@@ -763,7 +766,7 @@ export function AvoidFlag({ r }: { r: { reaction_date: string | null; vs_nifty_p
     'Research (pre-registered, PASS): after a ≤ −5% results reaction NSE stocks lagged the market by another 1.8–3.7% over ' +
     'the next 60 sessions. Consider waiting. A flag, not a trading rule.'
   return (
-    <span title={tip} style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 700, color: T.red, border: `1px solid ${T.red}88`,
+    <span title={tip} style={{ fontFamily: T.mono, fontSize: 'var(--t-fs-micro)', fontWeight: 700, color: T.red, border: `1px solid ${T.red}88`,
                                padding: '1px 5px', whiteSpace: 'nowrap', letterSpacing: .5 }}>⚠ BAD RESULTS</span>
   )
 }
@@ -793,9 +796,9 @@ export function SourceChip({ state, hint, info, style }: { state?: SourceState; 
       // live program: machine-readable age / as-of for the freshness audit (scripts/ui_audit.py), only when known
       data-sd-age-s={info?.ageS != null && Number.isFinite(info.ageS) ? info.ageS.toFixed(1) : undefined}
       data-sd-asof={info?.asOf ?? undefined} data-sd-feed-source={info?.source ?? undefined}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: T.mono, fontSize: 9.5,
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: T.mono, fontSize: 'var(--t-fs-micro)',
                letterSpacing: 1, color, border: `1px solid ${color}55`, padding: '1px 6px',
-               whiteSpace: 'nowrap', ...style }}>
+               whiteSpace: 'nowrap', flex: 'none', ...style }}>
       <Dot color={color} pulse={st === 'live' && !info?.quiet} size={5} />{text.label}
     </span>
   )
@@ -806,7 +809,7 @@ export function BadgeChip({ badge, note, style }: { badge: Badge | string | null
   const b = badgeSpec(badge)
   const color = b.tone === 'green' ? T.green : b.tone === 'cyan' ? T.cyan : b.tone === 'violet' ? T.violet : T.muted
   return (
-    <Chip color={color} title={note ? `${b.title} ${note}` : b.title} style={{ fontSize: 9, padding: '1px 6px', ...style }}
+    <Chip color={color} title={note ? `${b.title} ${note}` : b.title} style={{ fontSize: 'var(--t-fs-nano)', padding: '1px 6px', flex: 'none', ...style }}
       aria-label={`evidence badge ${b.label.toLowerCase()}`}>{b.label}</Chip>
   )
 }

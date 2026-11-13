@@ -205,7 +205,7 @@ export function DataExplorerTab() {
           const fundNull = data.columns.filter(c => FUNDAMENTAL_FEATURES.includes(c) && data.rows.every(r => r[c] == null))
           if (!Object.keys(dups).length && !fundNull.length) return null
           return (
-            <div className="rounded border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-[10.5px] text-slate-400 leading-relaxed" data-dexp-notes>
+            <div className="rounded border border-slate-700/60 bg-slate-900/60 px-3 py-2 text-[11px] text-slate-400 leading-relaxed" data-dexp-notes>
               {Object.keys(dups).length > 0 && <div>Same values on every row of this page: {Object.entries(dups).map(([c, of]) => `${c.toUpperCase()} = ${of.toUpperCase()}`).join(' · ')}.
                 A <span className="font-mono">return_lag_k</span> column is the k-session trailing return (not a lagged 1-day return), so the 1- and 5-session ones
                 repeat RET_1D and RET_5D by definition; the model&apos;s default inputs leave the duplicates out.</div>}
@@ -225,7 +225,7 @@ export function DataExplorerTab() {
                     className="cursor-pointer whitespace-nowrap px-3 py-2 text-left text-[9px] tracking-widest text-slate-400 hover:text-amber-400 transition-colors select-none"
                   >
                     {col.toUpperCase().replace(/_/g, '_')}
-                    {dupOf[col] && <span className="ml-1 text-[8.5px] text-slate-500" title={`identical to ${dupOf[col].toUpperCase()} on this page`}>= {dupOf[col].toUpperCase()}</span>}
+                    {dupOf[col] && <span className="ml-1 text-[9px] text-slate-500" title={`identical to ${dupOf[col].toUpperCase()} on this page`}>= {dupOf[col].toUpperCase()}</span>}
                     <SortIcon col={col} />
                   </th>
                 ))}

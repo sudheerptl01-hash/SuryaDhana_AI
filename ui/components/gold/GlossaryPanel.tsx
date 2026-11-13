@@ -36,12 +36,12 @@ function Entry({ e, onPick }: { e: GlossaryEntry; onPick: (t: string) => void })
   const long = longIfDifferent(e)
   return (
     <div data-glossary-term={e.term} style={{ padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
-      <div style={{ fontFamily: T.display, fontSize: 12.5, fontWeight: 600, color: T.amber, letterSpacing: .6 }}>
+      <div style={{ fontFamily: T.display, fontSize: 13, fontWeight: 600, color: T.amber, letterSpacing: .6 }}>
         {e.term}
-        {e.aliases && e.aliases.length > 0 && <span data-glossary-aliases style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 400, color: T.dim, letterSpacing: 0, marginLeft: 6 }}>also {e.aliases.join(' · ')}</span>}
+        {e.aliases && e.aliases.length > 0 && <span data-glossary-aliases style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 400, color: T.dim, letterSpacing: 0, marginLeft: 6 }}>also {e.aliases.join(' · ')}</span>}
       </div>
-      <div style={{ fontSize: 11.5, color: T.text, lineHeight: 1.5, marginTop: 2 }}>{e.short}</div>
-      {long && <div data-glossary-long style={{ fontSize: 10.5, color: T.muted, lineHeight: 1.5, marginTop: 4 }}>{long}</div>}
+      <div style={{ fontSize: 12, color: T.text, lineHeight: 1.5, marginTop: 2 }}>{e.short}</div>
+      {long && <div data-glossary-long style={{ fontSize: 11, color: T.muted, lineHeight: 1.5, marginTop: 4 }}>{long}</div>}
       {e.see_also && e.see_also.length > 0 && (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
           <span style={{ fontSize: 9, color: T.dim, alignSelf: 'center' }}>see also</span>

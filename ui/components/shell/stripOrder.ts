@@ -120,3 +120,13 @@ export function slotKeyHint(strip: readonly string[], index: number, desktop: bo
 export function isDefaultStrip(strip: readonly string[]): boolean {
   return strip.length === DEFAULT_STRIP.length && strip.every((id, i) => id === DEFAULT_STRIP[i])
 }
+
+/**
+ * The canonical stored value of a strip order (R2 workspaces): the JSON `useStripOrder.write` stores, or null when
+ * nothing should be stored (no list, or the default order — the key is then removed, exactly as the editor's RESET
+ * does). One rule for the strip editor and for a saved workspace restoring its strip.
+ */
+export function stripStorageValue(strip: readonly string[] | null | undefined): string | null {
+  if (!strip || !strip.length || isDefaultStrip(strip)) return null
+  return JSON.stringify(strip)
+}

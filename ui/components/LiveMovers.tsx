@@ -39,10 +39,10 @@ function Mini<R extends { symbol: string }>({ title, accent, rows, cols, note, s
 }) {
   return (
     <Panel title={title} accent={accent} pad={0} source={source}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11.5, fontVariantNumeric: 'tabular-nums' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
         <thead>
           <tr>{[{ label: '', align: undefined }, ...cols].map((c, i) => (
-            <th key={i} style={{ padding: '4px 8px', textAlign: c.align ?? 'left', color: T.dim, fontWeight: 400, fontSize: 9.5, letterSpacing: 0.5, borderBottom: `1px solid ${T.border}` }}>{i === 0 ? 'STOCK' : c.label.toUpperCase()}</th>))}</tr>
+            <th key={i} style={{ padding: '4px 8px', textAlign: c.align ?? 'left', color: T.dim, fontWeight: 400, fontSize: 10, letterSpacing: 0.5, borderBottom: `1px solid ${T.border}` }}>{i === 0 ? 'STOCK' : c.label.toUpperCase()}</th>))}</tr>
         </thead>
         <tbody>
           {rows.map(r => (
@@ -71,7 +71,7 @@ function SectorTile({ x, active, onClick }: { x: LiveIndex; active?: boolean; on
       <div style={{ fontSize: 10, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{x.index.replace(/^NIFTY /, '')}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 2 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: T.bright }}>{fmtPct(x.change_pct)}</span>
-        <span style={{ fontSize: 9.5, color: T.muted }}>{x.advances ?? '—'}/{x.declines ?? '—'}</span>
+        <span style={{ fontSize: 10, color: T.muted }}>{x.advances ?? '—'}/{x.declines ?? '—'}</span>
       </div>
       {/* L-15: the advancers-share bar is breadth context — neutral fill over the border track, not green on red */}
       <div style={{ height: 3, background: T.border, marginTop: 4 }}><div style={{ height: 3, width: `${up}%`, background: T.muted }} /></div>
@@ -182,7 +182,8 @@ export function LiveMovers() {
             <Stat label="NIFTY 500 breadth" value={breadth(idx.n500)} sub={<span><span style={{ color: tone(idx.n500?.change_pct) }}>{fmtPct(idx.n500?.change_pct)}</span>
               <span style={{ color: T.dim }}> · the index&apos;s members, NSE {data.timestamp?.slice(12, 17) ?? ''}{eod?.breadth?.universe ? ` · MKT counts ${Number(eod.breadth.universe).toLocaleString('en-IN')} liquid stocks` : ''}</span></span>} />
             <Stat label="Midcap 100 / Smallcap 100" value={<span><span style={{ color: tone(idx.mid?.change_pct) }}>{fmtPct(idx.mid?.change_pct, 1)}</span> / <span style={{ color: tone(idx.small?.change_pct) }}>{fmtPct(idx.small?.change_pct, 1)}</span></span>} />
-            <Stat label="52-week highs / lows" value={<span><span style={{ color: T.green }}>{data.highs.count}</span> / <span style={{ color: T.red }}>{data.lows.count}</span></span>} sub={`new ${when === 'today' ? 'today' : `in the ${when}`}, all NSE`} />
+            {/* L-15 (R2-TYPE): the highs/lows counts are context — neutral, never green/red, like the A/D figures */}
+            <Stat label="52-week highs / lows" value={<span style={{ color: T.text }}>{data.highs.count} / {data.lows.count}</span>} sub={`new ${when === 'today' ? 'today' : `in the ${when}`}, all NSE`} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 12, marginBottom: 12 }}>
@@ -193,7 +194,7 @@ export function LiveMovers() {
           <Panel title="Who moved the index" subtitle={`each stock's contribution ${when === 'today' ? 'today' : `in the ${when}`}, in index points`} accent={T.green}
             style={{ marginBottom: 12 }} source={srcContrib ?? feedSource} badge="arithmetic"><IndexContribution onSource={setSrcContrib} />
             {/* PLAN 1.2: MOV keeps the live today panel; every horizon (5d / 1m / YTD / since the last driver change) is on MEMB */}
-            <div style={{ marginTop: 6, fontSize: 10.5, color: T.muted, display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ marginTop: 6, fontSize: 11, color: T.muted, display: 'flex', justifyContent: 'flex-end' }}>
               <span role="button" tabIndex={0} data-testid="mov-history-on-memb" onClick={() => goToPage('memb')}
                 onKeyDown={e => { if (e.key === 'Enter') goToPage('memb') }}
                 style={{ color: T.cyan, cursor: 'pointer', letterSpacing: 0.5 }}>history on MEMB ›</span>
@@ -210,7 +211,7 @@ export function LiveMovers() {
             </div>
             {drill && (
               <div style={{ marginTop: 10, borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: T.muted, marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.muted, marginBottom: 6 }}>
                   <span><b style={{ color: T.amber }}>{drill}</b> · members{liveMembers.available && liveMembers.source ? <> <SourceChip info={liveMembers.source} /></> : ', NSE heatmap ≈ 1 min'}{members?.capped ? ' · NSE lists the first 50' : ''} · best to worst</span>
                   <span role="button" style={{ color: T.dim, cursor: 'pointer' }} onClick={() => setDrill(null)}>✕ close</span>
                 </div>
@@ -243,11 +244,11 @@ export function LiveMovers() {
             <Mini source={feedSource} title={`New 52-week highs · ${data.highs.count}`} accent={T.green} rows={hl.highs}
               note={`all NSE · newest date first, then by ₹ traded${data.highs.rows.length < data.highs.count ? ` · NSE's list carries ${data.highs.rows.length} of ${data.highs.count}` : ''}${hl.noHistory.length ? ` · no 52-week history yet (left out): ${hl.noHistory.join(', ')}` : ''}`}
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' },
-                     { label: 'Old high', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 9.5 }}>{shortDateWithYear(r.prev_date)}</span></span>, align: 'right' }]} />
+                     { label: 'Old high', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 10 }}>{shortDateWithYear(r.prev_date)}</span></span>, align: 'right' }]} />
             <Mini source={feedSource} title={`New 52-week lows · ${data.lows.count}`} accent={T.red} rows={hl.lows}
               note={`all NSE · newest date first, then by ₹ traded${data.lows.rows.length < data.lows.count ? ` · NSE's list carries ${data.lows.rows.length} of ${data.lows.count}` : ''}`}
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' },
-                     { label: 'Old low', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 9.5 }}>{shortDateWithYear(r.prev_date)}</span></span>, align: 'right' }]} />
+                     { label: 'Old low', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 10 }}>{shortDateWithYear(r.prev_date)}</span></span>, align: 'right' }]} />
             <Mini source={feedSource} title="F&O open-interest spurts" accent={T.violet} rows={data.oi_spurts} note="futures + options OI vs yesterday · context: the held-overnight study found no edge in OI build-ups (RSCH)"
               cols={[{ label: 'OI chg', render: r => <span style={{ color: tone(r.oi_change_pct), fontWeight: 600 }}>{fmtPct(r.oi_change_pct, 1)}</span>, align: 'right' },
                      { label: 'Contracts', render: r => <span style={{ color: T.muted }}>{fmtSigned(r.oi_change == null ? null : Math.round(r.oi_change), 0)}</span>, align: 'right' },

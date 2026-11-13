@@ -343,7 +343,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
         <Panel source={sourceOf(syncedAt ? syncedAt.toISOString() : null, { source: 'data-service' })} title="Warehouse Coverage" hint="enrichment · freshness" accent={JADE}>
           <div className="space-y-4 px-5 pb-5 pt-4">
             <CoverageBar label="Fundamentals snapshot (one undated record each)" value={stats?.enrichment?.with_fundamentals ?? 0} total={stats?.total_stocks ?? 0} color={JADE} />
-            <p className="-mt-2 text-[9.5px] leading-snug" style={{ color: MUTED }}>
+            <p className="-mt-2 text-[10px] leading-snug" style={{ color: MUTED }}>
               A record exists per ticker, but it is a single undated snapshot, so the 15 fundamental columns of ml_features are NULL on every
               dated row (point-in-time). DEXP shows them empty for that reason.
             </p>
@@ -389,7 +389,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
               These are the production v2 5-day labels (close 5 sessions ahead &gt; +0.15 %); the label study marks them FAIL. The counts
               describe the stored table, not a usable target.
             </CatalogNote>
-            <div className="-mt-2 flex items-center gap-2 text-[9.5px]" style={{ color: MUTED }}>
+            <div className="-mt-2 flex items-center gap-2 text-[10px]" style={{ color: MUTED }}>
               <BadgeChip badge="arithmetic" note="Counts and moments of the stored labels." /> labels end 5 sessions before the features: a forward label needs 5 future sessions
             </div>
             {/* feature/label counts */}

@@ -131,7 +131,7 @@ export function MacroView(props: GoldSubViewProps) {
     { key: 'in_session', label: 'MCX', title: tip('cal_in_session'), render: r => {
       // untimed rows are 'ALL DAY' / a closure, never 'AFTER CLOSE · gap risk' (wave 1e minor)
       const tag = eventSessionTag({ time_ist: r.time_ist ?? null, kind: r.kind ?? '', name: r.title ?? r.name ?? '', in_session: r.in_session ?? null, after_close: r.after_close ?? null })
-      return tag ? <Chip color={tag.text === 'IN SESSION' ? T.cyan : tag.text.startsWith('AFTER CLOSE') ? T.amber : T.muted} style={{ fontSize: 8.5 }}>{tag.text}</Chip> : '—'
+      return tag ? <Chip color={tag.text === 'IN SESSION' ? T.cyan : tag.text.startsWith('AFTER CLOSE') ? T.amber : T.muted} style={{ fontSize: 9 }}>{tag.text}</Chip> : '—'
     } },
   ]
 
@@ -221,7 +221,7 @@ export function MacroView(props: GoldSubViewProps) {
                 week to date — two meanings, one of them hover-only */}
             {/* …and the window column is dropped altogether when it would repeat the 1D one — in the 'D' window the
                 page's window IS the previous session, so both columns read −0.573 for USD (§f.6, round-2 checker) */}
-            <thead><tr style={{ color: T.muted, fontSize: 9.5, textAlign: 'right' }}>
+            <thead><tr style={{ color: T.muted, fontSize: 10, textAlign: 'right' }}>
               <th style={{ textAlign: 'left', padding: '5px 10px' }}>CCY</th><th>PRICE</th><th title={tip('d1')}>1D</th>
               {showCcyWindow && <th title={ccyWin?.label ? `${windowTag(props.window)} = ${ccyWin.label}` : undefined}>{windowTag(props.window)}</th>}
               <th title={tip('d1w')}>7 D</th><th title={tip('d1m')}>30 D</th><th style={{ padding: '5px 10px' }}>YTD</th>
@@ -230,7 +230,7 @@ export function MacroView(props: GoldSubViewProps) {
               {ccyRows.map(c => (
                 <tr key={c.ccy} style={{ borderTop: `1px solid ${T.border}`, textAlign: 'right' }}>
                   <td style={{ textAlign: 'left', padding: '5px 10px', color: T.text }}>{c.ccy}{c.ccy === 'INR' && (
-                    <span style={{ fontSize: 9.5 }}>
+                    <span style={{ fontSize: 10 }}>
                       {' '}<span style={{ color: T.dim }}>landed ₹/10 g ·</span>
                       {' '}<span role="button" tabIndex={0} data-go="mcxgold" onClick={() => goToPage('mcxgold')} onKeyDown={e => { if (e.key === 'Enter') goToPage('mcxgold') }} style={{ color: T.cyan, cursor: 'pointer' }} title="MCX gold desk: session, quotes, contract selector, paper ticket">MCXG ›</span>
                       {' '}<span role="button" tabIndex={0} onClick={() => props.onNavigate('contracts')} onKeyDown={e => { if (e.key === 'Enter') props.onNavigate('contracts') }} style={{ color: T.cyan, cursor: 'pointer' }} title="GOLD › CONTRACTS: the MCX curve and the duty-paid leg">CONTRACTS ›</span>
@@ -257,14 +257,14 @@ export function MacroView(props: GoldSubViewProps) {
           copyP="the full distribution comes from SOFR options (Atlanta Fed MPT, G16); ZQ = 100 − price (G17); the FOMC statement lands at 23:30 IST (00:30 after 1 Nov), after the MCX close.">
           {m?.fed ? (
             <>
-              <div style={{ fontSize: 10.5, color: T.text, marginBottom: 6 }}>
+              <div style={{ fontSize: 11, color: T.text, marginBottom: 6 }}>
                 <span title={tip('effr')}>EFFR {pct(m.fed.effr, 2)}{m.fed.effr_date ? ` (${istLabel(m.fed.effr_date)})` : ''}</span> · <span title={tip('fed_target')}>target {m.fed.target ?? '—'}</span> · <span title={tip('next_fomc_ist')}>next FOMC {m.fed.next_fomc_ist ?? '—'}</span>
-                {m.fed.after_mcx_close != null && <> · </>}{m.fed.after_mcx_close != null && <Chip color={m.fed.after_mcx_close ? T.amber : T.cyan} style={{ fontSize: 8.5, marginLeft: 6 }} title={tip('after_mcx_close')}>{m.fed.after_mcx_close ? 'AFTER MCX CLOSE · gap risk at 09:00' : 'IN SESSION'}</Chip>}
+                {m.fed.after_mcx_close != null && <> · </>}{m.fed.after_mcx_close != null && <Chip color={m.fed.after_mcx_close ? T.amber : T.cyan} style={{ fontSize: 9, marginLeft: 6 }} title={tip('after_mcx_close')}>{m.fed.after_mcx_close ? 'AFTER MCX CLOSE · gap risk at 09:00' : 'IN SESSION'}</Chip>}
               </div>
-              <div style={{ fontSize: 9.5, color: T.dim, marginBottom: 3 }} data-gold-fed-rows title={tip('fed_p_hike')}>rows: the Atlanta Fed tracker&apos;s horizons (IMM third-Wednesday windows), not FOMC decision dates — the next decision is the one named above</div>
+              <div style={{ fontSize: 10, color: T.dim, marginBottom: 3 }} data-gold-fed-rows title={tip('fed_p_hike')}>rows: the Atlanta Fed tracker&apos;s horizons (IMM third-Wednesday windows), not FOMC decision dates — the next decision is the one named above</div>
               <div style={{ display: 'grid', gap: 4 }}>
                 {m.fed.meetings.map(mt => (
-                  <div key={mt.meeting} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 60px 60px 110px', gap: 8, alignItems: 'center', fontSize: 10.5, fontFamily: T.mono }}>
+                  <div key={mt.meeting} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 60px 60px 110px', gap: 8, alignItems: 'center', fontSize: 11, fontFamily: T.mono }}>
                     <span style={{ color: T.text }} title="a tracker horizon (IMM window), not a meeting date">to {istLabel(mt.meeting)}</span>
                     <Meter value={(mt.p_cut ?? 0) / 100} color={T.violet} height={6} />
                     <span title={tip('fed_p_cut')} style={{ color: T.muted }}>cut {pct(mt.p_cut, 0)}</span>
@@ -370,12 +370,12 @@ function ScatterRY({ data, error }: { data: GoldSeries | null; error: string | n
       <div style={{ fontSize: 10, color: T.muted }}>gold ($/oz) vs 10-y real yield (%), monthly, last {pts.length} months — the level link broke in 2022</div>
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="gold vs real yield scatter">
         {pts.map((p, i) => <circle key={p.d} cx={X(p.x)} cy={Y(p.y)} r={2.5} fill={i >= pts.length - 12 ? T.amber : T.violet} opacity={0.8}><title>{`${p.d}: ${p.x.toFixed(2)} % → $${Math.round(p.y)}`}</title></circle>)}
-        <text x={L} y={H - 4} fontSize={8.5} fontFamily={T.mono} fill={T.dim}>{lo.toFixed(1)} %</text>
-        <text x={W - 8} y={H - 4} textAnchor="end" fontSize={8.5} fontFamily={T.mono} fill={T.dim}>{hi.toFixed(1)} %</text>
-        <text x={2} y={12} fontSize={8.5} fontFamily={T.mono} fill={T.dim}>${Math.round(yhi)}</text>
-        <text x={2} y={H - B} fontSize={8.5} fontFamily={T.mono} fill={T.dim}>${Math.round(ylo)}</text>
+        <text x={L} y={H - 4} fontSize={9} fontFamily={T.mono} fill={T.dim}>{lo.toFixed(1)} %</text>
+        <text x={W - 8} y={H - 4} textAnchor="end" fontSize={9} fontFamily={T.mono} fill={T.dim}>{hi.toFixed(1)} %</text>
+        <text x={2} y={12} fontSize={9} fontFamily={T.mono} fill={T.dim}>${Math.round(yhi)}</text>
+        <text x={2} y={H - B} fontSize={9} fontFamily={T.mono} fill={T.dim}>${Math.round(ylo)}</text>
       </svg>
-      <div style={{ fontSize: 9.5, color: T.dim }}>amber = last 12 months</div>
+      <div style={{ fontSize: 10, color: T.dim }}>amber = last 12 months</div>
     </div>
   )
 }
