@@ -390,3 +390,69 @@ def test_the_retention_floor_is_ist_and_compared_as_an_instant(tmp_path, monkeyp
     ist_floor = "2026-11-14T13:20:00+05:30"
     assert _later_iso(utc_later, ist_floor) == utc_later, "string comparison picked the wrong moment"
     assert _later_iso(None, ist_floor) == ist_floor and _later_iso(utc_later, None) == utc_later
+
+
+def test_one_job_that_writes_eight_datasets_lights_all_eight() -> None:
+    """R14-A: `/jobs/ingest-nse-files` records ONE kind for a job that produces eight datasets.
+
+    Transcribing pairs by hand left every one of them dark, so the 20:30 evening pass could fail and
+    index_ohlc_daily, nse_fo_volt, nse_contract_delta, nse_combined_oi, nse_participant_vol, nse_fii_stats
+    and nse_mwpl_clients would all still read clean on the page whose job is data trust. The mapping is
+    derived from the job's own TERMINAL_DATASETS table, so a dataset added to that job is covered the day it
+    is added — hand-transcription is the mistake this column has now repeated at three different levels.
+    """
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from data_health.reads import _failures_for, _keys_for, _nse_files_datasets
+
+    produced = _nse_files_datasets()
+    assert len(produced) >= 8, f"the nse_files job table shrank unexpectedly: {produced}"
+    assert "index_ohlc_daily" in produced and "nse_fii_stats" in produced
+
+    failures = {"nse_files": 2}
+    counted = {"nse_files"}
+    for dataset in produced:
+        keys = _keys_for({"id": dataset, "ingest_job": "nse_positions_catchup"})
+        assert "nse_files" in keys, f"{dataset} cannot see its own job's crash: {keys}"
+        assert _failures_for({"id": dataset, "ingest_job": "nse_positions_catchup"}, failures, counted) == 2, dataset
+
+    # a dataset NOT produced by that job must not inherit its crash
+    assert _failures_for({"id": "unrelated", "ingest_job": "whatever"}, failures, counted) is None
+
+
+def test_every_mapped_key_is_a_real_catalog_id_or_job() -> None:
+    """R14-B: `_DATASET_TO_KIND` carried `nse_indices`, which is not a catalog id at all — the dataset the
+    `indices` kind writes is `market_index_daily`, so that row stayed dark while the map looked complete.
+    A map whose keys nothing matches is worse than a missing entry: it reads as coverage."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from data_health import catalog
+    from data_health.reads import _DATASET_TO_KIND, _JOB_ID_TO_KIND
+
+    rows = catalog.build_rows() if hasattr(catalog, "build_rows") else catalog.rows()
+    ids = {str(r["id"]) for r in rows}
+    jobs = {str(r.get("ingest_job") or "") for r in rows}
+
+    unknown_ds = sorted(k for k in _DATASET_TO_KIND if k not in ids)
+    assert not unknown_ds, f"_DATASET_TO_KIND keys that are not catalog ids: {unknown_ds}"
+    unknown_job = sorted(k for k in _JOB_ID_TO_KIND if k not in jobs)
+    assert not unknown_job, f"_JOB_ID_TO_KIND keys that are not any row's ingest_job: {unknown_job}"
+
+
+def test_the_floor_comparison_survives_a_naive_mark_file(tmp_path) -> None:
+    """R14-C: comparing a naive datetime with an aware one raises TypeError, not ValueError — and that is
+    exactly the upgrade path this function exists for (a mark written by the earlier, naive code beside
+    offset-aware job rows). `health()` calls job_failures() unguarded, so the uncaught version took the whole
+    69-row payload down."""
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from data_health.reads import _later_iso
+
+    naive = "2026-11-14T07:17:02"                 # what the previous code wrote
+    aware = "2026-11-13T17:47:00+00:00"           # what the job rows carry
+    assert _later_iso(aware, naive) == naive, "a naive mark must not raise"
+    assert _later_iso(naive, aware) == aware
+    assert _later_iso("nonsense", aware) == aware

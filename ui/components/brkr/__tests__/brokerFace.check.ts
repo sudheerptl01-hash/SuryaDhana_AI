@@ -113,7 +113,18 @@ check('F8-04 the title does not pin all-method errors on logins',
 // all returning grey "BRKR IDLE — the token expires at midnight IST by design": true at 2 a.m., misleading at
 // 08:30, and the 08:00 login job's failure is only repairable before the 09:15 open. These pin the window.
 const DEAD = { breeze_session: false }
-const COUNTS = { errors_today: 133, by_method: { generate_session: 135 } }
+// R14-D: this fixture carried NO mcx_window, so every case below ran the unknown-payload fallback instead of
+// what the server actually sends — and the two cases asserting "09:00 → BRKR PRE" and "09:14 still warns"
+// passed while the shipped chip returned BRKR DOWN at both. A gate written for exactly that window was
+// blinded by a field added later. The default now mirrors a real Monday (MCX gold opens 09:00, NSE 09:15),
+// and the cases that need a different calendar override it explicitly.
+const COUNTS = { errors_today: 133, by_method: { generate_session: 135 },
+                 mcx_window: { open_hm: 900, close_hm: 2355 } }
+// Each fixture carries the calendar of the day it names, because that is what the server sends: a weekend
+// has NO MCX window, an NSE holiday has MCX's own evening one (24 Nov 2026 = 17:00–23:55), and a normal
+// Monday has 09:00–23:55. Sharing one default across all three is what let R14-D through.
+const WEEKEND = { ...COUNTS, trading_day: false, mcx_window: null }
+const HOL = { ...COUNTS, trading_day: false, mcx_window: { open_hm: 1700, close_hm: 2355 } }
 const monAt = (hh: number, mm: number) => brokerFace(DEAD, COUNTS, at(2026, 11, 16, hh, mm))   // Mon 16 Nov
 
 check('F9-01 07:50 Monday is still quiet (the 08:00 login has not run yet)', monAt(7, 50)?.tone === 'idle', monAt(7, 50))
@@ -125,7 +136,7 @@ check('F9-01 the PRE title names the repair the owner can still do',
   (monAt(8, 30)?.title ?? '').includes('/login') && (monAt(8, 30)?.title ?? '').includes('OTP'), monAt(8, 30)?.title)
 // the nightly-silence contract still holds: a weekend 08:30 must stay grey, not warn
 check('F9-01 Saturday 08:30 stays grey (trading days only)',
-  brokerFace(DEAD, COUNTS, at(2026, 11, 14, 8, 30))?.tone === 'idle', brokerFace(DEAD, COUNTS, at(2026, 11, 14, 8, 30)))
+  brokerFace(DEAD, WEEKEND, at(2026, 11, 14, 8, 30))?.tone === 'idle', brokerFace(DEAD, WEEKEND, at(2026, 11, 14, 8, 30)))
 check('F9-01 Sunday 08:30 stays grey', brokerFace(DEAD, COUNTS, at(2026, 11, 15, 8, 30))?.tone === 'idle')
 // and a session that came up normally says nothing at all through the same window
 check('F9-01 a healthy session before the open renders nothing',
@@ -157,13 +168,12 @@ check('F10-05 a real trading day still raises it',
 check('F10-05 an unknown calendar falls back to the weekday test (no worse than before)',
   brokerFace(DEAD, COUNTS, at(2026, 11, 16, 8, 30))?.label === 'BRKR PRE')
 check('F10-05 …and stays quiet on a weekend even when the calendar is unknown',
-  brokerFace(DEAD, COUNTS, at(2026, 11, 14, 8, 30))?.tone === 'idle')
+  brokerFace(DEAD, WEEKEND, at(2026, 11, 14, 8, 30))?.tone === 'idle')
 
 // ── F11-03: the calendar must gate the RED rung too, not only the amber one ────────────────────────────
 // F10-05 was fixed on the pre-open branch and the DOWN branch kept running on sessionExpected's weekday test,
 // so on Guru Nanak Jayanti (Tue 24 Nov 2026 — in the holiday master this payload carries) the chip would have
 // shown red BRKR DOWN from 09:15 to 23:30 over a shut market. A whole day of false alarm.
-const HOL = { ...COUNTS, trading_day: false }
 check('F11-03 midday on a HOLIDAY is not red', brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0))?.tone !== 'bad',
   brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0)))
 check('F11-03 …it is the grey idle rung', brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0))?.tone === 'idle')
@@ -177,7 +187,7 @@ check('F12 22:00 on an NSE holiday is still RED — MCX trades that evening (17:
 check('F12 …while 12:00 that day, inside the NSE window only, stays grey',
   brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0))?.tone === 'idle')
 check('F12 a WEEKEND evening is still grey (MCX is shut Sat/Sun)',
-  brokerFace(DEAD, { ...COUNTS, trading_day: false }, at(2026, 11, 14, 22, 0))?.tone === 'idle')
+  brokerFace(DEAD, WEEKEND, at(2026, 11, 14, 22, 0))?.tone === 'idle')
 check('F11-03 the same clock on a TRADING day is still red',
   brokerFace(DEAD, { ...COUNTS, trading_day: true }, at(2026, 11, 24, 12, 0))?.tone === 'bad')
 check('F11-03 an unknown calendar still goes red midday on a weekday (no worse than before)',
@@ -186,7 +196,8 @@ check('F11-03 an unknown calendar still goes red midday on a weekday (no worse t
 // ── F11-04: the REFUSED rung has to fire in the case it was written for ────────────────────────────────
 // `generate_session` is itself metered, so an exhausted budget is WHY there is no session — and the first
 // version put REFUSED below every !connected rung, where it could never be reached in that exact case.
-const REFUSED = { errors_today: 4, refused_today: 9, trading_day: true }
+const REFUSED = { errors_today: 4, refused_today: 9, trading_day: true,
+                 mcx_window: { open_hm: 900, close_hm: 2355 } }
 check('F11-04 a refused login shows the CAUSE, not a bare "no session"',
   brokerFace(DEAD, REFUSED, at(2026, 11, 16, 12, 0))?.label === 'BRKR 9 REFUSED',
   brokerFace(DEAD, REFUSED, at(2026, 11, 16, 12, 0)))
@@ -195,7 +206,7 @@ check('F11-04 it is red during market hours (the session really is gone)',
 check('F11-04 it also fires in the pre-open hour',
   brokerFace(DEAD, REFUSED, at(2026, 11, 16, 8, 30))?.label === 'BRKR 9 REFUSED')
 check('F11-04 but NOT on a holiday, where no session is expected at all',
-  brokerFace(DEAD, { ...REFUSED, trading_day: false }, at(2026, 11, 24, 12, 0))?.tone === 'idle')
+  brokerFace(DEAD, { ...REFUSED, trading_day: false, mcx_window: { open_hm: 1700, close_hm: 2355 } }, at(2026, 11, 24, 12, 0))?.tone === 'idle')
 check('F11-04 with a session up, refusals stay the amber rung',
   brokerFace({ breeze_session: true }, REFUSED, at(2026, 11, 16, 12, 0))?.tone === 'warn')
 // F11-05: the tooltip must name a page that exists — SYS has only system|data sub-views; BRKR is top-level
@@ -229,6 +240,25 @@ check('F13-06 …and grey BEFORE that evening session opens (16:00 < 17:00)',
   brokerFace(DEAD, HOL_WIN, at(2026, 11, 24, 16, 0)))
 check('F13-06 an unknown window falls back to the old weekday heuristic',
   brokerFace(DEAD, { ...COUNTS, trading_day: true }, at(2026, 11, 16, 22, 0))?.tone === 'bad')
+
+// ── R14-D: MCX opens BEFORE NSE, so `expected` turns true at 09:00 and used to preempt the pre-open rung ──
+// From 09:00 to 09:14 the chip showed BRKR DOWN — a damage report — instead of BRKR PRE, which is the only
+// sentence in the terminal that names a repair the owner can still make before the open. Fifteen minutes,
+// on the morning of a login that had failed 188 times the day before.
+const MON = { ...COUNTS, trading_day: true }
+for (const [h, m] of [[8, 15], [8, 30], [9, 0], [9, 5], [9, 14]] as const) {
+  const f = brokerFace(DEAD, MON, at(2026, 11, 16, h, m))
+  check(`R14-D ${h}:${String(m).padStart(2, '0')} Monday is BRKR PRE even though MCX is open`,
+    f?.label === 'BRKR PRE', f)
+}
+check('R14-D 09:15 escalates to DOWN once the repair window has closed',
+  brokerFace(DEAD, MON, at(2026, 11, 16, 9, 15))?.label === 'BRKR DOWN')
+check('R14-D the PRE title still names the repair at 09:00',
+  (brokerFace(DEAD, MON, at(2026, 11, 16, 9, 0))?.title ?? '').includes('/login'))
+check('R14-D …and says MCX is already trading, because it is',
+  (brokerFace(DEAD, MON, at(2026, 11, 16, 9, 0))?.title ?? '').includes('MCX is already trading'))
+check('R14-D before MCX opens the same rung does NOT claim it is trading',
+  !(brokerFace(DEAD, MON, at(2026, 11, 16, 8, 30))?.title ?? '').includes('MCX is already trading'))
 
 console.log(`brokerChip.check: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)

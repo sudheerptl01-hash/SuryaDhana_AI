@@ -205,9 +205,26 @@ _DATASET_TO_KIND = {
     "nse_bhavcopy": "bhavcopy",
     "ohlcv": "refresh",
     "ml_features": "build",
-    "nse_indices": "indices",
+    "market_index_daily": "indices",
     "iv_expiry_replay": "fo_iv:expiry_replay",
 }
+
+
+def _nse_files_datasets() -> tuple[str, ...]:
+    """Every dataset produced by the single `nse_files` job, from the job's OWN table.
+
+    R14-A: a crash of /jobs/ingest-nse-files records one kind — `nse_files` — for a job that writes eight
+    datasets, so transcribing pairs by hand left all of them dark: the 20:30 evening pass could fail and
+    index_ohlc_daily, nse_fo_volt, nse_contract_delta, nse_combined_oi, nse_participant_vol, nse_fii_stats
+    and nse_mwpl_clients would every one still read as clean. Derived from TERMINAL_DATASETS rather than
+    copied, so a dataset added to that job is covered the day it is added — hand-transcription is the defect
+    this whole column has repeated at every level.
+    """
+    try:
+        from nse_positions import TERMINAL_DATASET_NAMES
+        return tuple(TERMINAL_DATASET_NAMES)
+    except Exception:                                          # pragma: no cover — import shape changed
+        return ()
 
 
 def _keys_for(row: dict[str, Any]) -> list[str]:
@@ -215,6 +232,8 @@ def _keys_for(row: dict[str, Any]) -> list[str]:
     job = str(row.get("ingest_job") or "")
     ident = str(row.get("id") or "")
     out = [k for k in (job, _JOB_ID_TO_KIND.get(job, ""), ident, _DATASET_TO_KIND.get(ident, "")) if k]
+    if ident in _nse_files_datasets():            # one job, eight datasets — see _nse_files_datasets
+        out.append("nse_files")
     return list(dict.fromkeys(out))
 
 
@@ -310,7 +329,12 @@ def _later_iso(a: str | None, b: str | None) -> str | None:
         return a
     try:
         return a if datetime.fromisoformat(a) >= datetime.fromisoformat(b) else b
-    except ValueError:                                         # pragma: no cover — unparseable mark
+    except (ValueError, TypeError):
+        # R14-C: TypeError, not just ValueError — comparing a NAIVE datetime with an aware one raises
+        # TypeError, and that is precisely the case this function exists to handle (a mark file written by
+        # the previous, naive code beside offset-aware job rows). `health()` calls job_failures() unguarded,
+        # so the uncaught version would have taken the whole 69-row DATA payload down on the one upgrade
+        # path it was written for.
         return b
 
 

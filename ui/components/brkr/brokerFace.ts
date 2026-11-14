@@ -122,6 +122,10 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
   // — the budget refusing the login is exactly what makes `connected` false. The original order put REFUSED
   // below all three !connected rungs, so in the one case it was written for (an exhausted budget) it could
   // never fire and the owner saw a bare "no session" with no cause. Cause beats symptom.
+  //
+  // It also outranks the pre-open rung below, and that ordering is the point: telling the owner "there is
+  // still time, send /login" when the budget is the thing refusing would send them to do something that gets
+  // refused too. The rungs read: cause, then the repair that can still work, then the damage.
   if (!connected && refused > 0 && (expected || (tradingDay && ist.hm >= 815 && ist.hm < 915))) {
     return {
       label: `BRKR ${refused} REFUSED`,
@@ -131,6 +135,23 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
         + 'and margin are on stored or delayed data. The BRKR page shows which caller spent the quota.',
     }
   }
+  // F10-05: `day >= 1 && day <= 5` is WEEKDAYS, and the first version of this branch called that comment
+  // "trading days only". On an exchange holiday that falls midweek — Guru Nanak Jayanti, Tue 24 Nov 2026, a
+  // date this repo already records — it would have cried about a login that was never scheduled. The server
+  // owns the holiday master and reports `trading_day` on the payload this chip already reads; `tradingDay` is
+  // computed once at the top of this function (F11-03) so the red rung honours the calendar too.
+  if (!connected && tradingDay && ist.hm >= 815 && ist.hm < 915) {
+    return {
+      label: 'BRKR PRE',
+      tone: 'warn',
+      title: `No broker session yet and the market opens at 09:15${mcxOpen ? ' (MCX is already trading)' : ''}`
+        + ' — the 08:00 login has not produced one'
+        + `${errors ? ` (${errors} failed broker call${errors === 1 ? '' : 's'} today)` : ''}. There is still `
+        + 'time: /login on Telegram and reply with the SMS OTP. Live quotes, the chain and margin stay on '
+        + 'stored or delayed data until a session exists, each labelled on its own panel.',
+    }
+  }
+
   if (!connected && expected) {
     return {
       label: 'BRKR DOWN',
@@ -152,21 +173,6 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
   // open — the login job may legitimately still be running at 08:05 — it is merely OVERDUE, which is a
   // different thing and earns amber rather than red. Trading days only, so the nightly-silence contract and
   // F8-05's 02:00-Saturday case both still hold.
-  // F10-05: `day >= 1 && day <= 5` is WEEKDAYS, and the first version of this branch called that comment
-  // "trading days only". On an exchange holiday that falls midweek — Guru Nanak Jayanti, Tue 24 Nov 2026, a
-  // date this repo already records — it would have cried about a login that was never scheduled. The server
-  // owns the holiday master and reports `trading_day` on the payload this chip already reads; `tradingDay` is
-  // computed once at the top of this function (F11-03) so the red rung honours the calendar too.
-  if (!connected && tradingDay && ist.hm >= 815 && ist.hm < 915) {
-    return {
-      label: 'BRKR PRE',
-      tone: 'warn',
-      title: 'No broker session yet and the market opens at 09:15 — the 08:00 login has not produced one'
-        + `${errors ? ` (${errors} failed broker call${errors === 1 ? '' : 's'} today)` : ''}. There is still `
-        + 'time: /login on Telegram and reply with the SMS OTP. Live quotes, the chain and margin stay on '
-        + 'stored or delayed data until a session exists, each labelled on its own panel.',
-    }
-  }
   // F8-04: the error branch used to be tested BEFORE this one, so a closed Saturday carrying a dead token
   // showed an amber "BRKR 127 ERR" — exactly the nightly noise the contract above promises to avoid. Outside
   // market hours a failing login is expected and tells the owner nothing new, so IDLE wins the tie.
