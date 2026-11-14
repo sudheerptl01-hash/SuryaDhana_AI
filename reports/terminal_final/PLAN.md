@@ -68,3 +68,26 @@ only the DEPLOYED terminal with evidence (screenshots under ~/.suryadhana_pm_scr
 ## §5 Rubric (wave F)
 The 8 RATING.md areas, same scale, same owner lens. Target ≥ 9.0 each. A critic may not award 9 without naming the
 evidence; a critic must name the single cheapest remaining fix if < 9. Iterate until done — time is not a constraint.
+
+## §6 Round log (what each rating round actually found)
+Kept because the pattern is the most useful thing this programme learned: **after the first two rounds, almost every
+new defect was in a PM fix or in the gate written to protect it.** A round that only re-measures the product misses
+them; the brief has to point the critic at the recent diff.
+
+| Round | Overall | What it found |
+|---|---|---|
+| F1–F4 | 7.19 → 8.1 | product gaps: charts, cockpit, data trust, design tokens |
+| F5 | 8.2 | `CommodityDesk.tsx` (387 lines) imported by nothing — the PM had called the desks live |
+| F6 | 8.34 | two tools that lied about their own subject; **four Breeze SDK call sites bypassed the ledger** (`get_quotes` had recorded ZERO calls) |
+| F7 | 8.39 | seven defects in code written that morning, incl. a gate that could pass while blind and a TTL fix applied to one file but not its twin |
+| F8 | 8.4 | five more: a freeze guard **defeated by the function it guards**; a gate asserting strings that existed only in a comment; the ledger gate blind wherever a comment names the metering helper; the new BRKR chip making the nightly noise its own docstring forbids; and reading the market clock in the browser's timezone |
+
+Rules that came out of it, for whoever runs round N+1:
+1. **Point the critic at `git log --oneline -8` and the diff**, not only at the deployed pages.
+2. **A new gate must be mutation-tested** — revert the fix and watch the gate fail — or it is prose. F8-02 and two
+   of the PM's own checks passed while blind; one pair of cases even sat after the summary line, unable to fail.
+3. **Strip comments before a scanner reasons about code.** Three separate gates were fooled by their own
+   explanatory comments.
+4. **A fix applied in one file must be grepped for its twin** (`QUOTE_TTL_S` survived F6 in a second router).
+5. **Anything deciding an Indian market window converts through `Asia/Kolkata` explicitly.** A bare `Date`'s
+   weekday and hour are the viewer's, and fixtures built the same wrong way hide it.
