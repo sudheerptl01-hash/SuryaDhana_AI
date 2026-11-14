@@ -858,6 +858,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `nav` | number |
 | `nifty` | object |
 | `nifty.explained_pts` | number |
+| `nifty.index_move_pct` | number |
 | `nifty.index_move_pts` | number |
 | `nifty.top5_add` | array |
 | `nifty.top5_add[]` | object |

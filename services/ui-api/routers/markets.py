@@ -2427,7 +2427,11 @@ async def desk_attribution_route(response: Response, horizon: str = Query("1m", 
     driver = driver_state_row(state, 20)
     win = horizon_window(dates, horizon, driver["change_date"] if driver else None)
     nifty = slice_contributions(contrib, fit, [], win) if win else None
+    # `index_move_pct` is the cap-weighted move `slice_contributions` already computed for THIS window — the
+    # board dropped it, so the UI printed "2,466 pts" over a month with nothing to scale it against on a
+    # ~25,000 index. Taken from the same slice, never from a different window's breadth.
     nifty_board = None if nifty is None else {"index_move_pts": nifty["index_move_pts"], "explained_pts": nifty["explained_pts"],
+                                              "index_move_pct": (nifty.get("breadth") or {}).get("cw_pct"),
                                               "top5_add": nifty["members"][:5], "top5_drag": nifty["members"][-5:][::-1]}
     try:
         status = await _DESK_STORE.get("status", _desk_status)

@@ -354,11 +354,26 @@ class DurableJobManager:
         except Exception as exc:  # noqa: BLE001 — a sync endpoint's response never fails on bookkeeping
             logger.warning("Sync job row write failed", kind=kind, error=str(exc))
 
+    #: failures are retained separately from successes — see _trim
+    KEEP_ERRORS = 200
+
     def _trim(self, con: sqlite3.Connection) -> None:
+        """Keep the most recent successes AND, separately, the most recent failures.
+
+        This used to prune both by recency together, so a busy day of successful jobs silently erased the
+        evidence of a crash: on 14 Nov the two `nse_results` failures of 13 Nov (a TypeError that killed the
+        whole job and with it every company's results data) were already gone from this table, while 83
+        successful rows remained. A failure is the row worth keeping — it is the only durable record outside a
+        log line, and the DATA page reads this store to say whether a dataset's job is healthy.
+        """
         con.execute(
-            "DELETE FROM jobs WHERE status IN ('done', 'error') AND job_id NOT IN ("
-            " SELECT job_id FROM jobs WHERE status IN ('done', 'error')"
+            "DELETE FROM jobs WHERE status = 'done' AND job_id NOT IN ("
+            " SELECT job_id FROM jobs WHERE status = 'done'"
             " ORDER BY submitted_at DESC LIMIT ?)", (self._keep,))
+        con.execute(
+            "DELETE FROM jobs WHERE status = 'error' AND job_id NOT IN ("
+            " SELECT job_id FROM jobs WHERE status = 'error'"
+            " ORDER BY submitted_at DESC LIMIT ?)", (self.KEEP_ERRORS,))
 
     @staticmethod
     def _encode_result(result: Any) -> str | None:

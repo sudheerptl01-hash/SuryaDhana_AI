@@ -238,3 +238,33 @@ def test_default_db_path_env_override(tmp_path: Path, monkeypatch):
     assert default_db_path(tmp_path) == tmp_path / "job_queue.sqlite"
     monkeypatch.setenv("JOB_QUEUE_DB", str(tmp_path / "elsewhere.sqlite"))
     assert default_db_path(tmp_path) == tmp_path / "elsewhere.sqlite"
+
+
+def test_a_flood_of_successes_does_not_erase_a_failure(tmp_path) -> None:
+    """The evidence problem, found on 14 Nov: `nse_results` died twice on 13 Nov with a TypeError that took
+    every company's results data with it, and by the next morning the rows were gone — pruned by 83 ordinary
+    successes, because _trim ranked successes and failures together by recency. A failure is the row worth
+    keeping: it is the only durable record outside a log line, and the DATA page reads this store to decide
+    whether a dataset's job is healthy.
+    """
+    mgr = DurableJobManager(tmp_path / "q.sqlite", keep=5)
+    con = mgr._connect()
+
+    def _row(job_id: str, kind: str, status: str, at: str) -> None:
+        con.execute(
+            "INSERT INTO jobs (job_id, kind, status, progress, total, attempt, requeued, submitted_at, error) "
+            "VALUES (?, ?, ?, 0, 0, 1, 0, ?, ?)",
+            (job_id, kind, status, at, "TypeError: boom" if status == "error" else None))
+
+    _row("e1", "nse_results", "error", "2026-11-13T15:15:00+00:00")
+    for i in range(40):                                        # a busy day of successes after it
+        _row(f"d{i}", "ingest", "done", f"2026-11-14T{i // 2:02d}:{(i % 2) * 30:02d}:00+00:00")
+    con.commit()
+    mgr._trim(con)
+    con.commit()
+
+    kept_errors = con.execute("SELECT COUNT(*) FROM jobs WHERE status = 'error'").fetchone()[0]
+    kept_done = con.execute("SELECT COUNT(*) FROM jobs WHERE status = 'done'").fetchone()[0]
+    assert kept_errors == 1, "the failure was pruned by successes — the exact 13 Nov evidence loss"
+    assert kept_done == 5, f"successes should still be capped at keep=5, got {kept_done}"
+    con.close()

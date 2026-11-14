@@ -62,7 +62,7 @@ export interface DeskAttribution extends DriverStoreMeta {
   as_of: string | null; horizon: { name: Horizon; from: string | null; to: string | null; sessions: number }
   risk_off: boolean; since: string | null; nav: number | null; nav_from?: number | null; book_pp: number
   rows: { symbol: string; sector: string | null; qty: number | null; close_from: number | null; close_to: number | null; pnl_inr: number | null; pp_of_nav: number | null }[]
-  nifty: { index_move_pts: number | null; explained_pts: number | null; top5_add: DriverMember[]; top5_drag: DriverMember[] } | null
+  nifty: { index_move_pts: number | null; index_move_pct?: number | null; explained_pts: number | null; top5_add: DriverMember[]; top5_drag: DriverMember[] } | null
   badges: Record<string, Badge>; paper_only: boolean; note_rules?: string
 }
 

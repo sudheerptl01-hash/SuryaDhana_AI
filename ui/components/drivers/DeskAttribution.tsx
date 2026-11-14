@@ -65,7 +65,11 @@ export function DeskAttribution() {
               NIFTY 50, SAME SESSIONS <BadgeChip badge={d.badges?.nifty ?? 'arithmetic'} /></div>
             {!nifty ? <div style={{ fontSize: 11, color: T.muted }}>No stored contribution rows for these sessions · backfill pending.</div> : (
               <div style={{ fontFamily: T.mono, fontSize: 11, display: 'grid', gap: 3 }}>
-                <div>index move <b style={{ color: T.text }}>{fmtPts(nifty.index_move_pts)}</b> pts · members explain {fmtPts(nifty.explained_pts)}</div>
+                {/* the percentage comes from the SAME window slice as the points (markets.py nifty_board),
+                    because a points figure on a ~25,000 index says nothing on its own */}
+                <div>index move <b style={{ color: T.text }}>{fmtPts(nifty.index_move_pts)}</b> pts
+                  {nifty.index_move_pct == null ? '' : ` (${nifty.index_move_pct > 0 ? '+' : ''}${nifty.index_move_pct.toFixed(2)}%)`}
+                  {' · members explain '}{fmtPts(nifty.explained_pts)}</div>
                 <div style={{ color: T.muted }}>adds: {nifty.top5_add.filter(m => (m.points ?? 0) > 0).map(m => `${m.symbol} ${fmtPts(m.points, 0)}`).join(' · ') || '—'}</div>
                 <div style={{ color: T.muted }}>drags: {nifty.top5_drag.filter(m => (m.points ?? 0) < 0).map(m => `${m.symbol} ${fmtPts(m.points, 0)}`).join(' · ') || '—'}</div>
               </div>
