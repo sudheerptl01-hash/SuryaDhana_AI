@@ -223,8 +223,15 @@ def previous_session(publish_day: date) -> date:
     return d
 
 
-def session_label(settle_day: date) -> str:
-    """How a settlement is named everywhere (PLAN 0.1 #8): by its SESSION, e.g. 'Thu 22 Oct settlement'."""
+def session_label(settle_day: date | None) -> str:
+    """How a settlement is named everywhere (PLAN 0.1 #8): by its SESSION, e.g. 'Thu 22 Oct settlement'.
+
+    R18-B: it takes None now, because the 2027 calendar guard makes every session walk optional and this is
+    the leaf they all funnel into. Naming the absence is the point — "an unknown session" is a sentence the
+    owner can act on; a TypeError 500 is not.
+    """
+    if settle_day is None:
+        return "an unknown session (the MCX holiday table does not cover that year)"
     return f"{settle_day:%a %d %b} settlement"
 
 
@@ -391,15 +398,23 @@ VWAP_READY_AFTER_S = 120.0       # a session counts as completed for the VWAP tw
 VWAP_FETCH_LEAD_MIN = 40         # one historical call: the bars from 40 minutes before the close to 23:59
 
 
-def band_session(published: date) -> date:
-    """The session whose settlement the band midpoint of a master published on `published` really is (see above)."""
-    d = published
+def band_session(published: date) -> date | None:
+    """The session whose settlement the band midpoint of a master published on `published` really is (see above).
+
+    R18-B: None once the walk leaves the years the MCX holiday table covers. The guard added for 2027 made
+    `previous_session` return None, and this fed its own result straight back in — so it raised AttributeError
+    rather than declining to answer. Failing loud beats publishing a settlement from a session that never
+    happened, but a typed None beats both.
+    """
+    d: date | None = published
     for _ in range(BAND_LAG_SESSIONS):
+        if d is None:
+            return None
         d = previous_session(d)
     return d
 
 
-def band_applies_to(published: date) -> date:
+def band_applies_to(published: date) -> date | None:
     """The session the master's price band was the band OF (centred on `band_session`): the session before the publish day."""
     return previous_session(published)
 
@@ -530,7 +545,9 @@ def settlement_block(band_mid: float | None, published: date | None, vwap: dict[
     band, which is two sessions old — checker round 1); else the band midpoint labelled with the session it REALLY belongs
     to. The band is kept beside it with its own session, and band and VWAP compared (sessions named). Pure."""
     b_sess = band_session(published) if published else None
-    prev = previous_session(latest)
+    # R18-B: `latest` is None whenever the calendar cannot speak for the year (and _gold_preopen passes
+    # `latest_completed_session(now)` straight in), so this has to decline rather than walk from nothing.
+    prev = previous_session(latest) if latest else None
     v = _vwap_value(vwap)
     pv = None if v else _vwap_value(prev_vwap, prev)
     if pv is not None and b_sess is not None and prev < b_sess:
@@ -540,8 +557,10 @@ def settlement_block(band_mid: float | None, published: date | None, vwap: dict[
         "band_midpoint": band_mid,
         "band_session": b_sess.isoformat() if b_sess else None,
         "band_session_label": session_label(b_sess) if b_sess else None,
-        "band_applies_to": band_applies_to(published).isoformat() if published else None,
-        "latest_session": latest.isoformat(),
+        # R18-B: `band_applies_to` is None outside the covered calendar years, so the walrus keeps the one
+        # call and the None cannot reach .isoformat()
+        "band_applies_to": (ba.isoformat() if (ba := band_applies_to(published)) else None) if published else None,
+        "latest_session": latest.isoformat() if latest else None,
         "latest_session_label": session_label(latest),
         "settlement_check": band_check(band_mid, b_sess, latest, prev, v, prev_vwap, used_sess),
         "vwap30": ({k: (used or {}).get(k) for k in ("value", "bars", "volume", "method", "window", "last_close", "session")}

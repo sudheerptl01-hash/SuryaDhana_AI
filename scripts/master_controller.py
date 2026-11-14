@@ -1620,6 +1620,12 @@ async def gold_downtime_catchup(job_ids: list[str], backfill_from: str) -> str:
 def mcx_day_plan(day: date) -> dict[str, Any]:
     """How the MCX day shapes the desk's two jobs (shared/mcx_specs): the 08:45 snapshot needs a 09:00 open; the open is
     captured at 09:10, or at 17:10 on a morning-closure day (evening session only); nothing on full closures/weekends."""
+    # R18-B: this decides whether the 08:45 snapshot and the 09:10 capture run AT ALL, so it is a decider,
+    # not a label. Outside the years the holiday table covers, `trading_window` answers on the weekend rule
+    # alone and would schedule a capture on a day MCX never opened.
+    if not mcx_specs.calendar_covers(day):
+        return {"date": day.isoformat(), "trading": False, "snapshot": False, "capture_at": None,
+                "note": f"MCX holiday table does not cover {day.year} — refresh it from mcxindia.com circulars"}
     win = mcx_specs.trading_window(day)
     hol = mcx_specs.holiday_on(day)
     name, closure = hol if hol else (None, None)

@@ -437,6 +437,8 @@ def test_every_mcx_trading_window_caller_is_known_and_the_deciders_guard_the_yea
         "services/data-service/gold/mcx_close.py",      # the settlement of record's VWAP window
         "services/ui-api/routers/gold_preopen.py",      # the fallback that contract routes to
         "services/ui-api/routers/positions.py",         # mcx_window served to the BRKR chip
+        "scripts/master_controller.py",                 # whether the 08:45 snapshot runs at all
+        "services/data-service/gold/ingest_india.py",   # which session a master file is attributed to
     }
     for d in deciders:
         assert d in callers, f"a decider stopped calling trading_window — re-check this list: {d}"
@@ -452,9 +454,7 @@ def test_every_mcx_trading_window_caller_is_known_and_the_deciders_guard_the_yea
     labellers = set(callers) - deciders
     known = {
         "services/ui-api/routers/mcx.py", "services/ui-api/routers/gold.py",
-        "services/ui-api/routers/commodity_desk.py",
-        "services/data-service/gold/ingest_india.py", "services/data-service/gold/ingest_local.py",
-        "scripts/master_controller.py",
+        "services/ui-api/routers/commodity_desk.py", "services/data-service/gold/ingest_local.py",
     }
     surprises = sorted(labellers - known)
     assert not surprises, (
@@ -486,22 +486,37 @@ def test_the_whole_filings_by_day_path_survives_two_filings_at_one_second() -> N
          "attchmntText": "Outcome of board meeting - financial results approved"},
     ]
 
-    captured: dict[str, object] = {}
+    # R18-D: drive the REAL `results_filings_by_day`, stubbing only its network boundary — the injectable
+    # `paced` parameter. The first version of this test rebuilt the function's comprehension inline, which
+    # passes whatever the shipped code does; the second reached for a module-level fetcher that does not
+    # exist and so made a LIVE NSE REQUEST, coming back with real companies instead of the fixture.
+    import results_history as rh_mod
 
-    def fake_fetch(day, client=None, **kw):                      # noqa: ANN001 - test double
-        captured["called"] = True
-        return rows if day == date(2026, 11, 14) else []
+    captured: list[dict] = []
 
-    import inspect
+    class FakePaced:
+        """Stands in for the paced NSE client: records the query, returns the fixture."""
 
-    sig = inspect.signature(rh.results_filings_by_day)
-    assert "start" in sig.parameters or len(sig.parameters) >= 1, sig
+        def get(self, *a, **kw):                                  # noqa: ANN002,ANN003 - test double
+            captured.append(kw)
+            raise AssertionError("results_filings_by_day used .get directly — update this stub")
 
-    # the pure path: the comprehension must not raise on two filings sharing a timestamp
-    by_symbol = {"ACME": rows}
-    out = {sym: list(dict.fromkeys(ann)) for sym, rs in by_symbol.items()
-           if (ann := rh.results_announcements(rs))}
-    assert out["ACME"] and len(out["ACME"]) == 2, out
+    def fake_rows(paced, params):                                 # noqa: ANN001 - test double
+        captured.append(params)
+        return rows
+
+    original = rh_mod._announcement_rows
+    rh_mod._announcement_rows = fake_rows
+    try:
+        out = rh.results_filings_by_day(date(2026, 11, 14), date(2026, 11, 14), paced=FakePaced())
+    finally:
+        rh_mod._announcement_rows = original
+
+    assert captured, "the fixture never reached the function — it would have gone to the network"
+    assert out is not None and "ACME" in out, out
+    assert len(out["ACME"]) == 2, (
+        f"two filings at one second must both survive the whole path: {out['ACME']}")
+    assert {p for _, p in out["ACME"]} == {None, date(2026, 9, 30)}, out["ACME"]
 
     # and the shipped source must no longer contain the bare re-sort that raised
     src = Path(rh.__file__).read_text(encoding="utf-8")
@@ -509,3 +524,38 @@ def test_the_whole_filings_by_day_path_survives_two_filings_at_one_second() -> N
     assert "sorted(set(ann))" not in code, (
         "results_filings_by_day re-sorts tuples whose second element may be None — the 13 Nov crash, "
         "reachable again one line from its own fix")
+
+
+def test_the_2027_guard_declines_instead_of_raising() -> None:
+    """R18-B: guarding the calendar made every session walk optional, and the callers were typed `-> date`.
+
+    So from 1 Jan 2027 the pre-open endpoint would have raised rather than declined: `band_session` fed its
+    own None back into `previous_session` (AttributeError), `settlement_block` walked from a None `latest`,
+    `session_close_at(...) - timedelta(minutes=40)` hit a TypeError, and `session_label` could not format
+    None. Failing loud beats publishing a settlement from a session that never happened — but declining
+    beats both, and "an unknown session" is a sentence the owner can act on where a 500 is not.
+    """
+    import sys
+    from datetime import date
+    from pathlib import Path as _P
+
+    repo = _P(__file__).resolve().parents[2]
+    for p in (str(repo), str(repo / "services/ui-api")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    from routers import gold_preopen as gp
+
+    y27 = date(2027, 1, 27)                                     # the calendar covers 2026 only
+    assert gp.previous_session(y27) is None
+    assert gp.band_session(y27) is None
+    assert gp.band_applies_to(y27) is None
+    assert gp.session_close_at(date(2027, 1, 26)) is None
+    assert "unknown session" in gp.session_label(None)
+
+    block = gp.settlement_block(139000.0, y27, None, None)       # must not raise
+    assert block["latest_session"] is None and block.get("settlement_source") is None
+
+    # …and 2026 is untouched: the same call still names its sessions
+    ok = gp.settlement_block(139000.0, date(2026, 11, 17), None, date(2026, 11, 13))
+    assert ok["latest_session"] == "2026-11-13"
+    assert "settlement" in (ok.get("band_session_label") or "")
