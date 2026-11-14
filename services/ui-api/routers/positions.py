@@ -340,7 +340,7 @@ async def breeze_budget_status() -> dict[str, Any]:
         # WEEKEND RULE ALONE, so it would report a normal window on a 2027 MCX holiday and the chip would
         # paint BRKR DOWN all evening over a shut exchange. Outside those years we do not know, and saying so
         # falls back to the UI's heuristic instead of asserting a window that was never looked up.
-        if ist.date().year not in mcx_specs.CALENDAR_YEARS:
+        if not mcx_specs.calendar_covers(ist.date()):
             raise LookupError(f"MCX calendar has no data for {ist.date().year}")
         win = mcx_specs.trading_window(ist.date())
         if win:

@@ -394,3 +394,59 @@ def test_two_filings_at_the_same_second_do_not_crash_the_whole_job() -> None:
     assert results_announcements(rows) == results_announcements(list(reversed(rows)))
     # the undated one sorts first, deterministically
     assert out[0][1] is None and out[1][1] is not None, out
+
+
+def test_every_mcx_trading_window_caller_is_known_and_the_deciders_guard_the_year() -> None:
+    """Outside `CALENDAR_YEARS`, `mcx_specs.trading_window` answers on the WEEKEND RULE ALONE — it reports a
+    normal 09:00–23:55 session on a 2027 MCX holiday, because the table it consults has no 2027 rows.
+
+    That is fine for a label and not fine for a decision. The sites that DECIDE something with it — the
+    settlement of record's VWAP window and the broker-session chip's red/grey — must ask `calendar_covers`
+    first. The rest are enumerated here rather than left invisible, so the next person extending the calendar
+    has the list instead of a search, and a NEW caller appearing fails this test and has to be classified.
+    """
+    import re
+    from datetime import date
+    from pathlib import Path
+
+    from shared import mcx_specs
+
+    # the premise this all rests on
+    assert not mcx_specs.calendar_covers(date(2027, 1, 4))
+    assert mcx_specs.trading_window(date(2027, 1, 4)) is not None, (
+        "the premise changed: trading_window now refuses uncovered years itself, so the guards can go")
+
+    repo = Path(__file__).resolve().parents[2]
+    callers: dict[str, int] = {}
+    for root in ("shared", "services", "scripts"):
+        for path in sorted((repo / root).rglob("*.py")):
+            if "/tests/" in str(path) or path.name == "mcx_specs.py":
+                continue
+            code = "\n".join(ln.split("#", 1)[0] for ln in path.read_text(encoding="utf-8").split("\n"))
+            n = len(re.findall(r"\btrading_window\(", code))
+            if n:
+                callers[str(path.relative_to(repo))] = n
+
+    #: callers that DECIDE with the window and therefore guard the year first
+    deciders = {
+        "services/data-service/gold/mcx_close.py",      # the settlement of record's VWAP window
+        "services/ui-api/routers/positions.py",         # mcx_window served to the BRKR chip
+    }
+    for d in deciders:
+        assert d in callers, f"a decider stopped calling trading_window — re-check this list: {d}"
+        src = (repo / d).read_text(encoding="utf-8")
+        assert "calendar_covers" in src, f"{d} decides on a window without checking the year is covered"
+
+    #: callers that only LABEL or DISPLAY, where a weekend-rule answer is acceptable until the table is
+    #: extended. Listed so the set is known; a new caller fails this test until it is classified.
+    labellers = set(callers) - deciders
+    known = {
+        "services/ui-api/routers/mcx.py", "services/ui-api/routers/gold_preopen.py",
+        "services/ui-api/routers/gold.py", "services/ui-api/routers/commodity_desk.py",
+        "services/data-service/gold/ingest_india.py", "services/data-service/gold/ingest_local.py",
+        "scripts/master_controller.py",
+    }
+    surprises = sorted(labellers - known)
+    assert not surprises, (
+        "new trading_window caller(s) — decide whether each DECIDES (guard the year) or merely labels, then "
+        f"add it to the right set above: {surprises}")

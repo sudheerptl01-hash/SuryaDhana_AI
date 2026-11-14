@@ -308,7 +308,12 @@ class BreezeBudget:
                 "SELECT method, COUNT(*) FROM calls WHERE day = ? GROUP BY method ORDER BY 2 DESC", (day,))}
             refused = int(self._conn.execute("SELECT COUNT(*) FROM refusals WHERE day = ?", (day,)).fetchone()[0])
             errors = int(self._conn.execute("SELECT COUNT(*) FROM calls WHERE day = ? AND ok = 0", (day,)).fetchone()[0])
-            last = self._conn.execute("SELECT ts, caller, method, ok FROM calls ORDER BY id DESC LIMIT 1").fetchone()
+            # scoped to TODAY, like every other field in this payload. Unscoped, a quiet morning showed
+            # yesterday's last call beside today's zero counters — the panel read "0 calls today · last:
+            # 23:58 gold_vwap30", which is two true facts arranged to look like one false one.
+            last = self._conn.execute(
+                "SELECT ts, caller, method, ok FROM calls WHERE day = ? ORDER BY id DESC LIMIT 1", (day,)
+            ).fetchone()
         return {
             "day_ist": day, "used_day": used_d, "cap_day": self.cap_day, "ceiling_day": DOC_LIMIT_PER_DAY,
             "used_minute": used_m, "cap_minute": self.cap_minute, "ceiling_minute": DOC_LIMIT_PER_MINUTE,

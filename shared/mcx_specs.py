@@ -144,9 +144,23 @@ def is_session_day(day: date) -> bool:
     return trading_window(day) is not None
 
 
+def calendar_covers(day: date) -> bool:
+    """True when the holiday table actually covers `day`'s year.
+
+    Outside `CALENDAR_YEARS`, `trading_window` answers on the WEEKEND RULE ALONE — it reports a normal
+    09:00–23:55 session on a 2027 MCX holiday, because the table it would consult has no 2027 rows. That is a
+    silently approximate answer, and the callers that decide something with it (the settlement of record, the
+    fair-open baseline, the broker-session chip) need to know the difference between "MCX is open" and "I have
+    no data for this year". Calling this is the difference between a stale table and a wrong number.
+    """
+    return day.year in CALENDAR_YEARS
+
+
 def trading_window(day: date) -> tuple[datetime, datetime] | None:
     """The continuous trading stretch on `day` in IST, or None when MCX is shut. A dated special session (Muhurat, Sun
-    8 Nov 2026: 14:20–15:30) is a trading window like any other, whatever the weekday."""
+    8 Nov 2026: 14:20–15:30) is a trading window like any other, whatever the weekday.
+
+    NOTE: outside `CALENDAR_YEARS` this is the weekend rule only — see `calendar_covers`."""
     special = SPECIAL_SESSION_WINDOWS.get(day)
     if special is not None:
         return datetime.combine(day, special[0], tzinfo=IST), datetime.combine(day, special[1], tzinfo=IST)

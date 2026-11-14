@@ -103,7 +103,15 @@ def catalog_key(sid: str) -> str | None:
 
 
 def session_close(day: date) -> datetime | None:
-    """The IST close of the MCX session on ``day`` (23:30 / 23:55, 17:00 on an evening closure), None when shut."""
+    """The IST close of the MCX session on ``day`` (23:30 / 23:55, 17:00 on an evening closure), None when shut.
+
+    None ALSO when the holiday table does not cover that year: outside `CALENDAR_YEARS` `trading_window`
+    answers on the weekend rule alone, so it would hand back a normal 23:55 close on a 2027 MCX holiday — and
+    this close is what the settlement of record's last-30-minute VWAP is measured back from. A settlement
+    computed over a window that did not exist is worse than no settlement, because it looks like a price.
+    """
+    if not specs.calendar_covers(day):
+        return None
     w = specs.trading_window(day)
     return w[1] if w else None
 
