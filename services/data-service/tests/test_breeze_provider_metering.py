@@ -99,6 +99,50 @@ def test_a_refusal_asks_the_ledger_once_and_never_reaches_the_sdk(monkeypatch) -
 # spare the first BRIEF/MKT visit a ~5 s cold cache and had never once worked; its own forgiving `except` said
 # "a cold cache is only slower, never broken", which is true and is precisely why nobody looked.
 
+def test_no_route_handler_is_called_with_its_dependency_left_unresolved() -> None:
+    """Any call to a route handler from non-request code must give every `Depends` parameter a value.
+
+    Scoped to EVERY module of both services, not just the one file the bug was found in: F9's lesson was that
+    three rounds hardened a gate's logic while never asking what it did not look at. The rule is the real one —
+    a `Depends` parameter must be filled by keyword OR by a positional list long enough to reach it, so
+    `financials_latest(symbols, store)` and `index_contribution(index, store)` stay correct and unflagged.
+    A gate that cried about those is one the next author learns to skip.
+    """
+    import ast
+
+    roots = (REPO / "services/ui-api", REPO / "services/data-service")
+    offenders: list[str] = []
+    scanned = 0
+    for root in roots:
+        for path in sorted(root.rglob("*.py")):
+            if "/tests/" in str(path):
+                continue
+            scanned += 1
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+            except SyntaxError:                                    # pragma: no cover — mid-edit file
+                continue
+            dep_params: dict[str, dict[str, int]] = {}
+            for node in ast.walk(tree):
+                if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or not node.args.defaults:
+                    continue
+                args, defaults = node.args.args, node.args.defaults
+                for arg, default in zip(args[-len(defaults):], defaults, strict=True):
+                    if isinstance(default, ast.Call) and getattr(default.func, "id", "") == "Depends":
+                        dep_params.setdefault(node.name, {})[arg.arg] = [a.arg for a in args].index(arg.arg)
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                        and node.func.id in dep_params):
+                    continue
+                named = {k.arg for k in node.keywords}
+                for param, pos in dep_params[node.func.id].items():
+                    if param not in named and len(node.args) <= pos:
+                        offenders.append(f"{path.relative_to(REPO)}:{node.lineno} {node.func.id}() leaves "
+                                         f"`{param}` as its unresolved Depends default")
+    assert scanned > 100, f"only {scanned} service modules scanned — are the roots right?"
+    assert not offenders, offenders
+
+
 def test_startup_warmups_pass_fastapi_dependencies_by_keyword() -> None:
     """Any call to a route handler from non-request code must name `store=`, or it silently gets a `Depends`."""
     import ast
