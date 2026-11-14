@@ -71,6 +71,8 @@ interface ICICIConnectionStatus {
 
 export function PortfolioSummary() {
   const [summary, setSummary] = useState<Summary | null>(null)
+  // the broker budget's own as_of, reported by the panel from the ledger's last call (F14)
+  const [budgetAsOf, setBudgetAsOf] = useState<string | null>(null)
   const [positions, setPositions] = useState<Position[]>([])
   // today's % change per holding: ICICI's holdings call has no previous close. Live program (reports/live_nse): the live
   // NSE quote service (Breeze websocket → NSE ≈ 1 min → the last close; never Yahoo); the old 60 s quotes call runs only
@@ -294,8 +296,8 @@ export function PortfolioSummary() {
               HERE most of all: a day with no session is exactly when the owner wants to know whether the
               budget refused the login, and the chip's hover sends them to this page to find out. */}
           <Panel title="Broker budget" subtitle="Breeze calls today, by caller — the quota the chip refers to"
-            source={sourceOf(new Date().toISOString(), { source: 'ui-api budget ledger', maxAgeDays: 1 })}>
-            <BudgetPanel />
+            source={sourceOf(budgetAsOf, { source: 'ui-api budget ledger', maxAgeDays: 1 })}>
+            <BudgetPanel onAsOf={setBudgetAsOf} />
           </Panel>
           {backendEntries.length > 0 && (
             <Panel source={sourceOf(lastRefresh ? lastRefresh.toISOString() : null, { source: 'ICICI sync', maxAgeDays: 1 })} title="Backend sync status">
@@ -374,8 +376,8 @@ export function PortfolioSummary() {
             page showed nothing of the kind — by_caller, remaining_day and refused_today had no reader
             anywhere in ui/. Credential-free counters only. */}
         <Panel title="Broker budget" subtitle="Breeze calls today, by caller — the quota the chip refers to"
-          source={sourceOf(new Date().toISOString(), { source: 'ui-api budget ledger', maxAgeDays: 1 })}>
-          <BudgetPanel />
+          source={sourceOf(budgetAsOf, { source: 'ui-api budget ledger', maxAgeDays: 1 })}>
+          <BudgetPanel onAsOf={setBudgetAsOf} />
         </Panel>
         {rules}
       </div>

@@ -48,8 +48,15 @@ check('a failed fetch degrades to a message, never to a false zero',
 // ── and it must be reachable in the state that matters most ──────────────────────────────────────────────
 const hostCode = host.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
 check('mounted TWICE on BRKR — a day with no session is when the budget matters most',
-  (hostCode.match(/<BudgetPanel\s*\/>/g) ?? []).length === 2,
-  (hostCode.match(/<BudgetPanel\s*\/>/g) ?? []).length)
+  (hostCode.match(/<BudgetPanel[\s\S]{0,60}?\/>/g) ?? []).length === 2,
+  (hostCode.match(/<BudgetPanel[\s\S]{0,60}?\/>/g) ?? []).length)
+// F14: the SourceChip convention was satisfied by `sourceOf(new Date().toISOString())` — a constant that
+// always looks fresh, which is the one thing a freshness chip must not do. The gate enforced the convention
+// and missed the meaning, so it now requires a real as_of threaded from the payload.
+check('the budget chip is dated from the LEDGER, never from "now"',
+  !/sourceOf\(new Date\(\)/.test(hostCode) && hostCode.includes('sourceOf(budgetAsOf'))
+check('…and the panel reports that as_of from the payload it just read',
+  code.includes('onAsOf?.(') && code.includes('last_call?.at'))
 check('every mount carries a SourceChip (the G9.4 convention)',
   (hostCode.match(/title="Broker budget"[\s\S]{0,220}?source=/g) ?? []).length === 2)
 

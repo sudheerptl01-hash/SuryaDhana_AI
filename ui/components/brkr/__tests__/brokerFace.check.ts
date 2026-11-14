@@ -260,5 +260,19 @@ check('R14-D …and says MCX is already trading, because it is',
 check('R14-D before MCX opens the same rung does NOT claim it is trading',
   !(brokerFace(DEAD, MON, at(2026, 11, 16, 8, 30))?.title ?? '').includes('MCX is already trading'))
 
+// ── F14: "MCX is shut" and "we could not read the calendar" must not be the same payload ───────────────
+// `null` used to mean both, so a server-side lookup failure would have silenced the chip all evening — on
+// the one evening the MCX fix exists for. The field is OMITTED when unknown (fall back to the weekday
+// heuristic, i.e. still speak) and explicitly null when MCX is shut (stay quiet, correctly).
+const UNKNOWN_CAL = { errors_today: 10, trading_day: true }            // no mcx_window key at all
+check('F14 an UNKNOWN calendar still flags a dead session on a weekday evening',
+  brokerFace(DEAD, UNKNOWN_CAL, at(2026, 11, 16, 22, 0))?.tone === 'bad',
+  brokerFace(DEAD, UNKNOWN_CAL, at(2026, 11, 16, 22, 0)))
+check('F14 an explicit null (MCX shut) stays quiet that same evening',
+  brokerFace(DEAD, { ...UNKNOWN_CAL, mcx_window: null }, at(2026, 11, 16, 22, 0))?.tone === 'idle')
+check('F14 the two are genuinely different faces, not the same one twice',
+  brokerFace(DEAD, UNKNOWN_CAL, at(2026, 11, 16, 22, 0))?.tone
+    !== brokerFace(DEAD, { ...UNKNOWN_CAL, mcx_window: null }, at(2026, 11, 16, 22, 0))?.tone)
+
 console.log(`brokerChip.check: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)

@@ -31,7 +31,7 @@ type Budget = {
 
 const POLL_MS = 60_000
 
-export function BudgetPanel() {
+export function BudgetPanel({ onAsOf }: { onAsOf?: (iso: string | null) => void } = {}) {
   const [b, setB] = useState<Budget | null>(null)
   const [err, setErr] = useState(false)
 
@@ -42,8 +42,13 @@ export function BudgetPanel() {
         const r = await fetch('/api/positions/breeze-budget', { cache: 'no-store' })
         if (!alive) return
         if (!r.ok) { setErr(true); return }
-        setB((await r.json()) as Budget)
+        const payload = (await r.json()) as Budget
+        setB(payload)
         setErr(false)
+        // the panel's real as_of is the ledger's last call, not the moment the browser asked. `new Date()`
+        // always looks fresh, which is exactly what a freshness chip must not do (F14: the SourceChip gate
+        // was satisfied by that constant, so the convention was enforced and the meaning was not).
+        onAsOf?.(payload.last_call?.at ?? null)
       } catch { if (alive) setErr(true) }
     }
     tick()

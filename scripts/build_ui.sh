@@ -211,7 +211,10 @@ GIT_SHA=""; GIT_DIRTY=0; RELEASE_ID=""; NEXT_VERSION=""; SOURCE_SHA=""; BUILD_MS
 make_id() {
   GIT_SHA="$(git -C "$ROOT" rev-parse --short=7 HEAD 2> /dev/null || echo 0000000)"
   [ ${#GIT_SHA} = 7 ] || GIT_SHA="$(printf '%s' "$GIT_SHA" | cut -c1-7)"
-  if [ -n "$(git -C "$ROOT" status --porcelain -- ui/app ui/components ui/lib ui/context ui/public 2> /dev/null | head -1)" ]; then GIT_DIRTY=1; fi
+  # the whole ui/ tree, not a hand-written five-directory list: the build stages every top-level entry, so an
+  # uncommitted tailwind.config.ts or next.config.js shipped under an id claiming a clean HEAD (F14). git
+  # ignores what .gitignore ignores, so node_modules and dist cost nothing here.
+  if [ -n "$(git -C "$ROOT" status --porcelain -- ui 2> /dev/null | head -1)" ]; then GIT_DIRTY=1; fi
   # the id says `-dirty` when the UI tree did not match HEAD, because the id is what gets quoted in a report
   # or a bug — a manifest field nobody reads cannot correct an id that claims the wrong commit
   _suffix=""; [ "$GIT_DIRTY" = 1 ] && _suffix="-dirty"

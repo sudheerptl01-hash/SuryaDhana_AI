@@ -329,16 +329,22 @@ async def breeze_budget_status() -> dict[str, Any]:
     # over 23:30–23:55 — the window whose Breeze bars the MCX settlement of record is computed from — and
     # cried BRKR DOWN all evening on a full MCX closure. shared/mcx_specs models this; the UI cannot, so it
     # is served.
-    mcx = None
+    # F14: `null` meant BOTH "MCX is shut today" and "the lookup raised", so a server-side failure would have
+    # silenced the chip all evening — on the one evening the fix was written for. They are reported as
+    # different things: a window, an explicit closure, or the field omitted entirely when we could not tell.
+    mcx: dict[str, int] | None = None
+    mcx_known = True
     try:
         from shared import mcx_specs
         win = mcx_specs.trading_window(ist.date())
         if win:
             mcx = {"open_hm": win[0].hour * 100 + win[0].minute, "close_hm": win[1].hour * 100 + win[1].minute}
     except Exception:  # noqa: BLE001 — a missing calendar must never break the budget panel
-        mcx = None
-    return {**budget_counters(), "trading_day": trading_day, "holidays_known": bool(holidays),
-            "mcx_window": mcx}
+        mcx, mcx_known = None, False
+    payload = {**budget_counters(), "trading_day": trading_day, "holidays_known": bool(holidays)}
+    if mcx_known:                       # omitted, not null, when the calendar could not be read
+        payload["mcx_window"] = mcx     # a dict = the window; None = MCX is shut today
+    return payload
 
 
 # ── Holdings, today's positions and funds (Breeze field names per the SDK docs) ──
