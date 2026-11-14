@@ -279,46 +279,14 @@ def test_every_caller_name_in_the_code_has_a_quota() -> None:
     Reading the ledger would only ever catch a caller AFTER it had spent; reading the code catches it before it
     ever runs, which is the point of a quota.
     """
-    import ast
-    import re
-
     from shared.breeze_budget import DEFAULT_CALLER_QUOTAS
 
-    # F13: the roots are DERIVED, the way SCANNED_ROOTS derives its own — every services/* tree plus the
-    # non-service trees that hold callers. Hand-listing roots is how the ledger gate was blind five times, and
-    # this gate was quietly repeating it: a new service could add a Breeze caller with no quota and nothing
-    # would notice.
-    from test_breeze_ledger_coverage import SCANNED_ROOTS
+    # R18-C: ONE scan, shared with the two sibling gates. This test carried its own copy of the patterns and
+    # the root walk — three scans of the same tree, which is how they drifted: the sibling learned the
+    # *_CALLER constant pattern while this one had already had it, and nothing kept them in step. Whatever
+    # `_declared_callers()` can see is what every quota gate sees.
+    found = _declared_callers()
 
-    repo = Path(__file__).resolve().parents[3]
-    roots = SCANNED_ROOTS
-    #: `ledger().guard("caller", ...)`, `budget.guard("caller", ...)`, `_breeze_call(..., caller="caller")`,
-    #: and a *_CALLER constant. That last pattern is not optional: `ui-api.positions` — the biggest spender in
-    #: the ledger — is declared as `BREEZE_BUDGET_CALLER = "ui-api.positions"` and passed by name, so without
-    #: it this gate could not see the one caller it most needed to. Caught by mutation-testing this very test:
-    #: deleting that quota left it green.
-    pats = (re.compile(r'\.guard\(\s*["\']([\w.\-]+)["\']'),
-            re.compile(r'caller\s*=\s*["\']([\w.\-]+)["\']'),
-            re.compile(r'^[A-Z_]*CALLER[A-Z_]*\s*=\s*["\']([\w.\-]+)["\']', re.M))
-    found: dict[str, str] = {}
-    scanned = 0
-    for root in roots:
-        for path in sorted(root.rglob("*.py")):
-            if "/tests/" in str(path):
-                continue
-            scanned += 1
-            src = path.read_text(encoding="utf-8")
-            try:                                        # comments and strings-in-prose must not count
-                code = "\n".join(ln.split("#", 1)[0] for ln in src.split("\n"))
-                ast.parse(src)
-            except SyntaxError:                         # pragma: no cover
-                continue
-            for pat in pats:
-                for m in pat.finditer(code):
-                    found.setdefault(m.group(1), str(path.relative_to(repo)))
-
-    assert scanned > 100, f"only {scanned} modules scanned — are the roots right?"
-    assert len(found) >= 8, f"only {len(found)} caller names found — the patterns stopped matching: {found}"
     missing = {c: where for c, where in found.items()
                if c not in DEFAULT_CALLER_QUOTAS and not c.isupper()}      # CALLER constants resolve at runtime
     assert not missing, (
