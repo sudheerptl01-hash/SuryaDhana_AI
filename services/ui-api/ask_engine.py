@@ -526,8 +526,21 @@ class AskEngine:
             return None
         base = os.path.basename(path)
         m = re.search(r"(\d{4})(\d{2})(\d{2})", base)
-        as_of = f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else \
-            datetime.fromtimestamp(os.stat(path).st_mtime, tz=timezone.utc).date().isoformat()
+        as_of: Optional[str] = f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
+        if as_of is None:
+            # F6-05 (14 Nov 2026): the stable-path copy (ask_evening.duckdb) has no date in its NAME, and the
+            # mtime is NOT the cut time — `cp -c` / clonefile preserves the SOURCE file's mtime, so the old
+            # fallback reported the day market.duckdb was last written and the panel printed "snapshot
+            # 2026-11-14" over 13 Nov data. The builder writes a sidecar meta.json beside the file with its real
+            # created_at; use that, and fall back to the mtime only when no sidecar exists.
+            try:
+                meta = json.loads(Path(path + ".meta.json").read_text(encoding="utf-8"))
+                created = str(meta.get("created_at") or "")[:10]
+                as_of = created if re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) else None
+            except (OSError, ValueError):
+                as_of = None
+        if as_of is None:
+            as_of = datetime.fromtimestamp(os.stat(path).st_mtime, tz=timezone.utc).date().isoformat()
         return {"file": base, "as_of": as_of}
 
     # ── G1: validated, interrupted, capped execution ─────────────────────────────────────────────────────────

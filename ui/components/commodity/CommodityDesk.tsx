@@ -297,7 +297,7 @@ export function CommodityDesk({ group }: { group: DeskGroup }) {
                 <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
                   <Stat label="ICICI band midpoint (reference)" value={fmtInr(band?.settlement)} accent={T.cyan}
                     sub={band
-                      ? `band ${fmtInr(band.band_low)}–${fmtInr(band.band_high)} · OI ${fmtNum(band.open_interest_lots)} lots · BAND PROXY: the midpoint is the ${band.session_label ?? 'earlier session'}'s settlement`
+                      ? `band ${fmtInr(band.band_low)}–${fmtInr(band.band_high)} · OI ${fmtNum(band.open_interest_lots)} lots · BAND PROXY: the midpoint is ${band.session_label ?? "the earlier session's settlement"}`
                       : 'ICICI master unavailable'} />
                   {quote.best && <Stat label="Desk price in use" value={fmtInr(quote.best.price)} accent={T.cyan}
                     sub={quote.best.source} />}

@@ -71,7 +71,8 @@ IST = specs.IST
 DATA_SVC = os.environ.get("DATA_SERVICE_URL", "http://localhost:8001").rstrip("/")
 _DB_TIMEOUT = httpx.Timeout(8.0)
 _cache = TTLCache("commodity_desk", max_items=64, default_ttl=600)
-QUOTE_TTL_S = 15                 # UI polls every 30 s; concurrent viewers share one broker call
+QUOTE_TTL_S = 35                 # > the UI's 30 s poll (F6-01): at 15 s EVERY poll missed the cache, so
+                                 # 'viewers share one broker call' was false -- each desk cost a call a poll
 DAILY_TTL_S = 300                # stored EOD bars move once a day
 
 DESCRIBES = "describes, does not predict"

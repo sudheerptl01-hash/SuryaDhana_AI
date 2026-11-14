@@ -914,11 +914,14 @@ def _breeze_mcx_quote(expiry: date) -> dict[str, Any] | None:
     if _cached("mcx_quote_broken", 600):
         return None
     try:
-        from routers.positions import _get_breeze_client
+        from routers.positions import _breeze_call, _get_breeze_client
         breeze, err = _get_breeze_client()
         if err or breeze is None:
             return None
-        q = breeze.get_quotes(stock_code="GOLD", exchange_code="MCX", product_type="futures",
+        # F6-01: through the ONE ledger (PLAN section 0.11) -- this site was unmetered, so MCXG's 30 s poll
+        # drained the real broker cap invisibly to every other budgeted caller.
+        q = _breeze_call(breeze.get_quotes, caller="ui-api.gold-preopen", stock_code="GOLD",
+                         exchange_code="MCX", product_type="futures",
                               expiry_date=f"{expiry.isoformat()}T06:00:00.000Z", right="others", strike_price="0")
         rows = q.get("Success") if isinstance(q, dict) and q.get("Status") == 200 else None
         if not rows:
@@ -943,11 +946,12 @@ def _breeze_mcx_open(expiry: date, day: date) -> dict[str, Any] | None:
     if hit is not None:
         return hit or None
     try:
-        from routers.positions import _get_breeze_client
+        from routers.positions import _breeze_call, _get_breeze_client
         breeze, err = _get_breeze_client()
         if err or breeze is None:
             return None
-        h = breeze.get_historical_data_v2(interval="1minute", from_date=f"{day.isoformat()}T09:00:00.000Z",
+        h = _breeze_call(breeze.get_historical_data_v2, caller="ui-api.gold-preopen",
+                         interval="1minute", from_date=f"{day.isoformat()}T09:00:00.000Z",
                                           to_date=f"{day.isoformat()}T23:59:00.000Z", stock_code="GOLD", exchange_code="MCX",
                                           product_type="futures", expiry_date=f"{expiry.isoformat()}T06:00:00.000Z",
                                           right="others", strike_price="0")

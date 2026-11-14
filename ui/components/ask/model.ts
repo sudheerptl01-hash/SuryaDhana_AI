@@ -57,7 +57,7 @@ export const WITHHELD_TEXT = '— withheld: a numeric claim without its source t
 export const OFFLINE_LINE = 'analyst offline — the data reads still work'
 
 /** R3-ASK: health's snapshot-age block — the snapshot vs its own iv_summary_daily (facts, no judgement). */
-export type SnapshotAge = { iv_summary_max: string | null; stale: boolean; note: string | null }
+export type SnapshotAge = { iv_summary_max: string | null; sessions_max?: string | null; stale: boolean; note: string | null }
 
 /**
  * R3-ASK empty-state examples (F2-design ask). Describe-only by construction: each asks about STORED data,
@@ -82,9 +82,15 @@ export const EXAMPLE_QUESTIONS: readonly string[] = [
 export function snapshotAgeLine(snapshot: AskSnapshot | null, age: SnapshotAge | null | undefined,
                                 analystReady: boolean): { text: string; tone: 'ok' | 'amber' | 'loud' } {
   if (!snapshot) return { text: 'no snapshot yet', tone: 'amber' }
-  const base = `snapshot ${snapshot.as_of ?? snapshot.file}`
+  // F6-05 (14 Nov 2026): `as_of` is the date the snapshot was CUT, which is not the date of the data inside it —
+  // a Saturday re-cut of Friday's store is stamped Saturday. Printing it bare ("snapshot 2026-11-14") read as the
+  // data's date in the one product whose whole discipline is that a date on screen is the date of the data. Say
+  // both: the cut, and the last session the snapshot actually holds.
+  const cut = snapshot.as_of ?? snapshot.file
+  const through = age?.sessions_max ?? age?.iv_summary_max ?? null
+  const base = through && through !== cut ? `snapshot cut ${cut} · data through ${through}` : `snapshot ${cut}`
   if (age?.stale) {
-    const text = `${base} — ${age.note ?? `cut before the ${snapshot.as_of} iv_eod; iv_summary_daily inside it ends ${age.iv_summary_max}`}`
+    const text = `${base} — ${age.note ?? `iv_summary_daily inside it ends ${age.iv_summary_max}`}`
     return { text, tone: analystReady ? 'amber' : 'loud' }
   }
   return { text: base, tone: 'ok' }

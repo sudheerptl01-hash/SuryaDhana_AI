@@ -197,7 +197,7 @@ def _breeze_quote(code: str, expiry: date, today: date, after_open: bool) -> dic
     if remembered:
         return {"available": False, "quote": None, "reason": remembered, "attempted": False}
     try:
-        from routers.positions import _get_breeze_client
+        from routers.positions import _breeze_call, _get_breeze_client
         breeze, err = _get_breeze_client()
     except Exception as exc:  # noqa: BLE001 — import/build failure is a session problem
         breeze, err = None, str(exc)[:80]
@@ -208,8 +208,12 @@ def _breeze_quote(code: str, expiry: date, today: date, after_open: bool) -> dic
     stock_code = BREEZE_CODE.get(code, code)
     sdk_err: str | None = None
     try:
-        q = breeze.get_quotes(stock_code=stock_code, exchange_code="MCX", product_type="futures",
-                              expiry_date=expiry_arg, right="others", strike_price="0")
+        # F6-01 (14 Nov 2026): through the ONE ledger, as PLAN section 0.11 and _breeze_call's own docstring
+        # require. These sites were reached straight off the client, so get_quotes had NEVER been recorded --
+        # and the CMDT desks poll this path every 30 s, which would have drained the real ICICI cap while the
+        # ledger still reported thousands of calls left to the IV tape and the chain poller.
+        q = _breeze_call(breeze.get_quotes, caller="ui-api.mcx", stock_code=stock_code, exchange_code="MCX",
+                         product_type="futures", expiry_date=expiry_arg, right="others", strike_price="0")
         rows = q.get("Success") if isinstance(q, dict) and q.get("Status") == 200 else None
         if rows:
             row = rows[0]
@@ -224,7 +228,7 @@ def _breeze_quote(code: str, expiry: date, today: date, after_open: bool) -> dic
         sdk_err = str(exc)[:80]
     if after_open:  # get_quotes failed; 1-min bars worked on 12 Oct where get_quotes 500'd
         try:
-            h = breeze.get_historical_data_v2(interval="1minute",
+            h = _breeze_call(breeze.get_historical_data_v2, caller="ui-api.mcx", interval="1minute",
                                               from_date=f"{today.isoformat()}T09:00:00.000Z",
                                               to_date=f"{today.isoformat()}T23:59:00.000Z",
                                               stock_code=stock_code, exchange_code="MCX", product_type="futures",

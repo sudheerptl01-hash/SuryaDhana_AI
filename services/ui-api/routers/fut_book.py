@@ -7,7 +7,9 @@ Routes (mounted at ``/api/mcx/book``):
                  ticket's quote path still records nothing)
   POST /mark     append today's marks from the STORED settlement reads (data-service ``/db/gold/mcx/settlement``,
                  ``settlement_source`` labelled: breeze_vwap30 | band_midpoint; ``/db/gold/mcx/daily`` broker bar as the
-                 expired-contract fallback) and settle expired contracts at the stored settlement of record
+                 expired-contract fallback). Marking NEVER closes anything: an expired contract is REPORTED under
+                 ``awaiting_settlement`` with its stored exit price, and only ``?settle=true`` closes it (F5/F6 —
+                 the page mounts this call, and a page view must not mutate the owner's track record)
   POST /close    close open positions at their latest stored mark, or at a typed price (labelled 'edited')
   GET  /journal  the append-only action log
 
@@ -54,9 +56,10 @@ BADGE_ARITH = "arithmetic"
 DESCRIBES = "describes, does not predict"
 PAPER_NOTE = ("PAPER ONLY: a paper futures book in ui-api's SQLite; no order API exists on this desk and none is "
               "reachable from here — the ticket above still prices and records nothing")
-MARK_NOTE = ("marks are the stored settlement reads (Breeze last-30-min VWAP, MCX's DSP method, else the ICICI band "
-             "midpoint labelled with its real session); an expired contract settles at the stored settlement of "
-             "record on its expiry session, never a later price")
+MARK_NOTE = ("marks are the stored settlement reads (Breeze last-30-min VWAP, MCX's DSP method, else the ICICI "
+             "band midpoint, each labelled). Marking never closes a position: an expired contract is reported "
+             "and waits for the explicit SETTLE action, which settles it at the stored settlement of record on "
+             "its expiry session, never a later price")
 UNSETTLED = "expired-unsettled"
 
 
