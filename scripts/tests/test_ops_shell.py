@@ -322,3 +322,54 @@ def test_watchdog_lock_safe_start_restarts_ui_api_even_when_data_service_fails(t
     assert "RC=1" in r.stdout, "the failure is reported"
     calls = (tree / ".logs" / "calls.txt").read_text().splitlines()
     assert calls == ["stop ui-api", "start data-service", "start ui-api"], "ui-api comes back on the failure path too"
+
+
+# ── start-local.sh enforces the restart freeze windows (F6-07, 14 Nov 2026) ──────────────────────────────────
+# The windows lived only in documents and in the watchdog's own in_freeze(); a human or an agent running
+# `restart data-service` at 09:00 was stopped by nothing — and on 14 Nov that is exactly what happened (benign
+# only because it was a Saturday with no login due). These pin the refusal, the watchdog's exemption, and the
+# recorded override.
+
+FREEZE = "source ./start-local.sh >/dev/null 2>&1; "
+
+
+@pytest.mark.parametrize("hm,svc,blocked", [
+    ("0800", "data-service", True),          # inside 07:45–09:20
+    ("0800", "master-controller", True),
+    ("0800", "ui-api", False),               # ui-api has no window
+    ("1900", "data-service", True),          # inside 18:30–21:15
+    ("2115", "data-service", True),          # the end is included
+    ("2116", "data-service", False),         # one minute past it
+    ("0744", "data-service", False),         # one minute before
+    ("1200", "data-service", False),         # midday: free
+])
+def test_in_freeze_window_matches_the_documented_windows(tree, hm, svc, blocked):
+    stub = f'date() {{ echo "{hm}"; }}; '      # TZ=... date "+%H%M" → our stub
+    r = sh(tree, FREEZE + stub + f'in_freeze_window {svc} && echo BLOCKED || echo FREE')
+    assert ("BLOCKED" if blocked else "FREE") in r.stdout, (hm, svc, r.stdout, r.stderr)
+
+
+def test_a_restart_inside_a_window_is_refused_and_says_how_to_override(tree):
+    r = sh(tree, FREEZE + 'date() { echo "0800"; }; CALLED_BY_WATCHDOG=0; refuse_in_freeze restart data-service')
+    assert r.returncode == 3, r.stdout
+    assert "Refusing to restart data-service" in r.stdout and "FREEZE_OVERRIDE=1" in r.stdout
+    assert "07:45-09:20" in r.stdout and "18:30-21:15" in r.stdout      # it names both windows
+
+
+def test_the_watchdog_is_never_blocked_by_the_guard(tree):
+    """The watchdog has its own freeze logic and its own alert-and-wait path; second-guessing it here would stop
+    a hang restart that its own rules already allow."""
+    r = sh(tree, FREEZE + 'date() { echo "0800"; }; CALLED_BY_WATCHDOG=1; refuse_in_freeze restart data-service; echo RC=$?')
+    assert "RC=0" in r.stdout and "Refusing" not in r.stdout
+
+
+def test_the_override_is_loud_rather_than_silent(tree):
+    r = sh(tree, FREEZE + 'date() { echo "0800"; }; CALLED_BY_WATCHDOG=0; FREEZE_OVERRIDE=1 '
+                          'refuse_in_freeze restart data-service; echo RC=$?')
+    assert "RC=0" in r.stdout and "FREEZE_OVERRIDE=1" in r.stdout and "inside a freeze window" in r.stdout
+
+
+def test_a_service_outside_the_freeze_list_is_never_refused(tree):
+    for svc in ("ui-api", "frontend"):
+        r = sh(tree, FREEZE + f'date() {{ echo "0800"; }}; CALLED_BY_WATCHDOG=0; refuse_in_freeze stop {svc}; echo RC=$?')
+        assert "RC=0" in r.stdout and "Refusing" not in r.stdout, svc

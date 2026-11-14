@@ -23,6 +23,37 @@ VENV_PIP="/Users/sudheer/Desktop/jupyter_env/bin/pip"
 CALLED_BY_WATCHDOG="${SURYADHANA_WATCHDOG:-0}"
 unset SURYADHANA_WATCHDOG
 
+# ── Restart freeze windows (CLAUDE.md), enforced rather than merely documented (F6-07, 14 Nov 2026) ──────────
+# data-service and master-controller are never restarted 07:45-09:20 IST (the 08:00 ICICI login and the pre-open
+# jobs) or 18:30-21:15 (the EOD pipeline, desk, shadow, wrap). ui-api has no window. Until now this lived only in
+# documents and in the watchdog's own in_freeze(); a human (or an agent) running `restart data-service` at 09:00
+# was stopped by nothing, and on 14 Nov that is exactly what happened -- benign only because it was a Saturday.
+# FREEZE_OVERRIDE=1 is the deliberate escape hatch: it still prints what it is overriding, so the decision is on
+# the record instead of invisible.
+FREEZE_SERVICES="data-service master-controller"
+
+in_freeze_window() {   # in_freeze_window <service> -> 0 when a restart of it is forbidden right now
+  case " $FREEZE_SERVICES " in *" $1 "*) ;; *) return 1 ;; esac
+  local hm; hm=$((10#$(TZ=Asia/Kolkata date "+%H%M")))
+  { [ "$hm" -ge 745 ] && [ "$hm" -le 920 ]; } || { [ "$hm" -ge 1830 ] && [ "$hm" -le 2115 ]; }
+}
+
+refuse_in_freeze() {   # refuse_in_freeze <action> <service>  -> exits 3 unless overridden or run by the watchdog
+  local action=$1 svc=$2 now; now=$(TZ=Asia/Kolkata date "+%H:%M")
+  in_freeze_window "$svc" || return 0
+  # the watchdog has its own freeze logic (and its own alert-and-wait path), so it is never second-guessed here
+  [ "$CALLED_BY_WATCHDOG" = "1" ] && return 0
+  if [ "${FREEZE_OVERRIDE:-0}" = "1" ]; then
+    echo "⚠️  FREEZE_OVERRIDE=1: ${action}ing $svc at $now IST, inside a freeze window (07:45-09:20 / 18:30-21:15)."
+    echo "    Overriding on purpose — if a login or the EOD pipeline is running, this can break it."
+    return 0
+  fi
+  echo "⛔ Refusing to $action $svc at $now IST: that is inside a restart freeze window."
+  echo "   07:45-09:20 is the ICICI login + pre-open jobs; 18:30-21:15 is the EOD pipeline, desk, shadow and wrap."
+  echo "   Wait for the window to close, or — having checked that nothing is due — re-run with FREEZE_OVERRIDE=1."
+  exit 3
+}
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -1073,12 +1104,13 @@ main() {
       else start_services; fi
       ;;
     stop)
-      if [ -n "$svc" ]; then require_service "$svc"; mark_paused "$svc"; stop_one "$svc"
+      if [ -n "$svc" ]; then require_service "$svc"; refuse_in_freeze stop "$svc"; mark_paused "$svc"; stop_one "$svc"
       else stop_services; fi
       ;;
     restart)
       if [ -n "$svc" ]; then
-        require_service "$svc"; stop_one "$svc"; clear_paused "$svc"; clear_hang_history "$svc"; start_redis; start_one "$svc"
+        require_service "$svc"; refuse_in_freeze restart "$svc"
+        stop_one "$svc"; clear_paused "$svc"; clear_hang_history "$svc"; start_redis; start_one "$svc"
       else
         stop_services
         check_prerequisites "${START_SET:-$CORE_SERVICES}"

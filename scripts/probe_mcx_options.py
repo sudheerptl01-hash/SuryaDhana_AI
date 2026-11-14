@@ -105,6 +105,14 @@ def main(argv: list[str] | None = None) -> int:
     if not expiry or not ref:
         print("no stored expiry/reference price for this family — probe needs one; exit 2")
         return 2
+    try:
+        from routers.commodity_desk import BREEZE_CODE
+        broker_code = BREEZE_CODE[a.family]
+    except Exception as exc:                                        # noqa: BLE001 — never guess a broker code
+        print(f"could not resolve the broker code for {a.family} ({type(exc).__name__}) — aborting rather than "
+              f"spending metered calls on a guess")
+        return 2
+    print(f"broker code for {a.family}: {broker_code}")
     atm = _round_to(float(ref), step)
     strikes = [atm + i * step for i in range(-a.strikes, a.strikes + 1)]
     print(f"front expiry {expiry} · reference {ref:,.0f} · ATM {atm:,.0f} · strikes {strikes[0]:,.0f}…{strikes[-1]:,.0f}")
@@ -114,15 +122,20 @@ def main(argv: list[str] | None = None) -> int:
         for strike in strikes:
             for right in ("call", "put"):
                 with ledger().guard(CALLER, "get_quotes"):
-                    r = client.get_quotes(stock_code=a.family, exchange_code="MCX", product_type="options",
+                    # F6: the BROKER's code, not the family name — SILVERM is SILMIN, CRUDEOIL is CRUDE, and so
+                    # on. Sending the family name would have drawn a refusal for 4 of the 5 families and let the
+                    # probe report a vendor restriction that does not exist, after spending 10 metered calls.
+                    r = client.get_quotes(stock_code=broker_code, exchange_code="MCX", product_type="options",
                                           expiry_date=f"{expiry}T06:00:00.000Z", right=right,
                                           strike_price=str(int(strike)))
                 ok = isinstance(r, dict) and str(r.get("Status")) == "200" and bool(r.get("Success"))
                 if ok:
                     served += 1
                     row = (r.get("Success") or [{}])[0]
-                    shapes.append({"strike": strike, "right": right,
-                                   "fields": sorted(k for k, v in row.items() if v not in (None, "", 0))[:14]})
+                    present = sorted(k for k, v in row.items() if v not in (None, "", 0))
+                    # keep the FULL key set for the verdict; truncate only what is printed (F6: the verdict used
+                    # to read the truncated list, so a price or OI field past the cut looked absent)
+                    shapes.append({"strike": strike, "right": right, "fields": present[:14], "_all": present})
                 else:
                     refused += 1
                     if refused == 1:
@@ -131,9 +144,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"the Breeze ledger refused the calls ({exc}) — try later; exit 4")
         return 4
 
-    out.update({"served": served, "refused": refused, "sample_fields": shapes[:3]})
-    has_price = any("ltp" in f.lower() or "last" in f.lower() for s in shapes for f in s["fields"])
-    has_oi = any("open_interest" in f.lower() or f.lower() == "oi" for s in shapes for f in s["fields"])
+    out.update({"served": served, "refused": refused, "broker_code": broker_code,
+                "sample_fields": shapes[:3]})
+    all_fields = [f for sh in shapes for f in sh.get("_all", sh["fields"])]
+    has_price = any("ltp" in f.lower() or "last" in f.lower() or "close" in f.lower() for f in all_fields)
+    has_oi = any("open_interest" in f.lower() or f.lower() in ("oi", "openinterest") for f in all_fields)
+    for sh in shapes:
+        sh.pop("_all", None)                                        # the report prints the display list only
     out["verdict"] = ("MCX options ARE served per strike: a chain is assemblable at "
                       f"{planned} calls per snapshot (price={has_price}, open_interest={has_oi}); "
                       "IV must be computed locally (Black-76 on the futures price, as the NSE path does)"
