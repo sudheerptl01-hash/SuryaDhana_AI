@@ -52,6 +52,7 @@ NOT_AN_INGEST: dict[str, str] = {
     "price_alerts_check": "alerts read live quotes",
     "morning_gameplan": "Telegram digest rendered from the /api/gameplan assembly (reads only, wave E F-11)",
     "shared_snapshot_build": "read-only copy of market.duckdb for readers (no new data)",
+    "snapshot_ask_refresh": "second read-only copy of market.duckdb for ASK alone, re-cut after iv_eod (no new data)",
     "weekly_journal": "a report written from stored data",
     "eod_rebalancing": "dormant legacy 5-day pipeline (autopilot OFF)",
     "intraday_inference": "dormant legacy 5-day pipeline (autopilot OFF)",

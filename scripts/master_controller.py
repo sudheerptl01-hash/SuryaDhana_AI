@@ -32,6 +32,8 @@ Schedule (IST; job ids as registered in lifespan() and shown on SYS). Daily = ev
   20:30 Mon–Fri      nse_positions_catchup    the evening pass: F&O OI, participant OI, deals, MTF files; FII/DII cash;
                                               the NSE evening files (participant volumes, FII stats, MWPL clients); the
                                               20:35 drivers retry when the top-10 file was missing; iv_eod LAST
+  21:40 Mon–Fri      snapshot_ask_refresh     Re-cut the ASK-only snapshot copy after iv_eod lands (stable path
+                                              data/snapshots/ask/ask_evening.duckdb; the 19:20 cut stays frozen)
   20:45 Mon–Fri      results_capture_daily    Results release times (last 3 days)
   21:00 Mon–Fri      daily_wrap               Market wrap → reports/daily_wrap/<date>.md
   23:00 daily        overnight_rl_retrain     RL agent retraining (AUTOPILOT only — dormant)
@@ -3566,6 +3568,31 @@ async def shared_snapshot_build() -> None:
             _log.error(JOB, f"FAILED: {exc}")
 
 
+async def snapshot_ask_refresh() -> None:
+    """21:40 IST Mon–Fri — re-cut the ASK-only snapshot copy AFTER the 20:30 pass lands iv_eod, so the
+    analyst answers IV questions same-session (R5-ASK2 patch; F4 PENDING §6). The 19:20 shared snapshot and
+    its readers (S1 shadow, backup) are untouched — this cuts a second copy at the stable path
+    data/snapshots/ask/ask_evening.duckdb that ASK_SNAPSHOT_DB names; ask_engine serves the fresher of the
+    two, so a failed night degrades to the 19:20 copy, never to a refusal. A WARNING, not an alert storm:
+    ASK is a research face, nothing downstream reads this file."""
+    JOB = "snapshot_ask_refresh"
+    lock = _get_lock(JOB)
+    if lock.locked():
+        return
+    async with lock, _track(JOB):
+        cmd = [PYTHON_BIN, str(_ROOT / "scripts" / "build_ask_snapshot.py")]
+        try:
+            res = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=600,
+                                          cwd=str(_ROOT))
+            if res.returncode == 0:
+                _log.info(JOB, (res.stdout.strip().splitlines() or ["built"])[-1][:300])
+            else:
+                _log.warning(JOB, "ask snapshot re-cut failed — ASK stays on the 19:20 evening copy",
+                             stderr=res.stderr[-400:])
+        except Exception as exc:   # noqa: BLE001 — a research face: logged, never an alert storm
+            _log.error(JOB, f"FAILED: {exc}")
+
+
 DB_BACKUP_BUSY_EXIT = 75     # scripts/db_backup.py EXIT_BUSY: another run holds its lock; nothing was written
 
 
@@ -3582,6 +3609,21 @@ def db_backup_cmd(offsite: str | None) -> list[str]:
     copy exits 1 after the local backup is complete, so SYS shows the run as an error and Telegram says why)."""
     cmd = [PYTHON_BIN, str(_ROOT / "scripts" / "db_backup.py")]
     return cmd + ["--offsite", offsite] if offsite else cmd
+
+
+def _backup_missed_nights(stdout: str | None) -> list[str]:
+    """db_backup.py's RESULT json carries `missed_nights_new` (scripts/db_backup.missed_backup_days): prior
+    nights in the rotation window with no verified copy that no earlier meta has named. R5-OPS2 / F4 §1d: a
+    backup is point-in-time, so a missed night cannot be back-dated; the catch-up runs ONE backup and the gap
+    is recorded in the meta and said once here — not silently absorbed, not re-alerted nightly."""
+    for line in reversed((stdout or "").splitlines()):
+        if line.startswith("RESULT "):
+            try:
+                val = json.loads(line[len("RESULT "):]).get("missed_nights_new")
+            except ValueError:
+                return []
+            return [str(x) for x in val] if isinstance(val, list) else []
+    return []
 
 
 async def db_backup_daily() -> None:
@@ -3601,6 +3643,14 @@ async def db_backup_daily() -> None:
                                           cwd=str(_ROOT))
             if res.returncode == 0:
                 _log.info(JOB, (res.stdout.strip().splitlines() or ["backed up"])[-1][:300])
+                missed = _backup_missed_nights(res.stdout)
+                if missed:
+                    nice = ", ".join(f"{x[:4]}-{x[4:6]}-{x[6:]}" for x in missed)
+                    await _alerts.info(
+                        "Backup gap recorded",
+                        f"No backup exists for {nice} (a backup is point-in-time; a missed night cannot be "
+                        "back-dated). Tonight's backup is complete and covers the data as it stands; the gap "
+                        "is recorded in its meta (missed_nights). Loss window: docs/RUNBOOK_RESTORE.md.")
             elif res.returncode == DB_BACKUP_BUSY_EXIT:
                 _log.warning(JOB, "skipped: another db_backup.py run holds the backup lock")
             elif "off-site copy FAILED" in (res.stderr or "") and "ui_prefs backup FAILED" not in (res.stderr or ""):
@@ -4877,6 +4927,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         shared_snapshot_build,
         trigger=CronTrigger(day_of_week="mon-fri", hour=19, minute=20, timezone=IST),
         id="shared_snapshot_build", name="Shared Evening Snapshot",
+        max_instances=1, coalesce=True, misfire_grace_time=3600,
+    )
+
+    # ── ASK-only snapshot re-cut after iv_eod (R5-ASK2; the 19:20 cut above stays frozen) ──
+    scheduler.add_job(
+        snapshot_ask_refresh,
+        trigger=CronTrigger(day_of_week="mon-fri", hour=21, minute=40, timezone=IST),
+        id="snapshot_ask_refresh", name="ASK Snapshot Re-cut",
         max_instances=1, coalesce=True, misfire_grace_time=3600,
     )
 
