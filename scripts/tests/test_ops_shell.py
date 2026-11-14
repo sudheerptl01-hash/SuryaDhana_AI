@@ -375,13 +375,37 @@ def test_a_service_outside_the_freeze_list_is_never_refused(tree):
         assert "RC=0" in r.stdout and "Refusing" not in r.stdout, svc
 
 
+def _code_lines(text: str) -> str:
+    """The shell CODE of a snippet, with comment lines dropped — F8-02: the first version of the test below
+    asserted that "data-service" and "master-controller" appeared in the else branch, and they appeared only in
+    my explanatory COMMENT. Half the gate tested prose, so it could not see F8-01."""
+    return "\n".join(l for l in text.split("\n") if not l.strip().startswith("#"))
+
+
 def test_the_bare_restart_and_stop_forms_face_the_freeze_window_too(tree):
     """F7-03: the guard covered `restart <svc>` but not bare `restart`, which restarts data-service AND
-    master-controller — and bare `stop` would have left both down and PAUSED through the 08:00 login."""
+    master-controller — and bare `stop` would have left both down and PAUSED through the 08:00 login.
+    F8-01: and it must be guarded against $ALL_SERVICES, because stop_services() ignores START_SET."""
     src = (tree / "start-local.sh").read_text()
-    stop_branch = src.split("    stop)")[1].split(";;")[0]
-    restart_branch = src.split("    restart)")[1].split(";;")[0]
-    for name, branch in (("stop", stop_branch), ("restart", restart_branch)):
-        else_part = branch.split("else", 1)[1]
-        assert "refuse_in_freeze" in else_part, f"the bare `{name}` form is unguarded"
-        assert "data-service" in else_part and "master-controller" in else_part, f"bare `{name}` misses a service"
+    for name in ("stop", "restart"):
+        branch = src.split(f"    {name})")[1].split(";;")[0]
+        code = _code_lines(branch.split("else", 1)[1])
+        assert "refuse_in_freeze" in code, f"the bare `{name}` form is unguarded"
+        # the GUARD line specifically must ask about everything that goes down. The rest of the branch may
+        # legitimately mention START_SET (restart's check_prerequisites / install_deps / start_services honour
+        # it on the way back UP) — scoping the assertion to the guard line is the difference between testing
+        # the fix and testing the neighbourhood.
+        guard = [l for l in code.split("\n") if "refuse_in_freeze" in l]
+        assert len(guard) == 1, f"bare `{name}`: expected one guard line, found {guard}"
+        assert "ALL_SERVICES" in guard[0], (f"bare `{name}` guards a subset while stop_services() stops "
+                                           f"everything — the F8-01 hole: {guard[0].strip()}")
+        assert "START_SET" not in guard[0], (f"bare `{name}` asks the window about a set stop_services does not "
+                                            f"honour: {guard[0].strip()}")
+
+
+def test_stop_services_really_does_ignore_start_set(tree):
+    """The premise of F8-01, pinned: if stop_services ever starts honouring START_SET, the guard above becomes
+    stricter than it needs to be and this test says so instead of leaving a silent mismatch."""
+    body = (tree / "start-local.sh").read_text().split("stop_services() {")[1].split("\n}")[0]
+    assert "ALL_SERVICES" in body and "START_SET" not in body, (
+        "stop_services' scope changed — revisit the bare-form guard in start-local.sh")

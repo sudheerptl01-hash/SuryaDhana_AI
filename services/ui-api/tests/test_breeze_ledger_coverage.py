@@ -29,29 +29,74 @@ METERED_METHODS = ("get_quotes", "get_historical_data_v2", "get_historical_data"
                    "get_funds", "get_customer_details", "get_trade_list", "get_order_detail")
 # any receiver, not just a local literally named `breeze` (F7-02: self.client.get_quotes(...) and
 # clients[0].get_quotes(...) were invisible to the first version of this gate)
-_CALL = re.compile(r"[\w.\[\]()]+\.(" + "|".join(METERED_METHODS) + r")\s*\(")
+#: a dotted call on any receiver, OR the getattr form that reaches the same SDK through a string name (F8-03)
+_CALL = re.compile(
+    r"[\w.\[\]()]+\.(" + "|".join(METERED_METHODS) + r")\s*\("
+    r"|getattr\([^,)]+,\s*[\"'](" + "|".join(METERED_METHODS) + r")[\"']")
 #: how many lines above a call the metering may appear (a guard block plus the call's own argument lines)
 _WINDOW = 8
 
 
+def _code_lines(src: str) -> list[str]:
+    """The file's CODE lines, with every comment and string literal blanked, line numbers preserved.
+
+    F8-03: the first version of this detector asked "is it metered?" by searching the preceding LINES — comments
+    included — for `_breeze_call(` or `ledger().guard(`. Both `routers/mcx.py` and `routers/gold_preopen.py`
+    carry comments naming `_breeze_call` exactly where a new quote call would be added, so the next bare call in
+    the two files F6-01 was actually about would have been invisible to the gate written to catch it. It also
+    skipped any line containing a backtick, which prose uses constantly.
+
+    `tokenize` is used rather than a hand-rolled stripper because the hand-rolled one is the bug: it has to get
+    docstrings, trailing comments, implicit concatenation and raw strings all right, and the standard library
+    already does. A file that will not tokenize (a syntax error mid-edit) is returned raw, which can only make
+    the gate stricter, never blinder.
+    """
+    import io
+    import tokenize as tk
+
+    lines = src.split("\n")
+    try:
+        toks = list(tk.generate_tokens(io.StringIO(src).readline))
+    except (tk.TokenError, IndentationError, SyntaxError):       # pragma: no cover — raw is the safe direction
+        return lines
+    out = list(lines)
+    for t in toks:
+        if t.type not in (tk.COMMENT, tk.STRING):
+            continue
+        (r1, c1), (r2, c2) = t.start, t.end
+        for r in range(r1, r2 + 1):
+            i = r - 1
+            if i >= len(out):
+                continue
+            a = c1 if r == r1 else 0
+            b = c2 if r == r2 else len(out[i])
+            out[i] = out[i][:a] + " " * max(0, b - a) + out[i][b:]
+    return out
+
+
 def _bare_sdk_calls() -> list[str]:
-    """Every `breeze.<metered>(` call site with no visible metering above it, as 'file:line method'."""
+    """Every metered SDK call site with no metering visible in the CODE above it, as 'file:line method'."""
     bare: list[str] = []
     for path in sorted(UI_API.rglob("*.py")):
         if "/tests/" in str(path):
             continue
-        lines = path.read_text(encoding="utf-8").split("\n")
+        raw = path.read_text(encoding="utf-8")
+        lines, code = raw.split("\n"), _code_lines(raw)
         for n, line in enumerate(lines):
             m = _CALL.search(line)
             if not m:
                 continue
-            stripped = line.strip()
-            if stripped.startswith(("#", "*", '"', "'")) or "`" in line:
-                continue                                   # prose in a docstring or comment, not a call
-            window = "\n".join(lines[max(0, n - _WINDOW):n + 1])
+            # Matched on the RAW line, because `getattr(breeze, "get_quotes")` carries the method name inside a
+            # string literal that blanking would erase — but the match must START on real code, or it is prose
+            # (blanking preserves column positions, so a blanked column means "was a comment or a string").
+            start = m.start()
+            cl = code[n] if n < len(code) else ""
+            if start >= len(cl) or cl[start] != line[start]:
+                continue
+            window = "\n".join(code[max(0, n - _WINDOW):n + 1])
             if "_breeze_call(" in window or "ledger().guard(" in window:
                 continue
-            bare.append(f"{path.relative_to(UI_API)}:{n + 1} {m.group(1)}")
+            bare.append(f"{path.relative_to(UI_API)}:{n + 1} {next(g for g in m.groups() if g)}")
     return bare
 
 

@@ -1113,10 +1113,12 @@ main() {
     stop)
       if [ -n "$svc" ]; then require_service "$svc"; refuse_in_freeze stop "$svc"; mark_paused "$svc"; stop_one "$svc"
       else
-        # F7-03: the bare form stops BOTH frozen services and was refused by nothing — it would have left
-        # data-service and master-controller down AND paused straight through the 08:00 ICICI login. Only the
-        # frozen services actually IN the set are guarded, so `START_SET='ui-api frontend' stop` is unaffected.
-        refuse_in_freeze_set stop "${START_SET:-$CORE_SERVICES}"
+        # F7-03 / F8-01: the bare form stops BOTH frozen services and was refused by nothing — it would have
+        # left data-service and master-controller down AND paused straight through the 08:00 ICICI login.
+        # Guarded against $ALL_SERVICES, not $START_SET, because stop_services() ignores START_SET entirely
+        # (it loops $ALL_SERVICES): `START_SET='ui-api' stop` really does stop data-service, so it really must
+        # face the window. The per-service form (`stop ui-api`) is the one that touches only ui-api.
+        refuse_in_freeze_set stop "$ALL_SERVICES"
         stop_services
       fi
       ;;
@@ -1125,9 +1127,10 @@ main() {
         require_service "$svc"; refuse_in_freeze restart "$svc"
         stop_one "$svc"; clear_paused "$svc"; clear_hang_history "$svc"; start_redis; start_one "$svc"
       else
-        # F7-03: same hole on the bare form — `./start-local.sh restart` restarts data-service AND
-        # master-controller, so it must face the same window the per-service form does (set-aware, below).
-        refuse_in_freeze_set restart "${START_SET:-$CORE_SERVICES}"
+        # F7-03 / F8-01: `restart` calls stop_services() first, which stops $ALL_SERVICES regardless of
+        # START_SET — so the window must be asked about everything that actually goes down, not just the set
+        # that will come back up.
+        refuse_in_freeze_set restart "$ALL_SERVICES"
         stop_services
         check_prerequisites "${START_SET:-$CORE_SERVICES}"
         install_deps "${START_SET:-$CORE_SERVICES}"

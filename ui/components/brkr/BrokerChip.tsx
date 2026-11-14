@@ -21,7 +21,7 @@ import { useEffect, useState } from 'react'
 
 import { T } from '@/components/terminal'
 import { goToPage } from '@/lib/navigate'
-import { type BrokerFace, type BudgetSnap, type LiveSnap, brokerFace } from './brokerFace'
+import { type BrokerFace, type BudgetSnap, type LiveSnap, brokerFace, istClock } from './brokerFace'
 
 const POLL_MS = 60_000                    // once a minute: these are counters, not quotes
 
@@ -44,7 +44,8 @@ export function BrokerChip() {
         readJson<BudgetSnap>('/api/positions/breeze-budget'),
         readJson<LiveSnap>('/api/live/status'),
       ])
-      if (alive) setFace(brokerFace(live, budget, new Date()))
+      // F8-05: the IST wall clock, built explicitly — never the browser's own weekday/hour
+      if (alive) setFace(brokerFace(live, budget, istClock(new Date())))
     }
     tick()
     const iv = setInterval(tick, POLL_MS)
