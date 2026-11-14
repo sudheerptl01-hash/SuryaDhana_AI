@@ -387,7 +387,15 @@ def summary_rows(rows: list[dict[str, Any]], days: int) -> list[dict[str, Any]]:
 
 
 def event_markers(summary: list[dict[str, Any]], events: list[dict[str, Any]]) -> list[dict[str, str]]:
-    """Chart markers: each results release (kind `results`) and each monthly expiry roll (kind `expiry`), once per date.
+    """Chart markers, once per (date, kind): each results release (`results`), and each session on which the
+    front monthly expiry CHANGES (`expiry`).
+
+    F9-08: the second kind used to be described as "each monthly expiry roll", which reads as the expiry day.
+    It is not — the marker lands on the first session whose `monthly_expiry` differs from the previous
+    session's, i.e. the session on which the series has rolled to the next month, typically the one after the
+    old contract died. The first row carries no marker at all (nothing to compare against). Worth being exact
+    about: on a chart these sit a session away from where a reader counting expiry days would put them.
+
     Budget / RBI / US-data markers wait for the owner's clarification (PLAN Appendix C) — never guessed here."""
     marks: dict[tuple[str, str], None] = {}
     for e in events:

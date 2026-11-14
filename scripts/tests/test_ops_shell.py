@@ -397,15 +397,22 @@ def test_the_bare_restart_and_stop_forms_face_the_freeze_window_too(tree):
         # the fix and testing the neighbourhood.
         guard = [l for l in code.split("\n") if "refuse_in_freeze" in l]
         assert len(guard) == 1, f"bare `{name}`: expected one guard line, found {guard}"
-        assert "ALL_SERVICES" in guard[0], (f"bare `{name}` guards a subset while stop_services() stops "
-                                           f"everything — the F8-01 hole: {guard[0].strip()}")
-        assert "START_SET" not in guard[0], (f"bare `{name}` asks the window about a set stop_services does not "
-                                            f"honour: {guard[0].strip()}")
+        # F9-06: stop_services now honours START_SET, so the guard asks about exactly what will stop —
+        # ${START_SET:-$ALL_SERVICES}. Both halves must read the same variable; a guard scoped to a set that
+        # is not the one going down is the F8-01 hole, in either direction.
+        assert "ALL_SERVICES" in guard[0], (f"bare `{name}` must default to $ALL_SERVICES: {guard[0].strip()}")
+        assert "START_SET" in guard[0], (f"bare `{name}` must honour $START_SET now that stop_services does, "
+                                        f"or it refuses stops that touch nothing frozen: {guard[0].strip()}")
 
 
-def test_stop_services_really_does_ignore_start_set(tree):
-    """The premise of F8-01, pinned: if stop_services ever starts honouring START_SET, the guard above becomes
-    stricter than it needs to be and this test says so instead of leaving a silent mismatch."""
-    body = (tree / "start-local.sh").read_text().split("stop_services() {")[1].split("\n}")[0]
-    assert "ALL_SERVICES" in body and "START_SET" not in body, (
-        "stop_services' scope changed — revisit the bare-form guard in start-local.sh")
+def test_stop_and_start_agree_on_what_start_set_means(tree):
+    """F9-06: start_services honoured START_SET and stop_services ignored it, so `START_SET='ui-api' stop`
+    silently stopped and PAUSED all seven services — the footgun behind F8-01. Both halves must read the same
+    variable, and the guard must ask about that same set. (This test previously pinned the OPPOSITE premise and
+    failed the moment the asymmetry was removed, which is what a premise test is for.)"""
+    src = (tree / "start-local.sh").read_text()
+    stop_body = src.split("stop_services() {")[1].split("\n}")[0]
+    assert "START_SET" in stop_body, "stop_services must honour START_SET like start_services does"
+    assert "ALL_SERVICES" in stop_body, "…and must still default to every service when START_SET is unset"
+    start_body = src.split("start_services() {")[1].split("\n}")[0]
+    assert "START_SET" in start_body, "start_services must still honour START_SET"

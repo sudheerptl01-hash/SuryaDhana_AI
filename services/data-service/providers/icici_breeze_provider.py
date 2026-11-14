@@ -9,10 +9,22 @@ from collections.abc import Iterable, Iterator
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
+from shared.breeze_budget import BudgetExceeded, ledger
 from shared.logging import get_logger
 from shared.models import OHLCV, OHLCVBatch
+
+
+def _retry_real_errors(exc: BaseException) -> bool:
+    """Retry a transient RuntimeError, but NEVER a budget refusal.
+
+    F9-03: these calls were invisible to the Breeze ledger, and metering them created a trap — the ledger's
+    ``BudgetExceeded`` IS a RuntimeError, so the plain ``retry_if_exception_type(RuntimeError)`` these methods
+    used would have turned one refusal into three attempts with exponential backoff, each one asking the ledger
+    again. A refusal is a decision, not a transient fault: fail it immediately and let the caller pause.
+    """
+    return isinstance(exc, RuntimeError) and not isinstance(exc, BudgetExceeded)
 
 logger = get_logger(__name__)
 
@@ -183,7 +195,7 @@ class ICICIBreezeProvider(LiveDataProvider):
     # ── Live quote ─────────────────────────────────────────────────────────────
 
     @retry(
-        retry=retry_if_exception_type(RuntimeError),
+        retry=retry_if_exception(_retry_real_errors),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
@@ -191,13 +203,17 @@ class ICICIBreezeProvider(LiveDataProvider):
     def get_live_quote(self, ticker: str) -> dict[str, Any]:
         self._require_connection()
         stock_code = self._resolve_isec_code(ticker)
-        response = self._breeze.get_quotes(
-            stock_code=stock_code,
-            exchange_code="NSE",
-            product_type="cash",
-            right="others",
-            strike_price="0",
-        )
+        # F9-03: metered. This is the live-quote path the NIFTY and watchlist pollers drive every 15 s —
+        # the busiest Breeze consumer in the stack, and until now the ledger (and therefore the budget panel
+        # and the 100/min · 5,000/day guard) could not see a single one of its calls.
+        with ledger().guard("data-service.live_quote", "get_quotes"):
+            response = self._breeze.get_quotes(
+                stock_code=stock_code,
+                exchange_code="NSE",
+                product_type="cash",
+                right="others",
+                strike_price="0",
+            )
         if response.get("Status") != 200:
             raise RuntimeError(f"ICICI quote error for {ticker}: {response}")
         return response.get("Success", [{}])[0]
@@ -205,7 +221,7 @@ class ICICIBreezeProvider(LiveDataProvider):
     # ── Intraday OHLCV (v2) ────────────────────────────────────────────────────
 
     @retry(
-        retry=retry_if_exception_type(RuntimeError),
+        retry=retry_if_exception(_retry_real_errors),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
@@ -215,14 +231,15 @@ class ICICIBreezeProvider(LiveDataProvider):
         self._require_connection()
         stock_code = self._resolve_isec_code(ticker)
         target = day or date.today()
-        response = self._breeze.get_historical_data_v2(
-            interval=interval,
-            from_date=_to_icici_dt(target, eod=False),
-            to_date=_to_icici_dt(target, eod=True),
-            stock_code=stock_code,
-            exchange_code="NSE",
-            product_type="cash",
-        )
+        with ledger().guard("data-service.intraday", "get_historical_data_v2"):   # F9-03
+            response = self._breeze.get_historical_data_v2(
+                interval=interval,
+                from_date=_to_icici_dt(target, eod=False),
+                to_date=_to_icici_dt(target, eod=True),
+                stock_code=stock_code,
+                exchange_code="NSE",
+                product_type="cash",
+            )
         if response.get("Status") != 200:
             raise RuntimeError(f"ICICI intraday v2 error for {ticker}: {response}")
 
@@ -276,7 +293,7 @@ class ICICIBreezeProvider(LiveDataProvider):
         return OHLCVBatch(ticker=ticker, records=all_records, source="icici_breeze_v2")
 
     @retry(
-        retry=retry_if_exception_type(RuntimeError),
+        retry=retry_if_exception(_retry_real_errors),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=3, max=15),
         reraise=True,
@@ -289,14 +306,17 @@ class ICICIBreezeProvider(LiveDataProvider):
         chunk_end: date,
         exchange_code: str,
     ) -> list[OHLCV]:
-        response = self._breeze.get_historical_data_v2(
-            interval="1day",
-            from_date=_to_icici_dt(chunk_start, eod=False),
-            to_date=_to_icici_dt(chunk_end, eod=True),
-            stock_code=stock_code,
-            exchange_code=exchange_code,
-            product_type="cash",
-        )
+        # F9-03: a history backfill walks this in chunks, so it is the one path that can empty the daily
+        # quota in minutes — exactly what the ledger's per-day cap exists to stop.
+        with ledger().guard("data-service.history", "get_historical_data_v2"):
+            response = self._breeze.get_historical_data_v2(
+                interval="1day",
+                from_date=_to_icici_dt(chunk_start, eod=False),
+                to_date=_to_icici_dt(chunk_end, eod=True),
+                stock_code=stock_code,
+                exchange_code=exchange_code,
+                product_type="cash",
+            )
         if response.get("Status") != 200:
             raise RuntimeError(
                 f"ICICI daily v2 chunk error {ticker} "

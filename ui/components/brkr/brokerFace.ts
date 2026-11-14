@@ -49,7 +49,11 @@ export function istClock(now: Date): IstClock {
   }).formatToParts(now)
   const get = (t: string) => p.find(x => x.type === t)?.value ?? ''
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const day = days.indexOf(get('weekday'))
+  // An unexpected ICU rendering would make indexOf return -1, which is neither 0 nor 6 — so a Saturday would
+  // have read as a weekday and the market window would have applied. Fall back to the host's own weekday,
+  // which is wrong by at most a day rather than wrong in a way that invents a trading session.
+  const idx = days.indexOf(get('weekday'))
+  const day = idx >= 0 ? idx : now.getUTCDay()
   const hour = Number(get('hour'))
   // 'en-GB' with hour12:false renders midnight as 24 in some ICU versions; normalise so 24:05 is not > 23:30
   return { day, hm: (hour === 24 ? 0 : hour) * 100 + Number(get('minute')) }
@@ -64,10 +68,15 @@ export function sessionExpected(ist: IstClock, nseOnly = false): boolean {
 /**
  * The chip, or null when there is genuinely nothing to say.
  *
- * `idle` (outside market hours, no session) renders nothing: the token expiring overnight is normal and a chip
- * that cries every night teaches the owner to ignore it. During market hours a missing session is `bad`, and
- * repeated login failures are worth saying even when a session did eventually come up — they are the early
- * warning that the 08:00 job is failing.
+ * The ladder, quietest first (F9-02: this used to claim `idle` "renders nothing", which was never true — it
+ * renders a grey chip, and the one state that renders nothing is a healthy session returning null):
+ *   null  — connected, few errors. The header says nothing at all; that silence is the healthy state.
+ *   idle  — no session outside market hours. Grey. The token expiring overnight is normal, and a chip that
+ *           cries every night teaches the owner to ignore it.
+ *   warn  — BRKR PRE: no session between 08:15 and the 09:15 open on a trading day, i.e. the 08:00 login has
+ *           not produced one while there is still time to fix it; or BRKR n ERR: a session exists but the day
+ *           has cost a lot of failed calls, which is the early warning that the login job is struggling.
+ *   bad   — no session while a market is open. Red, because quotes, the chain and margin are all degraded.
  */
 export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist: IstClock): BrokerFace | null {
   const expected = sessionExpected(ist)
@@ -86,6 +95,28 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
         + '. Live quotes, the option chain and margin fall back to stored or delayed data, each labelled on its own panel.',
     }
   }
+  // F9-01: the hour that matters most, which F8-04's reorder had silently handed to IDLE.
+  //
+  // `sessionExpected` is false until 09:15, so between 08:15 and the open a dead session fell through to the
+  // grey "the token expires at midnight IST by design" — a sentence that is true at 2 a.m. and actively
+  // misleading at 08:30, because by then the 08:00 login job has run and either produced a session or failed.
+  // That hour is the ONLY window in which a failed login is still repairable (Telegram /login with the SMS
+  // OTP) before quotes are needed, and the terminal was reassuring the owner through exactly it.
+  //
+  // This is deliberately NOT folded into `sessionExpected`: a session is genuinely not *expected* before the
+  // open — the login job may legitimately still be running at 08:05 — it is merely OVERDUE, which is a
+  // different thing and earns amber rather than red. Trading days only, so the nightly-silence contract and
+  // F8-05's 02:00-Saturday case both still hold.
+  if (!connected && ist.day >= 1 && ist.day <= 5 && ist.hm >= 815 && ist.hm < 915) {
+    return {
+      label: 'BRKR PRE',
+      tone: 'warn',
+      title: 'No broker session yet and the market opens at 09:15 — the 08:00 login has not produced one'
+        + `${errors ? ` (${errors} failed broker call${errors === 1 ? '' : 's'} today)` : ''}. There is still `
+        + 'time: /login on Telegram and reply with the SMS OTP. Live quotes, the chain and margin stay on '
+        + 'stored or delayed data until a session exists, each labelled on its own panel.',
+    }
+  }
   // F8-04: the error branch used to be tested BEFORE this one, so a closed Saturday carrying a dead token
   // showed an amber "BRKR 127 ERR" — exactly the nightly noise the contract above promises to avoid. Outside
   // market hours a failing login is expected and tells the owner nothing new, so IDLE wins the tie.
@@ -100,9 +131,10 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
       // F8-04: `errors_today` counts failures across ALL methods, not just logins, so the old wording
       // ("errors across N login attempts") attributed them to a denominator that does not contain them.
       // The two numbers are now stated side by side as the different things they are.
-      title: `${errors} failed broker call${errors === 1 ? '' : 's'} today (all methods), alongside ${logins} `
-        + `login attempt${logins === 1 ? '' : 's'}${connected ? '; a session is up now' : ''}. Each failed call `
-        + 'still counts against the daily broker quota.',
+      // F9-05: `connected` is necessarily true here (every !connected case returned above) and `errors` is
+      // necessarily >= 20, so the ternaries this line used to carry could never take their other branch.
+      title: `A session is up, but ${errors} broker calls have failed today (all methods), alongside ${logins} `
+        + `login attempt${logins === 1 ? '' : 's'}. Each failed call still counts against the daily broker quota.`,
     }
   }
   return null                                                     // connected, few errors: the header stays quiet

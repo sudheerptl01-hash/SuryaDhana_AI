@@ -438,14 +438,19 @@ class ExecutionEngine:
         """Fetch last traded price. Returns 0 on any error."""
         try:
             breeze = self._get_breeze()
-            resp = breeze.get_quotes(
-                stock_code=symbol.replace(".NS", ""),
-                exchange_code="NSE",
-                expiry_date="",
-                product_type="cash",
-                right="",
-                strike_price="",
-            )
+            # F9-03: metered like every other Breeze call in the stack. This engine is dormant (autopilot OFF),
+            # but it is an EXECUTION path — the one place where an unmetered quote could be the call that gets
+            # refused mid-order — so it must not be the exception.
+            from shared.breeze_budget import ledger
+            with ledger().guard("live_execution.ltp", "get_quotes"):
+                resp = breeze.get_quotes(
+                    stock_code=symbol.replace(".NS", ""),
+                    exchange_code="NSE",
+                    expiry_date="",
+                    product_type="cash",
+                    right="",
+                    strike_price="",
+                )
             if resp.get("Status") == 200:
                 success = resp.get("Success") or []
                 if success:

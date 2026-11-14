@@ -108,5 +108,28 @@ check('F8-04 the same counts DO warn during market hours', f804mon?.tone === 'wa
 check('F8-04 the title does not pin all-method errors on logins',
   f804mon?.title.includes('all methods') === true, f804mon?.title)
 
+// ── F9-01: the pre-open hour, which F8-04's reorder had handed to IDLE ──────────────────────────────────
+// F9 ran the shipped model against Monday 16 Nov with a dead session and found 07:50, 08:15, 09:00 and 09:14
+// all returning grey "BRKR IDLE — the token expires at midnight IST by design": true at 2 a.m., misleading at
+// 08:30, and the 08:00 login job's failure is only repairable before the 09:15 open. These pin the window.
+const DEAD = { breeze_session: false }
+const COUNTS = { errors_today: 133, by_method: { generate_session: 135 } }
+const monAt = (hh: number, mm: number) => brokerFace(DEAD, COUNTS, at(2026, 11, 16, hh, mm))   // Mon 16 Nov
+
+check('F9-01 07:50 Monday is still quiet (the 08:00 login has not run yet)', monAt(7, 50)?.tone === 'idle', monAt(7, 50))
+check('F9-01 08:15 Monday warns BRKR PRE', monAt(8, 15)?.label === 'BRKR PRE' && monAt(8, 15)?.tone === 'warn', monAt(8, 15))
+check('F9-01 09:00 Monday warns BRKR PRE', monAt(9, 0)?.label === 'BRKR PRE', monAt(9, 0))
+check('F9-01 09:14 Monday — the last minute it is still fixable — warns', monAt(9, 14)?.label === 'BRKR PRE', monAt(9, 14))
+check('F9-01 09:15 Monday escalates to red BRKR DOWN', monAt(9, 15)?.tone === 'bad' && monAt(9, 15)?.label === 'BRKR DOWN', monAt(9, 15))
+check('F9-01 the PRE title names the repair the owner can still do',
+  (monAt(8, 30)?.title ?? '').includes('/login') && (monAt(8, 30)?.title ?? '').includes('OTP'), monAt(8, 30)?.title)
+// the nightly-silence contract still holds: a weekend 08:30 must stay grey, not warn
+check('F9-01 Saturday 08:30 stays grey (trading days only)',
+  brokerFace(DEAD, COUNTS, at(2026, 11, 14, 8, 30))?.tone === 'idle', brokerFace(DEAD, COUNTS, at(2026, 11, 14, 8, 30)))
+check('F9-01 Sunday 08:30 stays grey', brokerFace(DEAD, COUNTS, at(2026, 11, 15, 8, 30))?.tone === 'idle')
+// and a session that came up normally says nothing at all through the same window
+check('F9-01 a healthy session before the open renders nothing',
+  brokerFace({ breeze_session: true }, { errors_today: 0 }, at(2026, 11, 16, 8, 30)) === null)
+
 console.log(`brokerChip.check: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)

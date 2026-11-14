@@ -582,12 +582,23 @@ start_services() {
 }
 
 stop_services() {
+  # F9-06: this used to loop $ALL_SERVICES unconditionally while start_services honoured $START_SET, so
+  # `START_SET='ui-api' ./start-local.sh stop` stopped AND paused all seven services without saying so — and
+  # `restart` inherited it, stopping everything and bringing back only the set, leaving the rest paused. The
+  # asymmetry was the footgun behind F8-01: the guard was asked about one set and a different set went down.
+  # Both halves now read the same variable, so what the window is asked about is what actually stops.
+  local targets="${START_SET:-$ALL_SERVICES}"
   print_header "Stopping Local Services"
-  for name in $(reverse_list "$ALL_SERVICES"); do
+  [ -n "${START_SET:-}" ] && print_info "START_SET is set: stopping only $targets"
+  for name in $(reverse_list "$targets"); do
     mark_paused "$name"
     stop_one "$name"
   done
-  print_success "All local services stopped (Redis left running: redis-cli shutdown)"
+  if [ -n "${START_SET:-}" ]; then
+    print_success "Stopped: $targets (others left running; Redis untouched)"
+  else
+    print_success "All local services stopped (Redis left running: redis-cli shutdown)"
+  fi
 }
 
 # ── status rows beyond the services ──────────────────────────────────────────
@@ -1113,12 +1124,12 @@ main() {
     stop)
       if [ -n "$svc" ]; then require_service "$svc"; refuse_in_freeze stop "$svc"; mark_paused "$svc"; stop_one "$svc"
       else
-        # F7-03 / F8-01: the bare form stops BOTH frozen services and was refused by nothing — it would have
-        # left data-service and master-controller down AND paused straight through the 08:00 ICICI login.
-        # Guarded against $ALL_SERVICES, not $START_SET, because stop_services() ignores START_SET entirely
-        # (it loops $ALL_SERVICES): `START_SET='ui-api' stop` really does stop data-service, so it really must
-        # face the window. The per-service form (`stop ui-api`) is the one that touches only ui-api.
-        refuse_in_freeze_set stop "$ALL_SERVICES"
+        # F7-03 / F8-01 / F9-06: the bare form stops BOTH frozen services and was once refused by nothing —
+        # it would have left data-service and master-controller down AND paused through the 08:00 ICICI login.
+        # The guard asks about exactly the set stop_services will stop: $ALL_SERVICES normally, or $START_SET
+        # when it is set, which stop_services now honours too. Those two reading the same variable is the
+        # point — F8-01 happened because the guard was asked about one set while a different set went down.
+        refuse_in_freeze_set stop "${START_SET:-$ALL_SERVICES}"
         stop_services
       fi
       ;;
@@ -1127,10 +1138,10 @@ main() {
         require_service "$svc"; refuse_in_freeze restart "$svc"
         stop_one "$svc"; clear_paused "$svc"; clear_hang_history "$svc"; start_redis; start_one "$svc"
       else
-        # F7-03 / F8-01: `restart` calls stop_services() first, which stops $ALL_SERVICES regardless of
-        # START_SET — so the window must be asked about everything that actually goes down, not just the set
-        # that will come back up.
-        refuse_in_freeze_set restart "$ALL_SERVICES"
+        # F7-03 / F8-01 / F9-06: `restart` calls stop_services() first, so the window is asked about what
+        # goes DOWN ($START_SET when set, else $ALL_SERVICES) — not the narrower set that comes back up
+        # (bare `restart` deliberately restarts only the 3 core services).
+        refuse_in_freeze_set restart "${START_SET:-$ALL_SERVICES}"
         stop_services
         check_prerequisites "${START_SET:-$CORE_SERVICES}"
         install_deps "${START_SET:-$CORE_SERVICES}"

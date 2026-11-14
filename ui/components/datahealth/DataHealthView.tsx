@@ -46,7 +46,10 @@ export function DataHealthView() {
     { key: 'state', label: 'State', sort: r => ({ gap: 0, red: 1, amber: 2, live: 3, fresh: 4 } as Record<string, number>)[r.state] ?? 9, render: r => <StateChip s={r.state} /> },
     { key: 'label', label: 'Dataset', sort: r => r.label, render: r => <span title={r.id}><span style={{ color: T.text }}>{r.label}</span> <span style={{ color: T.dim, fontSize: 10 }}>{r.id}</span></span> },
     { key: 'lag', label: 'Behind', align: 'right', sort: r => r.lag_sessions ?? -1, title: 'sessions behind the last session whose data is due',
-      render: r => r.lag_sessions == null ? <span style={{ color: T.dim }}>—</span> : <span style={{ color: r.lag_sessions > 0 ? T.text : T.dim }}>{r.lag_sessions} s</span> },
+      // F9-07: this read "2 s" / "1844 s" for SESSIONS, in a terminal where `s` is seconds on every
+      // SourceChip, age_s and last_tick_age_s — so "2 s behind" looked fresh when it meant two trading
+      // sessions stale, on the one page whose whole job is to say how stale things are.
+      render: r => r.lag_sessions == null ? <span style={{ color: T.dim }}>—</span> : <span style={{ color: r.lag_sessions > 0 ? T.text : T.dim }}>{r.lag_sessions} sess</span> },
     { key: 'asof', label: 'Stored as of', sort: r => r.as_of ?? '', render: r => <span style={{ color: r.as_of ? T.text : T.dim }}>{r.as_of ?? 'nothing'}</span> },
     { key: 'exp', label: 'Expected by', render: r => <span style={{ color: T.muted }}>{r.expected_by ?? '—'}{r.published_ist ? ` (pub. ${r.published_ist})` : ''}</span> },
     { key: 'pages', label: 'Pages', render: r => <span style={{ color: T.muted }}>{(r.pages ?? []).join(' ')}</span> },

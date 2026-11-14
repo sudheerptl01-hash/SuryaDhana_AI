@@ -21,6 +21,21 @@ from pathlib import Path
 import pytest
 
 UI_API = Path(__file__).resolve().parents[1]
+REPO = UI_API.parents[1]
+
+#: Every tree that may hold a Breeze SDK call. F9-03: this gate was hardened three times while scanning ONLY
+#: services/ui-api, and the whole time `services/data-service/providers/icici_breeze_provider.py` held three
+#: unmetered calls on the busiest path in the stack — the live-quote poller the NIFTY and watchlist tasks drive
+#: every 15 seconds, whose own comment prices it at ~1,580 calls a day. The budget panel reported thousands of
+#: calls remaining while that volume was invisible to it, so the first symptom of exhaustion on a trading day
+#: would have been the option chain and margin failing mid-session with the panel still showing plenty left.
+#: A gate that guards one directory out of seven is a gate that tells you the wrong thing confidently.
+SCANNED_ROOTS = (UI_API, REPO / "services/data-service", REPO / "scripts", REPO / "shared", REPO / "alpha_lab")
+
+#: Set by the self-test below (and by an adversarial probe) to point the detector at a planted tree instead of
+#: the repo. A module-level override rather than reassigning UI_API: F8's probe had to monkeypatch UI_API, which
+#: silently also changed the path the relative-name reporting used.
+_ROOTS_OVERRIDE: tuple[Path, ...] | None = None
 
 #: the SDK methods that cost a call against ICICI's quota (reads and the margin calculator; order methods are
 #: refused outright elsewhere — see test_http_security.py — so they are deliberately not listed as "allowed")
@@ -30,8 +45,14 @@ METERED_METHODS = ("get_quotes", "get_historical_data_v2", "get_historical_data"
 # any receiver, not just a local literally named `breeze` (F7-02: self.client.get_quotes(...) and
 # clients[0].get_quotes(...) were invisible to the first version of this gate)
 #: a dotted call on any receiver, OR the getattr form that reaches the same SDK through a string name (F8-03)
+#: F9-04: the `\s*\(` that used to follow the method name made the gate blind to the idiom this codebase
+#: MANDATES — `routers/mcx.py` states "Breeze/master work goes through asyncio.to_thread", and
+#: `asyncio.to_thread(breeze.get_quotes, ...)` passes the method as a value, with no `(` after its name. The
+#: same held for functools.partial and for a bound alias (`fn = breeze.get_quotes`). A reference to a metered
+#: method is now enough; a string literal cannot trigger it, because strings are blanked before the window
+#: check and a match must start on real code.
 _CALL = re.compile(
-    r"[\w.\[\]()]+\.(" + "|".join(METERED_METHODS) + r")\s*\("
+    r"[\w.\[\]()]+\.(" + "|".join(METERED_METHODS) + r")\b"
     r"|getattr\([^,)]+,\s*[\"'](" + "|".join(METERED_METHODS) + r")[\"']")
 #: how many lines above a call the metering may appear (a guard block plus the call's own argument lines)
 _WINDOW = 8
@@ -74,11 +95,26 @@ def _code_lines(src: str) -> list[str]:
     return out
 
 
+def _rel(path: Path) -> str:
+    """A readable path for the failure message, whichever root the file came from.
+
+    This used to be `path.relative_to(UI_API)`, which raised ValueError the moment the gate scanned anything
+    outside services/ui-api — so widening the roots for F9-03 broke the reporting before it broke the logic.
+    """
+    for base in (REPO, *SCANNED_ROOTS):
+        try:
+            return str(path.relative_to(base))
+        except ValueError:
+            continue
+    return str(path)
+
+
 def _bare_sdk_calls() -> list[str]:
     """Every metered SDK call site with no metering visible in the CODE above it, as 'file:line method'."""
     bare: list[str] = []
-    for path in sorted(UI_API.rglob("*.py")):
-        if "/tests/" in str(path):
+    roots = SCANNED_ROOTS if _ROOTS_OVERRIDE is None else _ROOTS_OVERRIDE
+    for path in sorted({p for root in roots for p in root.rglob("*.py")}):
+        if "/tests/" in str(path) or "/node_modules/" in str(path):
             continue
         raw = path.read_text(encoding="utf-8")
         lines, code = raw.split("\n"), _code_lines(raw)
@@ -94,14 +130,44 @@ def _bare_sdk_calls() -> list[str]:
             if start >= len(cl) or cl[start] != line[start]:
                 continue
             window = "\n".join(code[max(0, n - _WINDOW):n + 1])
-            if "_breeze_call(" in window or "ledger().guard(" in window:
+            # `.guard(` on ANY receiver, not just `ledger().guard(`: data-service injects the ledger
+            # (`budget.guard(CALLER, METHOD)` in fo_iv/intraday.py), which is better design than reaching for
+            # the global — and the first widened run reported both of those correctly-metered calls as bare.
+            if "_breeze_call(" in window or ".guard(" in window:
                 continue
-            bare.append(f"{path.relative_to(UI_API)}:{n + 1} {next(g for g in m.groups() if g)}")
+            bare.append(f"{_rel(path)}:{n + 1} {next(g for g in m.groups() if g)}")
     return bare
 
 
+#: Hand-run diagnostics, exempt because nothing schedules them: a human types the command, watches the output
+#: and spends a handful of calls once. They are NOT exempt because metering them would be hard.
+#: An allowlist is how a gate rots, so the exemption's REASON is enforced by
+#: `test_the_allowlist_is_still_justified` below rather than merely asserted here: each file must still exist,
+#: must still contain a metered-method call, and must NOT be reachable from the scheduler. The day one of
+#: these becomes a job, the gate fails and says so.
+UNSCHEDULED_DIAGNOSTICS = {
+    "scripts/breeze_data_catalog.py",       # probes every market-data endpoint for one ticker, by hand
+    "scripts/icici_session_helper.py",      # get_customer_details as a session-validity check, by hand
+}
+
+
+def test_the_allowlist_is_still_justified() -> None:
+    """The exemption above holds only while these stay hand-run. Enforce exactly that."""
+    controller = (REPO / "scripts/master_controller.py").read_text(encoding="utf-8")
+    for rel in sorted(UNSCHEDULED_DIAGNOSTICS):
+        path = REPO / rel
+        assert path.is_file(), f"allowlisted file is gone — drop it from UNSCHEDULED_DIAGNOSTICS: {rel}"
+        src = path.read_text(encoding="utf-8")
+        assert any(m in src for m in METERED_METHODS), (
+            f"{rel} no longer calls a metered method; the exemption is dead weight — remove it")
+        stem = Path(rel).stem
+        assert stem not in controller, (
+            f"{rel} is now referenced by the scheduler, so it is no longer a hand-run diagnostic: meter its "
+            f"Breeze calls and remove it from UNSCHEDULED_DIAGNOSTICS")
+
+
 def test_no_breeze_sdk_call_bypasses_the_budget_ledger() -> None:
-    bare = _bare_sdk_calls()
+    bare = [b for b in _bare_sdk_calls() if b.split(":")[0] not in UNSCHEDULED_DIAGNOSTICS]
     assert not bare, (
         "Breeze SDK call(s) that do not pass through the ledger — wrap them in positions._breeze_call(fn, "
         "caller='ui-api.<area>', ...) or `with ledger().guard(caller, method):`. An unmetered call drains the "
@@ -128,29 +194,40 @@ def test_the_detector_actually_runs_and_separates_bare_from_metered(tmp_path, mo
     (tmp_path / "routers").mkdir()
     (tmp_path / "routers" / "bare.py").write_text(
         "def f(c):\n    q = c.get_quotes(stock_code='GOLD')\n"                       # receiver NOT named breeze
-        "def g(self):\n    h = self.client.get_historical_data_v2(x=1)\n")          # attribute chain
+        "def g(self):\n    h = self.client.get_historical_data_v2(x=1)\n"            # attribute chain
+        # F9-04: the house idiom — `routers/mcx.py` mandates asyncio.to_thread for Breeze work, and passing the
+        # method as a VALUE has no '(' after its name, so the old regex could not see it at all
+        "async def h(breeze):\n    return await asyncio.to_thread(breeze.get_quotes, 'GOLD')\n"
+        "def i(breeze):\n    fn = breeze.get_option_chain_quotes\n    return fn(x=1)\n")
     (tmp_path / "routers" / "metered.py").write_text(
         "def f(breeze):\n    with ledger().guard('x', 'get_quotes'):\n"
         "        q = breeze.get_quotes(stock_code='GOLD')\n"
         "def g(breeze):\n    q = _breeze_call(breeze.get_quotes, caller='x')\n")
-    monkeypatch.setattr(mod, "UI_API", tmp_path)
+    monkeypatch.setattr(mod, "_ROOTS_OVERRIDE", (tmp_path,))
     found = mod._bare_sdk_calls()
-    assert len(found) == 2, found                      # both bare forms seen, neither metered one flagged
+    assert len(found) == 4, found                      # all four bare forms, no metered one
     assert all("bare.py" in f for f in found), found
 
     # and it must not pass by scanning nothing: an empty tree yields no files, which is itself a failure mode
     empty = tmp_path / "empty"
     (empty / "routers").mkdir(parents=True)
-    monkeypatch.setattr(mod, "UI_API", empty)
+    monkeypatch.setattr(mod, "_ROOTS_OVERRIDE", (empty,))
     assert mod._bare_sdk_calls() == []
     assert list(empty.rglob("*.py")) == [], "the empty-tree case is only meaningful while the tree is empty"
 
 
 def test_the_gate_scans_a_non_trivial_number_of_files() -> None:
-    """F7-02: with UI_API pointing anywhere wrong, every assertion above passes vacuously. Pin the floor."""
-    scanned = [p for p in UI_API.rglob("*.py") if "/tests/" not in str(p)]
-    assert len(scanned) > 40, f"only {len(scanned)} ui-api modules scanned — is UI_API right?"
+    """F7-02: with the roots pointing anywhere wrong, every assertion above passes vacuously. Pin the floor.
+    F9-03: and pin that EVERY root is real and non-empty — the gate spent three hardening rounds scanning only
+    services/ui-api while the live-quote provider in data-service held three unmetered calls."""
+    for root in SCANNED_ROOTS:
+        assert root.is_dir(), f"scanned root missing: {root}"
+        assert any(root.rglob("*.py")), f"scanned root has no python: {root}"
+    scanned = [p for p in {q for r in SCANNED_ROOTS for q in r.rglob("*.py")} if "/tests/" not in str(p)]
+    assert len(scanned) > 200, f"only {len(scanned)} modules scanned across {len(SCANNED_ROOTS)} roots"
+    # the two files this gate exists for, one per service
     assert (UI_API / "routers" / "mcx.py").exists()
+    assert (REPO / "services/data-service/providers/icici_breeze_provider.py").exists()
 
 
 #: every (router that caches a broker quote, component that polls it) pair. F7-01: the first version of this
