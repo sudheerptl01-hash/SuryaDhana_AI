@@ -806,13 +806,15 @@ def test_r5_sample_tokens_pure() -> None:
 def test_r5_value_samples_question_matched(snap: Path) -> None:
     eng = AskEngine(llm=ScriptedLLM())
     vals = eng.value_samples("index_ohlc_daily", "What was the last stored NIFTY close?")
-    assert vals == ["BANKNIFTY", "NIFTY"]                              # DISTINCT, LIKE-matched, ordered
+    assert vals == ["NIFTY", "BANKNIFTY"]   # DISTINCT, LIKE-matched, SHORTEST FIRST (F5, 14 Nov 2026: alphabetical
+    # order buried the canonical forms — NIFTY100ALPHA30 outranked NIFTY50 — so the real stored value never
+    # reached the prompt and the model had to guess with a LIKE; brevity surfaces the canonical form instead)
     assert vals == eng.value_samples("index_ohlc_daily", "What was the last stored NIFTY close?")  # cached+stable
 
 
 def test_r5_value_samples_fallback_and_no_key_column(snap: Path) -> None:
     eng = AskEngine(llm=ScriptedLLM())
-    assert eng.value_samples("index_ohlc_daily", "zzz qqq") == ["BANKNIFTY", "NIFTY"]  # alphabetical fallback
+    assert eng.value_samples("index_ohlc_daily", "zzz qqq") == ["NIFTY", "BANKNIFTY"]  # no token match: same order
     assert eng.value_samples("big", "anything") == []                  # no symbol/id column -> no samples
     assert eng.value_samples("no_such_table", "NIFTY") == []           # unknown table degrades to none
 
@@ -820,7 +822,7 @@ def test_r5_value_samples_fallback_and_no_key_column(snap: Path) -> None:
 def test_r5_sample_injection_tokens_cannot_break_the_query(snap: Path) -> None:
     eng = AskEngine(llm=ScriptedLLM())
     out = eng.value_samples("index_ohlc_daily", "'; DROP TABLE index_ohlc_daily; -- NIFTY")
-    assert out == ["BANKNIFTY", "NIFTY"]                               # tokens sanitized, nothing raised
+    assert out == ["NIFTY", "BANKNIFTY"]    # tokens sanitized, nothing raised
     assert eng.run_query("SELECT count(*) FROM index_ohlc_daily")[1][0][0] == 3   # the table survived
 
 
@@ -920,7 +922,7 @@ def test_r5_caches_invalidate_when_the_snapshot_is_recut_at_the_same_path(snap: 
     follow the new file, never the old cache (citations would otherwise date against yesterday's cut)."""
     eng = AskEngine(llm=ScriptedLLM())
     assert eng.table_as_of("index_ohlc_daily") == "2026-11-12"
-    assert eng.value_samples("index_ohlc_daily", "NIFTY close") == ["BANKNIFTY", "NIFTY"]
+    assert eng.value_samples("index_ohlc_daily", "NIFTY close") == ["NIFTY", "BANKNIFTY"]
     import time as _time
     _time.sleep(0.01)                                                   # a distinct mtime_ns on coarse filesystems
     con = duckdb.connect(str(snap))

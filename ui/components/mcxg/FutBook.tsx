@@ -70,6 +70,7 @@ export function FutBook({ contract, expiry, lots, price, priceSource, brokerage 
     try { setBook(await api<BookPayload>('/api/mcx/book')) } catch (e: unknown) { setErr(e instanceof Error ? e.message : 'book unavailable') }
   }, [])
   const refreshMarks = useCallback(async () => {
+    // marks only — a page view never closes a position (F5, 14 Nov 2026); SETTLE below is the explicit action
     try { await post('/api/mcx/book/mark') } catch { /* stored reads may be empty on a fresh install — the book still renders */ }
     await load()
   }, [load])
@@ -117,6 +118,7 @@ export function FutBook({ contract, expiry, lots, price, priceSource, brokerage 
   ]
 
   const t = book?.totals
+  const hasExpired = (book?.open ?? []).some(r => r.expired)   // F5: drives the explicit SETTLE action
   return (
     <Panel source={inputSource('the paper futures book (ui-api SQLite, PAPER ONLY)')} title="Paper futures book" accent={T.violet}
       badge="arithmetic"
@@ -134,6 +136,13 @@ export function FutBook({ contract, expiry, lots, price, priceSource, brokerage 
           BOOK PAPER</Btn>
         <Btn size="sm" disabled={busy} onClick={() => act(async () => {}, 'marks refreshed from the stored settlement reads')}
           title="re-read the stored settlement reads and append today's marks (idempotent)">MARK</Btn>
+        {/* F5 (14 Nov 2026): closing an expired contract is an EXPLICIT action — the mount only marks */}
+        <Btn size="sm" disabled={busy || !hasExpired}
+          onClick={() => act(() => post('/api/mcx/book/mark?settle=true'),
+            'expired contracts settled at their stored settlement of record')}
+          title={hasExpired
+            ? 'close every expired contract at its stored MCX settlement of record (the exit price and its source are recorded in the fill)'
+            : 'nothing in the book has expired'}>SETTLE EXPIRED</Btn>
       </div>
       {err && <Notice color={T.red}>{err}</Notice>}
       {note && !err && <div style={{ fontSize: 10, color: T.green }}>{note}</div>}

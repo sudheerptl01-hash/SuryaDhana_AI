@@ -64,6 +64,7 @@ for _p in (Path(__file__).resolve().parents[3], Path(__file__).resolve().parents
         sys.path.insert(0, str(_p))
 
 from shared import mcx_specs as specs  # noqa: E402
+from shared.http_client import UpstreamError, get_json  # noqa: E402
 
 router = APIRouter()
 IST = specs.IST
@@ -378,21 +379,20 @@ async def desk_daily(family: str = Query(...), expiry: str | None = Query(None),
         params["expiry"] = expiry
     base = {"family": code, "expiry": expiry, "quote_unit": FAMILIES[code].quote_unit,
             "source": "gold_mcx_daily (ICICI Breeze daily bars, stored by data-service)", "quality": "broker"}
+    # the SHARED client (one per process, breaker + stale-serve + metrics), as fut_book.py does — F5 found this
+    # handler building a fresh AsyncClient per request, which bypasses all three.
     try:
-        async with httpx.AsyncClient(timeout=_DB_TIMEOUT) as client:
-            r = await client.get(f"{DATA_SVC}/db/gold/mcx/daily", params=params)
-    except httpx.HTTPError as exc:
-        return degraded({**base, "rows": [], "count": 0}, "upstream_down",
-                        f"data-service unreachable ({type(exc).__name__})")
-    if r.status_code != 200:
-        # a 422 from a data-service that predates the family-pattern extension, or any other refusal
+        body = await get_json(f"{DATA_SVC}/db/gold/mcx/daily", route="read", params=params)
+    except UpstreamError as exc:
+        status = getattr(exc, "status", None) or 503
+        if status == 503:
+            return degraded({**base, "rows": [], "count": 0}, "upstream_down", "data-service unreachable")
+        # a 422 from a data-service whose family pattern is gold-only (by design), or any other refusal
         return degraded({**base, "rows": [], "count": 0}, "degraded",
-                        f"data-service cannot serve {code} daily bars yet (HTTP {r.status_code})",
+                        f"data-service cannot serve {code} daily bars yet (HTTP {status})",
                         hint="The gold_breeze_daily family extension is a pending patch request; "
                              "the desk's quote, specs and ticket panels stand on their own")
-    try:
-        body = r.json()
-    except ValueError:
+    if not isinstance(body, dict):
         return degraded({**base, "rows": [], "count": 0}, "degraded", "data-service sent a non-JSON body")
     rows = body.get("rows") or []
     out = {**base, "rows": rows, "count": len(rows), "note": body.get("note")}

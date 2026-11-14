@@ -628,14 +628,14 @@ class AskEngine:
                 if len(out) >= SAMPLE_VALUES_N:
                     break
                 _, rows, _ = self.run_query(
-                    f"{base} WHERE upper(CAST({col_q} AS VARCHAR)) LIKE '%{tok}%' ORDER BY v LIMIT {SAMPLE_VALUES_N}",
+                    f"{base} WHERE upper(CAST({col_q} AS VARCHAR)) LIKE '%{tok}%' ORDER BY length(v), v LIMIT {SAMPLE_VALUES_N}",
                     row_cap=SAMPLE_VALUES_N)
                 for r in rows:
                     v = str(r[0])[:40]
                     if v not in out:
                         out.append(v)
             if not out:
-                _, rows, _ = self.run_query(f"{base} ORDER BY v LIMIT {SAMPLE_VALUES_N}", row_cap=SAMPLE_VALUES_N)
+                _, rows, _ = self.run_query(f"{base} ORDER BY length(v), v LIMIT {SAMPLE_VALUES_N}", row_cap=SAMPLE_VALUES_N)
                 out = [str(r[0])[:40] for r in rows]
         except AskError:
             pass                                     # partial or no samples — the hint block degrades, never breaks

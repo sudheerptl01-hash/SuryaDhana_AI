@@ -196,7 +196,14 @@ def test_expired_settles_at_the_stored_settlement_of_record(env: dict[str, Any])
     # the record OF the expiry session (MCX's DSP method: the last-30-min VWAP of that session)
     env["settlement"][("GOLD", PAST_EXPIRY, PAST_EXPIRY)] = settlement_block(
         "GOLD", PAST_EXPIRY, settlement=124_800.0, session=PAST_EXPIRY)
-    r = client.post("/api/mcx/book/mark").json()
+    # F5 (14 Nov 2026): a plain mark NEVER closes anything — the page mounts it, and a page view must not
+    # mutate the track record. The expired contract is reported with its stored exit price instead.
+    plain = client.post("/api/mcx/book/mark").json()
+    assert plain["settled"] == [] and len(plain["awaiting_settlement"]) == 1
+    assert plain["awaiting_settlement"][0]["exit_price"] == 124_800.0
+    assert store.positions(status="open") and len(store.positions(status="open")) == 1   # still open
+    # closing is the explicit action
+    r = client.post("/api/mcx/book/mark?settle=true").json()
     assert len(r["settled"]) == 1 and r["expired_unsettled"] == []
     settled = r["settled"][0]
     assert settled["status"] == "closed" and settled["exit_kind"] == "settle"
@@ -244,7 +251,7 @@ def test_expired_falls_back_to_the_stored_broker_daily_bar(env: dict[str, Any]) 
         {"trade_date": (TODAY - timedelta(days=4)).isoformat(), "close": 124_000.0},
         {"trade_date": PAST_EXPIRY, "close": 124_500.0},
     ]
-    r = client.post("/api/mcx/book/mark").json()
+    r = client.post("/api/mcx/book/mark?settle=true").json()   # F5: settling is explicit
     assert len(r["settled"]) == 1
     assert r["settled"][0]["exit_price"] == 124_500.0      # the bar ON the expiry session, not the 4-days-back one
     assert "breeze_daily_close" in r["settled"][0]["exit_price_source"]   # the fallback is labelled a broker bar

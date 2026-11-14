@@ -65,4 +65,5 @@ httpx==0.27.2
 ruff==0.16.4
 mypy==2.3.1
 black==24.10.0
+orjson==3.11.6               # fast JSON for the big data-service read payloads (R5-GIL; guarded import)
 openpyxl==3.1.5              # NSE bhavcopy occasionally published as .xlsx

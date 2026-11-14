@@ -26,6 +26,7 @@ import { Chip, PageHeader, SourceChip, T, fmtPct, sourceOf, type SourceInfo } fr
 import { ChartActions, futuresInstrument } from '@/components/terminal/ChartActions'
 import { goToPage } from '@/lib/navigate'
 import { setGoldSubInUrl } from '@/lib/gold/prefs'
+import { CommodityDesk } from '@/components/commodity/CommodityDesk'   // R5 desks (F5: they were unmounted)
 import {
   getCommodityOverview,
   getCommodityHistory,
@@ -344,6 +345,13 @@ export function CommodityTab(_props: { isDark?: boolean }) {
           )}
         </div>
       </Panel>
+
+      {/* MCX silver + crude desks (R5-CMDTY; mounted 14 Nov after F5 found them unreachable):
+          Breeze/stored-rows only, prices and context, NO fair-value verdict — that machinery is gold's alone. */}
+      <div style={{ display: 'grid', gap: 16, marginBottom: 16 }}>
+        <CommodityDesk group="SILVER" />
+        <CommodityDesk group="CRUDE" />
+      </div>
 
       {/* Fundamentals legs */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # services/ui-api
@@ -185,10 +185,16 @@ async def book_paper(body: FutBookIn) -> dict[str, Any]:
 
 
 @router.post("/mark")
-async def mark_book() -> dict[str, Any]:
+async def mark_book(settle: bool = Query(False, description="also CLOSE expired contracts at their stored "
+                                                            "settlement of record; default false")) -> dict[str, Any]:
     """Append today's marks for every open position from the STORED settlement reads (idempotent: the same session at
-    the same price is skipped; a revised value is a new row) and settle expired contracts at the stored settlement of
-    record. Reads stored tables only — safe after the close and inside freeze windows."""
+    the same price is skipped; a revised value is a new row). Reads stored tables only — safe after the close and
+    inside freeze windows.
+
+    Marking NEVER closes anything unless ``settle=true`` is asked for (F5, 14 Nov 2026): the page mounts this, and a
+    page view must not mutate the owner's track record — booking and closing are explicit actions everywhere else in
+    this module. Without the flag an expired contract is reported under ``awaiting_settlement`` with its stored exit
+    price, so the UI can offer the one-click SETTLE that does ask for it."""
     store = fts.get_store()
     open_pos = await asyncio.to_thread(store.positions, status="open")
     today = _today_ist().isoformat()
@@ -221,10 +227,16 @@ async def mark_book() -> dict[str, Any]:
                             "exit_price_source": f"MCX settlement of record {rec['session']} · {rec['source']} ({rec['quality']})",
                             "exit_costs": exit_costs})
     written = await asyncio.to_thread(store.add_marks, marks) if marks else 0
-    settled = await asyncio.to_thread(store.close, settles, action="settle") if settles else []
+    # settle ONLY when explicitly asked (see the docstring): otherwise the expired ones are reported, not closed
+    settled = await asyncio.to_thread(store.close, settles, action="settle") if (settles and settle) else []
+    awaiting = [] if settle else [{"position_id": x["position_id"], "exit_price": x["exit_price"],
+                                   "exit_price_source": x["exit_price_source"],
+                                   "note": "expired — POST /mark?settle=true (or the desk's SETTLE action) closes it "
+                                           "at this stored settlement of record"} for x in settles]
     return {"paper": True, "badge": BADGE_ARITH, "as_of": datetime.now(IST).isoformat(timespec="seconds"),
-            "marks_written": written, "settled": settled, "expired_unsettled": unsettled,
-            "unavailable": unavailable, "note": f"{MARK_NOTE}. {DESCRIBES}."}
+            "marks_written": written, "settled": settled, "awaiting_settlement": awaiting,
+            "expired_unsettled": unsettled, "unavailable": unavailable,
+            "note": f"{MARK_NOTE}. {DESCRIBES}."}
 
 
 @router.post("/close")
