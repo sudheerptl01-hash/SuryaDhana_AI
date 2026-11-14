@@ -359,7 +359,12 @@ def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | Non
         _GROUP_OF.update(_groups_from_source())         # the source knows ids the store has never run
         for job, grp in groups.items():
             _GROUP_OF[job] = grp
-        for grp in set(_GROUP_OF.values()):
+        # R19-A: a group counts as KNOWN only when the store has actually recorded one of its kinds. Adding
+        # every group the source declares made `counted` mean "this group exists in code", and the column
+        # reads `counted` as "the store has seen this job" — so datasets of a group that has never run once
+        # printed a clean 0. `nse_files` is the sharp case: it is declared, it has never been recorded, and
+        # nse_mwpl_clients was claiming health on the strength of its own source code.
+        for grp in {g for g in groups.values()}:
             counted.add(f"group:{grp}")
         return counts, since, counted
     except sqlite3.Error:                                      # pragma: no cover
@@ -375,23 +380,27 @@ _GROUP_OF: dict[str, str] = {}
 
 
 def _groups_from_source() -> dict[str, str]:
-    """`{job_id: group}` read off the FUNCTIONS that submit `"<group>:<job_id>"` kinds.
+    """`{job_id: group}` for the groups whose job ids are DOCUMENTED as an enum.
 
-    R18-A: the catalog names ONE producer per dataset (`iv_eod`) while the endpoint submits five job ids into
-    the same tables, so four of the five could never light the column — the store held one failure and no row
-    reported it. The group is literal in the submit call, and the job ids it accepts are named in the same
-    FUNCTION, so the mapping is read rather than transcribed. This column has had a producer-mapping defect
-    in four consecutive rounds, every one of them a hand-written list.
+    R19-A: the previous version claimed to read the functions that submit `"<group>:<job_id>"` kinds and in
+    fact walked every string constant in every function — any function holding one `"x:y"`-shaped literal
+    donated all its lowercase literals to group `x`. That produced 299 ids across 33 "groups", including
+    `https` (71 members, from URLs), `15` (from "15:30"), `Pure` (from a docstring) and `group` (from this
+    module's own f"group:{grp}"). Thirteen catalog rows then flipped from `—` to a bare `0` — "this job ran
+    and did not crash" — for jobs the store has never seen, which is exactly the claim the comment above
+    `_failures_for` forbids.
 
-    Function-scoped, not file-scoped: `fo_iv/api.py` submits BOTH `fo_iv:` and `nse_files:` kinds, and a
-    file-level scan mapped `iv_eod` to nse_files — the right shape of answer, confidently wrong.
+    So it reads only what is unambiguous: a group is the constant head of an f-string passed to a submit
+    call, and its job ids come from a documented `?job=a|b|c` enumeration in the same module. No enum, no
+    ids — the store's own kinds still fill in whatever has actually run. Under-reporting is a dash; this
+    kind of over-reporting is a lie.
     """
     import ast
 
     out: dict[str, str] = {}
     root = Path(__file__).resolve().parents[1]
     for path in sorted(root.rglob("*.py")):
-        if "/tests/" in str(path):
+        if "/tests/" in str(path) or path.name == "reads.py":
             continue
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
@@ -400,25 +409,39 @@ def _groups_from_source() -> dict[str, str]:
         for fn in ast.walk(tree):
             if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue
-            groups: set[str] = set()
-            literals: set[str] = set()
+            # the submit call's f-string: f"<group>:{var}" — remember BOTH the group and the variable
+            grp_var: tuple[str, str] | None = None
             for node in ast.walk(fn):
-                # f"<group>:{job_id}" — the group is the constant head of a JoinedStr
-                if isinstance(node, ast.JoinedStr) and node.values:
-                    head = node.values[0]
-                    if isinstance(head, ast.Constant) and isinstance(head.value, str) and head.value.endswith(":"):
-                        groups.add(head.value[:-1])
-                elif isinstance(node, ast.Constant) and isinstance(node.value, str):
-                    v = node.value
-                    if ":" in v and v.count(":") == 1 and v.split(":")[0].replace("_", "").isalnum():
-                        groups.add(v.split(":")[0])
-                    elif v.replace("_", "").isalnum() and len(v) > 2 and v.islower():
-                        literals.add(v)
-            if len(groups) == 1:                               # unambiguous: one group in this function
-                grp = groups.pop()
-                for job in literals:
-                    if job != grp:
-                        out.setdefault(job, grp)
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                        and node.func.id.startswith("_submit") and node.args):
+                    continue
+                arg = node.args[0]
+                if not (isinstance(arg, ast.JoinedStr) and len(arg.values) == 2):
+                    continue
+                head, tail = arg.values
+                if (isinstance(head, ast.Constant) and isinstance(head.value, str) and head.value.endswith(":")
+                        and isinstance(tail, ast.FormattedValue) and isinstance(tail.value, ast.Name)):
+                    grp_var = (head.value[:-1], tail.value.id)
+            if grp_var is None:
+                continue
+            grp, var = grp_var
+            # …and ONLY the literals compared against that variable. This is the whole fix: the previous
+            # version took every string in the function, which is how a URL became a job id.
+            for node in ast.walk(fn):
+                if isinstance(node, ast.Compare) and isinstance(node.left, ast.Name) and node.left.id == var:
+                    for comp in node.comparators:
+                        if isinstance(comp, ast.Constant) and isinstance(comp.value, str):
+                            out.setdefault(comp.value, grp)
+                        elif isinstance(comp, (ast.Tuple, ast.List, ast.Set)):
+                            for el in comp.elts:
+                                if isinstance(el, ast.Constant) and isinstance(el.value, str):
+                                    out.setdefault(el.value, grp)
+                # `job_id = job or "iv_eod"` — the default is a job id too
+                if isinstance(node, ast.Assign) and any(
+                        isinstance(t, ast.Name) and t.id == var for t in node.targets):
+                    for sub in ast.walk(node.value):
+                        if isinstance(sub, ast.Constant) and isinstance(sub.value, str) and sub.value.islower():
+                            out.setdefault(sub.value, grp)
     return out
 
 

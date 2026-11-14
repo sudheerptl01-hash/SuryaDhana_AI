@@ -579,3 +579,45 @@ def test_the_health_payload_builds_end_to_end() -> None:
     assert scope is None or isinstance(scope, str), scope
     if count:
         assert scope, "a non-zero count must say what it counted"
+
+
+def test_the_group_derivation_reads_job_ids_and_not_urls() -> None:
+    """R19-A: the first version of `_groups_from_source` walked EVERY string constant in every function.
+
+    Any function holding one `"x:y"`-shaped literal donated all its lowercase literals to group `x`, so it
+    produced 299 "job ids" across 33 "groups" — including `https` (71 members, from URLs), `15` (from
+    "15:30"), `Pure` (from a docstring) and `group` (from this module's own f"group:{grp}"). Thirteen
+    catalog rows then flipped from `—` to a bare `0`: "this job ran and did not crash", for jobs the store
+    has never seen. That is precisely the claim `_failures_for`'s own comment forbids, and it turned a silent
+    under-report into a confident false one — strictly worse.
+
+    The rule now: a group is the constant head of an f-string passed to a submit call, and its job ids are
+    only the literals COMPARED AGAINST the variable interpolated into that f-string.
+    """
+    import sys
+
+    repo = Path(__file__).resolve().parents[3]
+    for p in (str(repo), str(repo / "services/data-service")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    from data_health.reads import _groups_from_source, job_failures
+
+    derived = _groups_from_source()
+    assert derived, "the derivation found nothing — the submit shape changed"
+    assert len(derived) < 40, f"{len(derived)} job ids is a scrape, not a derivation: {sorted(derived)[:20]}"
+
+    # the junk the loose version produced must be absent
+    for junk in ("https", "group", "15", "Pure", "skipped", "table_unmoved"):
+        assert junk not in derived.values(), f"{junk!r} is not a job group: {derived}"
+        assert junk not in derived, f"{junk!r} is not a job id: {derived}"
+
+    # the case it exists for: every fo_iv job id resolves to fo_iv
+    for job in ("iv_eod", "iv_weekly", "iv_repair", "vix_backfill", "iv_backfill"):
+        assert derived.get(job) == "fo_iv", f"{job} -> {derived.get(job)}"
+
+    # and a group counts as KNOWN only once the store has recorded one of its kinds
+    _f, _since, counted = job_failures()
+    known_groups = {k.split(":", 1)[1] for k in counted if k.startswith("group:")}
+    assert "nse_files" not in known_groups, (
+        "a group the store has never recorded was marked known — its datasets would print a clean 0 on the "
+        "strength of their own source code")
