@@ -406,7 +406,24 @@ def test_one_job_that_writes_eight_datasets_lights_all_eight() -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from data_health.reads import _failures_for, _keys_for, _nse_files_datasets
 
+    # R15-A: this used to read `produced = _nse_files_datasets()` and then iterate `produced` — asserting the
+    # derived tuple against ITSELF, which passes whatever the derivation returns. It now checks against the
+    # job's OWN authority: the set `/jobs/ingest-nse-files` validates its input against, which includes
+    # nse_bhavcopy (the If-Modified-Since revision pass). Dropping that half left the terminal's most-read
+    # table reporting a positive 0 on a night its job crashed.
+    import re
+
+    api_src = (Path(__file__).resolve().parents[1] / "fo_iv" / "api.py").read_text(encoding="utf-8")
+    m = re.search(r"known\s*=\s*set\(nse_positions\.TERMINAL_DATASET_NAMES\)\s*\|\s*\{([^}]*)\}", api_src)
+    assert m, "the nse_files job no longer declares its dataset set the way this test reads it"
+    extra = {x.strip().strip('\'"') for x in m.group(1).split(",") if x.strip()}
+    assert "nse_bhavcopy" in extra, extra
+
     produced = _nse_files_datasets()
+    for dataset in extra:
+        assert dataset in produced, (
+            f"{dataset} is accepted by the job but missing from the derivation — it would read a positive 0 "
+            f"on a night the job crashed")
     assert len(produced) >= 8, f"the nse_files job table shrank unexpectedly: {produced}"
     assert "index_ohlc_daily" in produced and "nse_fii_stats" in produced
 

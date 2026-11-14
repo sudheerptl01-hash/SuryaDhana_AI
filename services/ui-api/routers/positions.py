@@ -336,6 +336,12 @@ async def breeze_budget_status() -> dict[str, Any]:
     mcx_known = True
     try:
         from shared import mcx_specs
+        # R15-B: the holiday table covers CALENDAR_YEARS only — outside them `trading_window` answers on the
+        # WEEKEND RULE ALONE, so it would report a normal window on a 2027 MCX holiday and the chip would
+        # paint BRKR DOWN all evening over a shut exchange. Outside those years we do not know, and saying so
+        # falls back to the UI's heuristic instead of asserting a window that was never looked up.
+        if ist.date().year not in mcx_specs.CALENDAR_YEARS:
+            raise LookupError(f"MCX calendar has no data for {ist.date().year}")
         win = mcx_specs.trading_window(ist.date())
         if win:
             mcx = {"open_hm": win[0].hour * 100 + win[0].minute, "close_hm": win[1].hour * 100 + win[1].minute}

@@ -363,3 +363,31 @@ def test_no_quota_sits_at_its_observed_peak() -> None:
     login_peak = peaks.get("ui-api.login", 0) or peaks.get("ui-api.positions", 0)
     assert DEFAULT_CALLER_QUOTAS["ui-api.login"] >= max(200, login_peak * 2), (
         "the login quota must clear its worst observed day with room to spare")
+
+
+def test_the_mcx_window_is_not_served_for_years_the_calendar_cannot_speak_for() -> None:
+    """R15-B: `mcx_specs.CALENDAR_YEARS` is (2026,), and outside those years `trading_window` answers on the
+    WEEKEND RULE ALONE — it would report a normal 09:00–23:55 window on a 2027 MCX holiday.
+
+    Serving that as fact would make the BRKR chip paint red DOWN all evening over a shut exchange, every
+    holiday of 2027, with nothing in the code saying when it started lying. "We do not know" is a different
+    answer from "it is open", and the UI already has a branch for it: the field is omitted and the chip falls
+    back to its weekday heuristic.
+    """
+    from datetime import date
+
+    from shared import mcx_specs
+
+    # the premise: outside CALENDAR_YEARS the calendar is weekend-only, so a holiday looks like a normal day
+    assert 2027 not in mcx_specs.CALENDAR_YEARS
+    assert mcx_specs.trading_window(date(2027, 1, 4)) is not None, (
+        "the premise changed — trading_window now refuses unknown years itself, so the guard below can go")
+
+    # and the endpoint must gate on it, in the same expression that reads the window
+    src = (Path(__file__).resolve().parents[1] / "routers" / "positions.py").read_text(encoding="utf-8")
+    code = "\n".join(ln.split("#", 1)[0] for ln in src.split("\n"))
+    assert "CALENDAR_YEARS" in code, (
+        "the budget endpoint serves mcx_window without checking the calendar covers that year — from "
+        "1 Jan 2027 the chip would call every MCX holiday a trading evening")
+    guard = [ln for ln in code.split("\n") if "CALENDAR_YEARS" in ln]
+    assert any("year" in ln for ln in guard), guard

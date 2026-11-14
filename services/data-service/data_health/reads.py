@@ -221,8 +221,13 @@ def _nse_files_datasets() -> tuple[str, ...]:
     this whole column has repeated at every level.
     """
     try:
+        # EXACTLY the set the job itself validates its input against (fo_iv/api.py:179:
+        # `set(nse_positions.TERMINAL_DATASET_NAMES) | {"nse_bhavcopy"}`). R15-A: taking only the first half
+        # left `nse_bhavcopy` — the table every equity panel on the terminal reads — showing a positive 0
+        # ("its job has not crashed") on a night the If-Modified-Since revision pass did crash. A 0 is a
+        # claim; None is the absence of one, and only one of those is true when the job died.
         from nse_positions import TERMINAL_DATASET_NAMES
-        return tuple(TERMINAL_DATASET_NAMES)
+        return (*TERMINAL_DATASET_NAMES, "nse_bhavcopy")
     except Exception:                                          # pragma: no cover — import shape changed
         return ()
 
