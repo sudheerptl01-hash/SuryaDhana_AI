@@ -505,3 +505,41 @@ def test_a_dataset_with_two_producer_jobs_sums_their_crashes() -> None:
     assert _failures_for(row, {"nse_files": 3}, {"nse_files"}) == 3
     assert _failures_for(row, {}, {"daily_pipeline"}) == 0          # known, clean
     assert _failures_for(row, {}, set()) is None                    # never seen
+
+
+def test_a_group_of_jobs_writing_one_table_lights_that_table() -> None:
+    """R18-A: the job store held exactly ONE failure — `fo_iv:iv_repair` — and ZERO of 69 dataset rows
+    reported it.
+
+    Job kinds are `<group>:<job_id>`, and a GROUP writes the same tables from several job ids: the fo_iv
+    endpoint submits iv_eod | iv_weekly | iv_backfill | vix_backfill | iv_repair into the same IV store,
+    while every catalog row names only `iv_eod`. So four of the five could never light the column, and the
+    IV rows printed "never seen" while the store had seen two of their jobs and one of them had crashed —
+    a false clean on the page whose whole job is to be the number.
+
+    The mapping is read from the FUNCTION that submits each group's kinds, never transcribed. That is the
+    point: this column has had a producer-mapping defect in four consecutive rounds, every one of them a
+    hand-written list, and a file-scoped first attempt at this very fix mapped `iv_eod` to `nse_files`
+    because `fo_iv/api.py` submits both.
+    """
+    import sys
+
+    repo = Path(__file__).resolve().parents[3]
+    for p in (str(repo), str(repo / "services/data-service")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    from data_health.reads import _failures_for, _groups_from_source, _keys_for
+
+    groups = _groups_from_source()
+    assert groups.get("iv_eod") == "fo_iv", (
+        f"iv_eod must resolve to the fo_iv group — a file-scoped scan called it nse_files: {groups.get('iv_eod')}")
+    assert groups.get("iv_weekly") == "fo_iv", groups.get("iv_weekly")
+
+    row = {"id": "iv_surface_daily", "ingest_job": "iv_eod"}
+    keys = _keys_for(row)
+    assert "group:fo_iv" in keys, f"the IV datasets cannot see their own group's crashes: {keys}"
+
+    # a crash under ANY of the group's job ids reaches the datasets that group writes
+    assert _failures_for(row, {"group:fo_iv": 2}, {"group:fo_iv"}) == 2
+    # and a different group's crash does NOT
+    assert _failures_for(row, {"group:gold": 4}, {"group:gold"}) is None

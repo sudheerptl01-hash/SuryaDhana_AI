@@ -239,6 +239,10 @@ def _keys_for(row: dict[str, Any]) -> list[str]:
     out = [k for k in (job, _JOB_ID_TO_KIND.get(job, ""), ident, _DATASET_TO_KIND.get(ident, "")) if k]
     if ident in _nse_files_datasets():            # one job, eight datasets — see _nse_files_datasets
         out.append("nse_files")
+    for k in list(out):                           # …and one GROUP, several job ids, same tables (R18-A)
+        grp = _GROUP_OF.get(k)
+        if grp:
+            out.append(f"group:{grp}")
     return list(dict.fromkeys(out))
 
 
@@ -307,11 +311,21 @@ def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | Non
         # every job kind the store has seen, so a dataset it knows can report 0 while one it has never
         # seen reports nothing at all
         counted: set = set()
+        # R18-A: job kinds are "<group>:<job_id>", and a GROUP writes the same tables from several job ids —
+        # the fo_iv endpoint submits iv_eod | iv_weekly | iv_backfill | vix_backfill | iv_repair, all into
+        # the same IV store, while each catalog row names only one of them. So a crash of four of the five
+        # mapped to nothing: the store held one failure (fo_iv:iv_repair) and ZERO of 69 rows reported it,
+        # with the IV rows printing "never seen" while the store had seen two of their jobs. Group membership
+        # is derived from the kinds the store has actually recorded — never transcribed, which is the mistake
+        # this column has now made at four levels.
+        groups: dict[str, str] = {}
         for (kind,) in con.execute("SELECT DISTINCT kind FROM jobs"):
             k = str(kind)
             counted.add(k)
             if ":" in k:
-                counted.add(k.split(":", 1)[1])
+                grp, job = k.split(":", 1)
+                counted.add(job)
+                groups[job] = grp
         # F12: the window is when FAILURE RETENTION began, not the oldest row held. Before KEEP_ERRORS went
         # live (the 14 Nov 12:15 data-service restart) `_trim` pruned failures together with successes, so the
         # store cannot speak for anything earlier — the proof is that the 13 Nov nse_results TypeError this
@@ -322,11 +336,74 @@ def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | Non
         # compared as INSTANTS, not strings: the rows are offset-aware UTC and the floor is offset-aware IST,
         # so a lexical max would pick whichever text sorted higher rather than whichever moment came later
         since = _later_iso(str(oldest) if oldest else None, floor)
+        # a failure under ANY kind of a group is attributable to that group's datasets
+        for kind, n in list(counts.items()):
+            if ":" in kind:
+                counts[f"group:{kind.split(':', 1)[0]}"] = counts.get(f"group:{kind.split(':', 1)[0]}", 0) + n
+        _GROUP_OF.update(_groups_from_source())         # the source knows ids the store has never run
+        for job, grp in groups.items():
+            _GROUP_OF[job] = grp
+        for grp in set(_GROUP_OF.values()):
+            counted.add(f"group:{grp}")
         return counts, since, counted
     except sqlite3.Error:                                      # pragma: no cover
         return {}, None, set()
     finally:
         con.close()
+
+
+#: bare job id -> the group whose kinds share its tables. Seeded from the SOURCE (below) and extended by
+#: whatever the store has actually recorded, because a group's job may not have run inside the retention
+#: window — `fo_iv:iv_eod` had not, which is exactly why the store alone could not answer this.
+_GROUP_OF: dict[str, str] = {}
+
+
+def _groups_from_source() -> dict[str, str]:
+    """`{job_id: group}` read off the FUNCTIONS that submit `"<group>:<job_id>"` kinds.
+
+    R18-A: the catalog names ONE producer per dataset (`iv_eod`) while the endpoint submits five job ids into
+    the same tables, so four of the five could never light the column — the store held one failure and no row
+    reported it. The group is literal in the submit call, and the job ids it accepts are named in the same
+    FUNCTION, so the mapping is read rather than transcribed. This column has had a producer-mapping defect
+    in four consecutive rounds, every one of them a hand-written list.
+
+    Function-scoped, not file-scoped: `fo_iv/api.py` submits BOTH `fo_iv:` and `nse_files:` kinds, and a
+    file-level scan mapped `iv_eod` to nse_files — the right shape of answer, confidently wrong.
+    """
+    import ast
+
+    out: dict[str, str] = {}
+    root = Path(__file__).resolve().parents[1]
+    for path in sorted(root.rglob("*.py")):
+        if "/tests/" in str(path):
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:                                    # pragma: no cover
+            continue
+        for fn in ast.walk(tree):
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            groups: set[str] = set()
+            literals: set[str] = set()
+            for node in ast.walk(fn):
+                # f"<group>:{job_id}" — the group is the constant head of a JoinedStr
+                if isinstance(node, ast.JoinedStr) and node.values:
+                    head = node.values[0]
+                    if isinstance(head, ast.Constant) and isinstance(head.value, str) and head.value.endswith(":"):
+                        groups.add(head.value[:-1])
+                elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+                    v = node.value
+                    if ":" in v and v.count(":") == 1 and v.split(":")[0].replace("_", "").isalnum():
+                        groups.add(v.split(":")[0])
+                    elif v.replace("_", "").isalnum() and len(v) > 2 and v.islower():
+                        literals.add(v)
+            if len(groups) == 1:                               # unambiguous: one group in this function
+                grp = groups.pop()
+                for job in literals:
+                    if job != grp:
+                        out.setdefault(job, grp)
+    return out
 
 
 def _later_iso(a: str | None, b: str | None) -> str | None:
