@@ -716,14 +716,22 @@ class AskEngine:
         amber on it. Facts only: a max date and a boolean, no judgement word."""
         if not snap or not snap.get("as_of"):
             return None
-        try:
-            iv_max = self.table_as_of("iv_summary_daily")
-        except AskError:
-            iv_max = None
-        stale = bool(iv_max and str(iv_max) < str(snap["as_of"]))
-        return {"iv_summary_max": iv_max, "stale": stale,
-                "note": (f"cut before the {snap['as_of']} iv_eod — iv_summary_daily inside it ends {iv_max}"
-                         if stale else None)}
+        def _as_of(table: str) -> Optional[str]:
+            try:
+                return self.table_as_of(table)
+            except AskError:
+                return None
+        iv_max = _as_of("iv_summary_daily")
+        # Compare IV against the SESSIONS THE SNAPSHOT ITSELF HOLDS, never against its calendar date (14 Nov
+        # 2026): a snapshot cut on a Saturday carries IV through Friday and is perfectly current, yet the old
+        # rule called it "cut before the 2026-11-14 iv_eod" — a session that will never exist. The equity
+        # bhavcopy (else the index close file) advances on exactly the sessions iv_eod does, so this needs no
+        # holiday calendar: IV is stale only when it trails the sessions stored beside it.
+        session_max = _as_of("nse_bhavcopy") or _as_of("index_ohlc_daily")
+        stale = bool(iv_max and session_max and str(iv_max) < str(session_max))
+        return {"iv_summary_max": iv_max, "sessions_max": session_max, "stale": stale,
+                "note": (f"iv_summary_daily inside it ends {iv_max} while its stored sessions reach "
+                         f"{session_max} — it was cut before that session's iv_eod" if stale else None)}
 
     def health(self) -> dict[str, Any]:
         p = resolve_provider()

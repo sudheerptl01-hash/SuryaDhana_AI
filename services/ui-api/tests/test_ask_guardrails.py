@@ -575,12 +575,20 @@ def test_r3_health_via_router_carries_analyst_ready(snap: Path) -> None:
 
 @pytest.fixture()
 def snap_iv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A snapshot dated 2026-11-13 (cut 19:20) whose iv_summary_daily ends 2026-11-12 — the F2-trader wart."""
+    """A snapshot dated 2026-11-13 (cut 19:20) whose iv_summary_daily ends 2026-11-12 — the F2-trader wart.
+
+    It also carries that day's bhavcopy, exactly as the real 19:20 cut does (the equity file is stored at 18:30,
+    before the snapshot; iv_eod only lands in the 20:30 pass). That contrast IS the wart, and since 14 Nov it is
+    what staleness is measured against — never the snapshot's calendar date, which on a weekend names a session
+    the exchange never held."""
     path = tmp_path / "evening-20261113-1920.duckdb"
     con = duckdb.connect(str(path))
     con.execute("CREATE TABLE iv_summary_daily (symbol VARCHAR, date DATE, iv30 DOUBLE)")
     con.execute("INSERT INTO iv_summary_daily VALUES ('NIFTY', DATE '2026-11-11', 12.1), "
                 "('NIFTY', DATE '2026-11-12', 12.4)")
+    con.execute("CREATE TABLE nse_bhavcopy (symbol VARCHAR, trade_date DATE, close DOUBLE)")
+    con.execute("INSERT INTO nse_bhavcopy VALUES ('TCS', DATE '2026-11-12', 3000.0), "
+                "('TCS', DATE '2026-11-13', 3010.0)")
     con.close()
     live = tmp_path / "market.duckdb"
     duckdb.connect(str(live)).close()
@@ -978,3 +986,36 @@ def test_f3_citation_tag_inside_the_sql_fence_is_stripped():
     assert extract_sql("```sql\n[iv_summary_daily \u00b7 as-of 2026-11-12]\n```") is None
     assert extract_sql("```sql\nSELECT 1\n```") == "SELECT 1"
 
+
+
+# ── F5-follow-up (14 Nov 2026): the snapshot-age line must not invent a session that never existed ──
+
+def test_snapshot_age_compares_iv_against_the_stored_sessions_not_the_calendar():
+    """A Saturday-cut snapshot carries IV through Friday and IS current; the old rule compared IV to the
+    snapshot's own date and claimed it 'was cut before the 2026-11-14 iv_eod' — a session the exchange never
+    held. Staleness is now IV trailing the sessions stored beside it (the bhavcopy advances on the same days)."""
+    import ask_engine as ae
+    eng = ae.AskEngine.__new__(ae.AskEngine)
+    tables: dict[str, str | None] = {}
+    eng.table_as_of = lambda t: tables.get(t)          # type: ignore[method-assign]
+
+    # Saturday 14 Nov: both IV and the sessions end Friday 13 Nov → NOT stale, no note
+    tables.update({"iv_summary_daily": "2026-11-13", "nse_bhavcopy": "2026-11-13"})
+    out = eng.snapshot_age({"as_of": "2026-11-14"})
+    assert out["stale"] is False and out["note"] is None and out["sessions_max"] == "2026-11-13"
+
+    # a genuine miss: the sessions moved on but iv_eod did not run → stale, and the note names both dates
+    tables["nse_bhavcopy"] = "2026-11-16"
+    out = eng.snapshot_age({"as_of": "2026-11-16"})
+    assert out["stale"] is True and "ends 2026-11-13" in out["note"] and "reach 2026-11-16" in out["note"]
+    assert "2026-11-16 iv_eod" not in (out["note"] or "")        # never names a session as if it were owed
+
+    # the index close file stands in when the bhavcopy is absent from the snapshot
+    tables.pop("nse_bhavcopy")
+    tables["index_ohlc_daily"] = "2026-11-13"
+    assert eng.snapshot_age({"as_of": "2026-11-14"})["stale"] is False
+    # no session table at all → never a false alarm
+    tables.pop("index_ohlc_daily")
+    assert eng.snapshot_age({"as_of": "2026-11-14"})["stale"] is False
+    # no snapshot → no line
+    assert eng.snapshot_age(None) is None
