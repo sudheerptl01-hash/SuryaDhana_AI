@@ -159,10 +159,34 @@ def vix(store: Any, *, days: int = 3000) -> dict[str, Any]:
     return {"rows": rows, "as_of": rows[-1]["date"] if rows else None, "badge": "context"}
 
 
+#: F&O underlying codes → the index names this store keys rows by (it follows NSE's own file naming, "NIFTY 50").
+#: Without this, /db/index-ohlc/NIFTY answers 200 with zero rows — a silent empty that cost the game-plan page its
+#: prior-session tile (F4) and misled a reviewer's own probe (F5). Resolved here so EVERY caller benefits once.
+INDEX_ALIASES: dict[str, str] = {
+    "NIFTY": "NIFTY 50", "NIFTY50": "NIFTY 50", "NIFTY 50": "NIFTY 50",
+    "BANKNIFTY": "NIFTY BANK", "NIFTYBANK": "NIFTY BANK",
+    "FINNIFTY": "NIFTY FINANCIAL SERVICES",
+    "MIDCPNIFTY": "NIFTY MIDCAP SELECT",
+    "NIFTYNXT50": "NIFTY NEXT 50",
+}
+
+
 def index_ohlc(store: Any, symbol: str, *, days: int = 3000) -> dict[str, Any]:
-    rows = db.records_sql(store, """SELECT * FROM (SELECT date, open, high, low, close, source FROM index_ohlc_daily WHERE symbol = ?
-                                    ORDER BY date DESC LIMIT ?) t ORDER BY date""", [symbol.upper(), days], ("date",))
-    return {"symbol": symbol.upper(), "rows": rows, "as_of": rows[-1]["date"] if rows else None}
+    """Stored daily OHLC of one index. ``symbol`` may be the stored NSE name or an F&O underlying code: an exact
+    match always wins, and only an EMPTY answer falls back to the alias (so a real index named like a code is never
+    shadowed). ``symbol`` in the payload is the name actually served — never the one that returned nothing."""
+    def _q(name: str) -> list[dict[str, Any]]:
+        return db.records_sql(store, """SELECT * FROM (SELECT date, open, high, low, close, source FROM index_ohlc_daily
+                                        WHERE symbol = ? ORDER BY date DESC LIMIT ?) t ORDER BY date""",
+                              [name, days], ("date",))
+    want = symbol.upper()
+    rows = _q(want)
+    served = want
+    if not rows:
+        alias = INDEX_ALIASES.get(want)
+        if alias and alias != want:
+            rows, served = _q(alias), alias
+    return {"symbol": served, "rows": rows, "as_of": rows[-1]["date"] if rows else None}
 
 
 def catalog() -> dict[str, Any]:
