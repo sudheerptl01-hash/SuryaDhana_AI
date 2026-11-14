@@ -10,8 +10,10 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, timezone
+from decimal import Decimal
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 BATCH_ROWS = 50_000
@@ -99,20 +101,72 @@ def table_exists(store: Any, table: str) -> bool:
     return scalar(store, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?", [table]) == 1
 
 
+def _is_date_named(name: str, dates: set[str]) -> bool:
+    """The one naming rule for 'this column is a calendar DATE, not a timestamp' (unchanged from the original records())."""
+    return name in dates or (name.endswith(("_date", "date", "expiry", "_at_date")) and name not in ("first_seen_at", "release_at"))
+
+
+def _shape_cell(v: Any, is_date_col: bool) -> Any:
+    """One cell under records()' rules: NaN/NaT/NA → None, datetimes → 'YYYY-MM-DD' or ISO ``+00:00``, Decimal → float."""
+    if v is None or v is pd.NaT or v is pd.NA:
+        return None
+    if isinstance(v, float):                              # covers np.float64; NaN → None as .where(df.notna(), None) did
+        return None if v != v else v
+    if isinstance(v, (pd.Timestamp, datetime, date)):
+        return _iso_date(v) if is_date_col else iso_utc(v)
+    if isinstance(v, Decimal):                            # DuckDB DECIMAL via fetchall; .df() made these float already
+        return float(v)
+    return v
+
+
 def records(df: pd.DataFrame | None, date_columns: Sequence[str] = ()) -> list[dict[str, Any]]:
-    """JSON-safe records: NaN → None, named DATE columns → 'YYYY-MM-DD', other timestamps → ISO with ``+00:00``."""
+    """JSON-safe records: NaN → None, named DATE columns → 'YYYY-MM-DD', other timestamps → ISO with ``+00:00``.
+
+    R5-GIL: one dtype-aware pass per column instead of the frame-wide ``astype(object)/.where/.map`` chain — the same
+    output, a fraction of the GIL-held time (this was ~70 % of a hot read call at days=3000, r4-conc/BENCH.md)."""
     if df is None or df.empty:
         return []
-    out = df.astype(object).where(df.notna(), None)
     dates = set(date_columns)
-    for c in out.columns:
-        s = out[c]
-        if s.map(lambda v: isinstance(v, (pd.Timestamp, datetime, date))).any():
-            if c in dates or c.endswith(("_date", "date", "expiry", "_at_date")) and c not in ("first_seen_at", "release_at"):
-                out[c] = s.map(_iso_date)
-            else:
-                out[c] = s.map(lambda v: iso_utc(v) if isinstance(v, (pd.Timestamp, datetime, date)) else v)
-    return out.to_dict(orient="records")
+    names = [str(c) for c in df.columns]
+    cols: list[list[Any]] = []
+    for c, name in zip(df.columns, names, strict=False):   # same length by construction (names := df.columns)
+        s = df[c]
+        is_date_col = _is_date_named(name, dates)
+        kind = getattr(s.dtype, "kind", "O")
+        if kind == "M":                                   # datetime64, tz-naive or tz-aware
+            conv = _iso_date if is_date_col else iso_utc
+            cols.append([None if v is pd.NaT else conv(v) for v in s.tolist()])
+        elif isinstance(s.dtype, np.dtype) and kind == "f":
+            cols.append([None if v != v else v for v in s.tolist()])
+        elif isinstance(s.dtype, np.dtype) and kind in "iub":   # plain int / uint / bool: nothing to shape
+            cols.append(s.tolist())
+        else:                                             # object / extension / mixed: per-cell, the original rules exactly
+            cols.append([_shape_cell(v, is_date_col) for v in s.tolist()])
+    return [dict(zip(names, row, strict=False)) for row in zip(*cols, strict=False)]   # one entry per column, by construction
+
+
+def query_rows(store: Any, sql: str, params: Sequence[Any] | None = None) -> tuple[list[str], list[tuple]]:
+    """(column names, ``fetchall()`` rows) on a per-call reader cursor — no DataFrame built (R5-GIL).
+
+    A store/double without ``reader()`` falls back to the frame path, so every existing test double keeps working."""
+    reader = getattr(store, "reader", None)
+    if reader is None:
+        df = store.read(sql, list(params or []))
+        return [str(c) for c in df.columns], list(df.itertuples(index=False, name=None))
+    with reader() as con:
+        res = con.execute(sql, list(params or []))
+        return [str(d[0]) for d in res.description or []], res.fetchall()
+
+
+def records_sql(store: Any, sql: str, params: Sequence[Any] | None = None, date_columns: Sequence[str] = ()) -> list[dict[str, Any]]:
+    """``records()`` straight off the cursor: the same shaping rules (named / suffixed DATE columns → 'YYYY-MM-DD', other
+    datetimes → ISO ``+00:00``, NaN → None) applied to ``fetchall()`` tuples, skipping pandas entirely. Ordering (e.g. the
+    ascending re-sort the callers did with ``sort_values``) belongs in the SQL."""
+    names, rows = query_rows(store, sql, params)
+    dates = set(date_columns)
+    flags = [_is_date_named(n, dates) for n in names]
+    shape = _shape_cell
+    return [{n: shape(v, f) for n, v, f in zip(names, row, flags, strict=False)} for row in rows]   # names/flags per column
 
 
 def _iso_date(v: Any) -> Any:

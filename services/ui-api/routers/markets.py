@@ -955,23 +955,30 @@ def special_session_rows(mcx_sessions: list[dict[str, Any]], start: date, end: d
             for day, v in sorted(by_day.items()) if s <= day <= e]
 
 
-async def _eco_extra_inputs(start: date, end: date) -> tuple[list[dict[str, Any]], list[str], str | None, str | None]:
-    """(gold_events rows, listed NIFTY expiries, errors) — each cached an hour; a missing source drops only its rows."""
+async def _eco_cached(key: str, fn: Any) -> Any:
+    """One-hour cache for the ECO extras (gold_events, listed expiries), shared with the commodity lane."""
     import time as _t
-    errs: dict[str, str] = {}
+    hit = _ECO_EXTRA_CACHE.get(key)
+    if hit and hit[0] > _t.time() - _ECO_EXTRA_TTL_S:
+        return hit[1]
+    val = await fn()
+    _ECO_EXTRA_CACHE[key] = (_t.time(), val)
+    return val
 
-    async def cached(key: str, fn: Any) -> Any:
-        hit = _ECO_EXTRA_CACHE.get(key)
-        if hit and hit[0] > _t.time() - _ECO_EXTRA_TTL_S:
-            return hit[1]
-        val = await fn()
-        _ECO_EXTRA_CACHE[key] = (_t.time(), val)
-        return val
 
+async def _gold_events_window(start: date, end: date) -> list[dict[str, Any]]:
+    """gold_events rows in [start, end] via data-service (a stored table, no new fetch), cached an hour.
+    The ECO feed and the EVTS commodity lane read the same cache keys."""
     async def gold() -> list[dict[str, Any]]:
         body = await http_client.get_json(f"{DATA_SVC}/db/gold/events", route="read",
                                           params={"from": start.isoformat(), "to": end.isoformat()})
         return list((body or {}).get("rows") or [])
+    return await _eco_cached(f"gold:{start}:{end}", gold)
+
+
+async def _eco_extra_inputs(start: date, end: date) -> tuple[list[dict[str, Any]], list[str], str | None, str | None]:
+    """(gold_events rows, listed NIFTY expiries, errors) — each cached an hour; a missing source drops only its rows."""
+    errs: dict[str, str] = {}
 
     async def chain() -> list[str]:
         body = await http_client.get_json(f"{DATA_SVC}/db/option-chain/NIFTY", route="read")
@@ -980,14 +987,130 @@ async def _eco_extra_inputs(start: date, end: date) -> tuple[list[dict[str, Any]
     events: list[dict[str, Any]] = []
     listed: list[str] = []
     try:
-        events = await cached(f"gold:{start}:{end}", gold)
+        events = await _gold_events_window(start, end)
     except http_client.UpstreamError as exc:
         errs["us"] = f"gold_events unavailable ({exc.status_code})"
     try:
-        listed = await cached("chain", chain)
+        listed = await _eco_cached("chain", chain)
     except http_client.UpstreamError as exc:
         errs["expiries"] = f"listed expiries unavailable ({exc.status_code}): the rule fills every week"
     return events, listed, errs.get("us"), errs.get("expiries")
+
+
+# ── Commodity calendar (final round R5-EVTS): the commodity desk's dated events, one lane on EVTS ────────────────
+# Sources are dated constants and stored tables only (no new fetches; O-8: the MCX website is never read):
+# shared/mcx_specs (MCX holidays + special sessions, each with its circular) and gold_events (the gold program's
+# stored ForexFactory weekly calendar). Each row names its source; `covers_eco_id` is the eco-calendar row id that
+# carries the same event, so EVTS draws each event once (the five-week grid's ◆ line skips covered ids).
+# Context only: dates, trading hours and stored prints — never a call, no direction words, nothing feeds the Desk,
+# the S1 shadow, an alert direction or a ticket price.
+MCX_CLOSURE_WHAT: dict[str, str] = {"full": "MCX closed all day",
+                                    "morning": "MCX morning session closed (the evening session trades)",
+                                    "evening": "MCX evening session closed (the morning session trades)"}
+_MCX_SPECS_SOURCE = "shared/mcx_specs (dated constants from MCX circulars)"
+_GOLDEV_SOURCE = ("gold_events (ForexFactory weekly calendar, stored; forecast / previous as published, "
+                  "actual once stored)")
+
+
+def mcx_holiday_rows(start: date, end: date) -> list[dict[str, Any]]:
+    """MCX trade holidays in [start, end] (weekday holidays with their closure kind: full / morning / evening).
+    These are MCX's own closures — an NSE HOLIDAY row the same day is a different exchange, not a duplicate."""
+    try:
+        from shared.mcx_specs import MCX_HOLIDAYS_2026
+    except ImportError:
+        return []
+    s, e = start.isoformat(), end.isoformat()
+    return [{"id": f"MCXHOL-{d.isoformat()}", "date": d.isoformat(), "time": None, "kind": "MCX_HOLIDAY",
+             "what": f"{name} · {MCX_CLOSURE_WHAT.get(closure, closure)}", "closure": closure, "circular": None,
+             "impact": None, "forecast": None, "previous": None, "actual": None,
+             "source": _MCX_SPECS_SOURCE, "covers_eco_id": None}
+            for d, (name, closure) in sorted(MCX_HOLIDAYS_2026.items()) if s <= d.isoformat() <= e]
+
+
+def mcx_session_rows(start: date, end: date) -> list[dict[str, Any]]:
+    """MCX dated special sessions (a trading session on an otherwise-closed day). The eco calendar's SESSION row
+    carries the same event (merged with NSE's), so the row covers it; when NSE holds its own session that day the
+    `what` says so instead of listing it twice."""
+    try:
+        from shared.mcx_specs import SPECIAL_SESSIONS_2026
+    except ImportError:
+        return []
+    nse_days = {x["date"] for x in NSE_SPECIAL_SESSIONS}
+    s, e = start.isoformat(), end.isoformat()
+    out: list[dict[str, Any]] = []
+    for x in SPECIAL_SESSIONS_2026:
+        day = str(x.get("date"))
+        if not s <= day <= e:
+            continue
+        what = f"{x.get('name')} · MCX trades {x.get('opens')}–{x.get('closes')}"
+        if x.get("pre_open"):
+            what += f" (pre-open {x['pre_open']})"
+        if day in nse_days:
+            what += " · NSE holds its own session (timing: ECO)"
+        out.append({"id": f"MCXSES-{day}", "date": day, "time": x.get("opens"), "kind": "MCX_SESSION", "what": what,
+                    "closure": None, "circular": x.get("circular"), "impact": None, "forecast": None,
+                    "previous": None, "actual": None, "source": _MCX_SPECS_SOURCE,
+                    "covers_eco_id": _eco_id("SESSION", day)})
+    return out
+
+
+def gold_event_lane_rows(events: list[dict[str, Any]], start: date, end: date) -> list[dict[str, Any]]:
+    """The gold program's stored calendar rows (gold_events) as lane rows: one per release, High / Medium impact
+    only (Low stays on GOLD, M28). A US_* row's day is the eco calendar's aggregated `US-<date>` row and a FOMC
+    row is its `FED-<date>` row (federalreserve.gov serves the same decision there) — covered, drawn once."""
+    s, e = start.isoformat(), end.isoformat()
+    out: list[dict[str, Any]] = []
+    for ev in events:
+        day, kind = str(ev.get("event_date") or "")[:10], str(ev.get("kind") or "")
+        if not (s <= day <= e) or str(ev.get("impact")) not in US_ECO_IMPACT \
+                or not (kind.startswith("US_") or kind == "FOMC"):
+            continue
+        slug = re.sub(r"[^A-Za-z0-9]+", "", str(ev.get("name") or ""))[:24]      # stable id: PK is (date, kind, name)
+        out.append({"id": f"GOLDEV-{day}-{kind}-{slug}", "date": day, "time": ev.get("time_ist"),
+                    "kind": "FED" if kind == "FOMC" else kind, "what": str(ev.get("name") or kind),
+                    "closure": None, "circular": None, "impact": ev.get("impact"), "forecast": ev.get("forecast"),
+                    "previous": ev.get("previous"), "actual": ev.get("actual"), "source": _GOLDEV_SOURCE,
+                    "covers_eco_id": _eco_id("FED" if kind == "FOMC" else "US", day)})
+    return out
+
+
+def merge_commodity_rows(*groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One row per id (first wins), sorted by date then time: the same event never twice in the lane."""
+    seen: dict[str, dict[str, Any]] = {}
+    for g in groups:
+        for r in g:
+            seen.setdefault(r["id"], r)
+    return sorted(seen.values(), key=lambda r: (r["date"], r.get("time") or "99:99", r["id"]))
+
+
+@router.get("/commodity-calendar")
+async def commodity_calendar(back: int = Query(7, ge=0, le=120), ahead: int = Query(60, ge=1, le=366)) -> dict:
+    """The commodity lane for EVTS (R5-EVTS): MCX trade holidays and special sessions (shared/mcx_specs, dated
+    constants with their circulars) and the US releases the gold program already stores (gold_events) — stored
+    tables and constants only, no new fetches. `covers_eco_ids` lists the eco-calendar row ids these rows carry,
+    so the page draws each event once (the five-week grid's ◆ line skips them). Context: dates, hours and stored
+    prints — it describes the calendar, never a call."""
+    today = date.today()  # noqa: DTZ005,DTZ011 — local clock on purpose, the same clock eco_calendar uses
+    start, end = today - _timedelta(days=back), today + _timedelta(days=ahead)
+    err: str | None = None
+    gold_rows: list[dict[str, Any]] = []
+    try:
+        gold_rows = await _gold_events_window(start, end)
+    except http_client.UpstreamError as exc:
+        err = f"gold_events unavailable ({exc.status_code}): MCX rows still shown"
+    rows = merge_commodity_rows(mcx_holiday_rows(start, end), mcx_session_rows(start, end),
+                                gold_event_lane_rows(gold_rows, start, end))
+    try:
+        from shared.mcx_specs import CALENDAR_YEARS
+        years = list(CALENDAR_YEARS)
+    except ImportError:
+        years = []
+    return {"today": today.isoformat(), "from": start.isoformat(), "to": end.isoformat(), "rows": rows,
+            "covers_eco_ids": sorted({r["covers_eco_id"] for r in rows if r.get("covers_eco_id")}),
+            "mcx_calendar_years": years, "badges": {"calendar": "context"},
+            "note": ("dates, trading hours and stored prints only (context): the lane describes the calendar, "
+                     "never a call"),
+            "errors": {"us": err} if err else None}
 
 
 @router.get("/eco-calendar")

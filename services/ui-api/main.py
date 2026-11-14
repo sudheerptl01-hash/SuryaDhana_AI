@@ -96,6 +96,8 @@ import static_ui  # desktop Layer 1: static terminal UI (ui/dist/current) + /ver
 from routers import prefs as ui_prefs
 from routers import client_errors
 from routers import notifications
+from routers import commodity_desk   # R5-CMDTY: CMDT silver/crude desks (/api/commodity/desk/*)
+from routers import fut_book         # R5-FUTBOOK: the MCXG paper futures book (/api/mcx/book/*)
 from routers._api_gzip import ApiGzipMiddleware
 from routers import _loop_watchdog
 from routers import _cache_warm
@@ -200,6 +202,7 @@ app.include_router(alpha.router,       prefix="/api/alpha",    tags=["alpha-disc
 app.include_router(ml_workspace.router, prefix="/api/ml",       tags=["ml-workspace"])
 app.include_router(commodity.router, prefix="/api/commodity", tags=["commodity"])
 app.include_router(gold_preopen.router, prefix="/api/commodity", tags=["commodity"])   # aliases for one release (PLAN §d)
+app.include_router(commodity_desk.router, prefix="/api/commodity/desk", tags=["commodity"])  # R5: silver/crude desks
 app.include_router(gold.router, prefix="/api/gold", tags=["gold"])                     # GOLD page (43rd): health, COT, contracts…
 app.include_router(markets.router, prefix="/api/market", tags=["market"])
 app.include_router(news_scanner.router, prefix="/api/news-scanner", tags=["news-scanner"])
@@ -218,6 +221,7 @@ app.include_router(flow_radar.router, prefix="/api/derivatives", tags=["flow-rad
 app.include_router(options_strategy.router, prefix="/api/options", tags=["options-strategy"])
 app.include_router(fo_book.router, prefix="/api/options/book", tags=["paper-fo-book"])  # PLAN 2.2 PAPER F&O book (W2-BOOK); /api/risk/fo lives in riskdash
 app.include_router(mcx.router, prefix="/api/mcx", tags=["mcx-gold"])
+app.include_router(fut_book.router, prefix="/api/mcx/book", tags=["mcx-gold"])   # R5: paper futures book (PAPER ONLY)
 app.include_router(riskdash.router, prefix="/api/risk", tags=["risk"])
 app.include_router(gameplan.router, prefix="/api/gameplan", tags=["gameplan"])  # GPLN (wave E, F-11): assembles existing reads; nothing feeds the Desk / S1 / alerts / tickets
 app.include_router(ui_prefs.router, prefix="/api/prefs", tags=["prefs"])  # user settings (desktop program D3)

@@ -11,7 +11,7 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
  */
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getDeskStatus, getMarketEvents, getOpenPositions, getRecentResults, getResultsReacting, type ReactingResult, getFundamentalsScreen, type ScreenRow, type CorpEvent, type RecentResult, getAnnouncementsCore, heldSymbols, getEcoCalendar, type EcoEvent, getSymbols } from '@/lib/api'
+import { getDeskStatus, getMarketEvents, getOpenPositions, getRecentResults, getResultsReacting, type ReactingResult, getFundamentalsScreen, type ScreenRow, type CorpEvent, type RecentResult, getAnnouncementsCore, heldSymbols, getEcoCalendar, type EcoEvent, getCommodityCalendar, type CommodityCalendarResponse, type CommodityEvent, getSymbols } from '@/lib/api'
 import { nseSession } from '@/components/desktop/session'
 import { fillIndustry, hhmm, reactingHeading, releaseCheck } from '@/components/marketPagesModel'
 import { ecoKindSpec } from '@/components/EconomicCalendar'
@@ -49,6 +49,15 @@ function KindChip({ kind }: { kind: string }) {
   return <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: .8, color: c,
                         border: `1px solid ${c}55`, padding: '1px 5px', whiteSpace: 'nowrap' }}>{kind}</span>
 }
+
+// Commodity lane (R5-EVTS): kind chips are categorical (which calendar a row comes from), never a view on price
+const CMDTY_KIND: Record<string, { color: string; label: string }> = {
+  MCX_HOLIDAY: { color: T.muted, label: 'MCX CLOSED' },
+  MCX_SESSION: { color: T.amber, label: 'MCX SESSION' },
+  FED: { color: T.cyan, label: 'FED' },
+}
+const cmdtyKind = (k: string) => CMDTY_KIND[k] ?? { color: T.cyan, label: k.replace(/^US_/, 'US ') }
+const cmdtySourceChip = (s: string) => (s.startsWith('shared/mcx_specs') ? 'MCX CIRCULAR' : 'GOLD_EVENTS · STORED')
 
 export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) => void }) {
   const [rows, setRows] = useState<CorpEvent[] | null>(null)
@@ -88,11 +97,19 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
   useEffect(() => { getFundamentalsScreen().then(r => setSeason(r.data.rows)).catch(() => setSeason([])) }, [])
   const [eco, setEco] = useState<EcoEvent[]>([])
   useEffect(() => { getEcoCalendar(7, 40).then(r => setEco(r.data.events)).catch(() => setEco([])) }, [])
+  // Commodity lane (R5-EVTS): MCX holidays & special sessions + the gold program's stored US releases, same window
+  const [cmdty, setCmdty] = useState<CommodityCalendarResponse | null>(null)
+  useEffect(() => { getCommodityCalendar(7, 40).then(r => setCmdty(r.data)).catch(() => setCmdty(null)) }, [])
+  // each event once on the page: the ◆ line skips the eco rows the commodity lane carries (US data, FOMC, sessions)
+  const coveredEcoIds = useMemo(() => new Set(cmdty?.covers_eco_ids ?? []), [cmdty])
   const ecoByDay = useMemo(() => {
     const m = new Map<string, EcoEvent[]>()
-    for (const e of eco) m.set(e.date, [...(m.get(e.date) ?? []), e])
+    for (const e of eco) {
+      if (e.id && coveredEcoIds.has(e.id)) continue
+      m.set(e.date, [...(m.get(e.date) ?? []), e])
+    }
     return m
-  }, [eco])
+  }, [eco, coveredEcoIds])
   // results filed since the last close, priced live (refreshed every 2 min)
   const [reacting, setReacting] = useState<{ rows: ReactingResult[]; since: string; phase?: string; as_of?: string; source?: string; data_date?: string | null; session_open?: boolean } | null>(null)
   useEffect(() => {
@@ -429,6 +446,46 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
             })}
           </div>
         </Panel>
+
+        {cmdty && cmdty.rows.length > 0 && (() => {
+          // R5-EVTS: the commodity desk's dated events, one lane. Everything here is also where it came from —
+          // shared/mcx_specs constants or the stored gold_events table — and the ◆ line above already skips the
+          // eco rows this lane carries, so no event is drawn twice on the page.
+          const hasNums = cmdty.rows.some(r => r.forecast != null || r.previous != null || r.actual != null)
+          const ccols: Column<CommodityEvent>[] = [
+            { key: 'date', label: 'Date', sort: r => r.date, render: r => {
+              const u = until(r.date)
+              return <span style={{ whiteSpace: 'nowrap' }}><span style={{ color: r.date < today ? T.dim : T.text }}>{fmtDay(r.date)}</span>
+                <span style={{ color: u.color, fontSize: 10, marginLeft: 6 }}>{u.text}</span></span>
+            } },
+            { key: 'time', label: 'IST', render: r => <span style={{ color: T.muted }}>{r.time ?? '—'}</span> },
+            { key: 'kind', label: 'Type', sort: r => r.kind, render: r => { const k = cmdtyKind(r.kind)
+              return <span style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: .8, color: k.color,
+                                    border: `1px solid ${k.color}55`, padding: '1px 5px', whiteSpace: 'nowrap' }}>{k.label}</span> } },
+            { key: 'what', label: 'Event', render: r => (
+              <span title={`${r.what}\nsource: ${r.source}`} style={{ display: 'inline-block', maxWidth: 480, overflow: 'hidden',
+                            textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom', color: r.date < today ? T.muted : T.text }}>
+                {r.what}{r.circular && <span style={{ color: T.dim, fontSize: 10 }}> · {r.circular}</span>}</span> ) },
+            ...(hasNums ? [
+              { key: 'impact', label: 'Impact', render: (r: CommodityEvent) => <span style={{ color: (r.impact ?? '').toLowerCase() === 'high' ? T.text : T.dim, fontSize: 11 }}>{r.impact ?? ''}</span> },
+              { key: 'fc', label: 'Forecast', align: 'right' as const, render: (r: CommodityEvent) => <span style={{ color: T.muted }}>{r.forecast ?? ''}</span> },
+              { key: 'prev', label: 'Previous', align: 'right' as const, render: (r: CommodityEvent) => <span style={{ color: T.dim }}>{r.previous ?? ''}</span> },
+              { key: 'print', label: 'Print', align: 'right' as const, title: 'the stored release print, once the calendar stores one',
+                render: (r: CommodityEvent) => <span style={{ color: r.actual != null ? T.bright : T.dim, fontSize: r.actual != null ? 11.5 : 10 }}>{r.actual ?? (r.date < today && r.forecast != null ? 'not stored' : '')}</span> },
+            ] as Column<CommodityEvent>[] : []),
+            { key: 'src', label: 'Source', render: r => (
+              <span title={r.source} style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: .6, color: T.dim,
+                            border: `1px solid ${T.border}`, padding: '1px 5px', whiteSpace: 'nowrap' }}>{cmdtySourceChip(r.source)}</span> ) },
+          ]
+          return (
+            <Panel source={undatedSource('MCX circulars (shared/mcx_specs) · gold_events (stored)', cmdty.note)} badge="context"
+              title="Commodity calendar" accent={T.cyan} pad={0}
+              subtitle={`MCX trade holidays & special sessions · US releases the gold desk stores · last 7 days and next 40 · drawn once: the week grid above skips what this lane carries${cmdty.errors?.us ? ` · ${cmdty.errors.us}` : ''}`}>
+              <DataTable columns={ccols} rows={cmdty.rows} rowKey={r => r.id} dense maxHeight={300}
+                rowStyle={r => (r.date < today ? { opacity: 0.5 } : undefined)} empty="No commodity events in this window" />
+            </Panel>
+          )
+        })()}
 
         <Panel source={undatedSource('NSE calendar')} title="All events" accent={T.cyan} pad={0}
           subtitle={`${filtered.length} shown · last 7 days and next 60 · click a stock for its chart`}

@@ -20,6 +20,7 @@ import { Chip, DataTable, Input, Loading, Notice, PageHeader, Panel, Select, Sta
          fmtInr, fmtNum, type Column, sourceOf, inputSource, undatedSource } from '@/components/terminal'
 import { fmtSigned, fmtSignedInr } from '@/lib/format'   // +₹ / −₹ with U+2212 (C1-18)
 import { ContractSelector, frontExpiry } from '@/components/gold/ContractsView'
+import { FutBook } from '@/components/mcxg/FutBook'
 import { FairOpenHistory } from '@/components/gold/FairOpenHistory'
 import { goToPage } from '@/lib/navigate'
 import { getGoldContracts } from '@/lib/gold/api'
@@ -409,6 +410,13 @@ export function McxGoldDesk() {
               </>
             )}
           </Panel>
+
+          {/* 5b. paper futures book (R5-FUTBOOK): the explicit BOOK PAPER action the ticket gains — the ticket's
+              quote path above still prices and records nothing (PLAN 0.1 #7 unchanged) */}
+          <FutBook contract={contract} expiry={quote?.expiry ?? (expiry || null)}
+            lots={Math.max(1, Math.floor(num(lots) ?? 1))} price={ticketPrice ?? null}
+            priceSource={priceIn ? 'price you typed' : quote?.best?.source ?? null}
+            brokerage={num(brokerage) ?? 20} />
         </div>
       )}
     </div>

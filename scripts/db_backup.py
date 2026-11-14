@@ -8,7 +8,12 @@ window, see docs/RUNBOOK_RESTORE.md). Fallback: a private consistent copy of the
 the same torn-copy-safe helper.
 
 Output: data/backups/duckdb/market-YYYYMMDD.duckdb[.zst] + market-YYYYMMDD.meta.json
-        {rows, sha256, src, src_mtime_ns, compressed}
+        {rows, sha256, src, src_mtime_ns, compressed, missed_nights, missed_nights_new} — missed_nights
+        (missed_backup_days) names
+        the prior nights in the rotation window that have no verified copy: after a multi-night outage the
+        catch-up runs ONE backup (point-in-time; a missed night cannot be back-dated) and the gap is recorded
+        here and said once on Telegram by the controller instead of being silently absorbed (F4 §1d);
+        missed_nights_new holds only the stamps no earlier meta named (what the controller's one line says).
 Rotation: keep 7 daily + 4 weekly (Sundays). Verification: read-only open + row count of
 nse_bhavcopy on the pre-compression copy; sha256 recorded for restore-integrity checks.
 
@@ -166,6 +171,53 @@ def _rotate_family(dest: Path, globs: tuple[str, ...], today: datetime, keep_dai
         meta.unlink(missing_ok=True)
         removed.append(p.name)
     return removed
+
+
+def missed_backup_days(dest: Path, today: datetime | None = None, lookback: int = KEEP_DAILY) -> list[str]:
+    """The dated stamps (YYYYMMDD, ascending) of the last ``lookback`` nights before ``today`` with no verified
+    market backup in ``dest``. A night counts as covered only by its market-<stamp>.meta.json — db_backup.py
+    writes the meta last, after verification, so a killed run's partial .duckdb does not count (same convention
+    as the controller's backup_done_today). Pure read: nothing is written.
+
+    Semantics (R5-OPS2, F4 §1d "the 12 Nov gap night"): a backup is point-in-time — a missed night can never be
+    re-created after the fact, so there is nothing to re-run per missed day. The correct catch-up after a
+    multi-night outage is ONE backup of the data as it stands; this function only names the nights that have no
+    copy, so the gap is recorded in tonight's meta ("missed_nights") and surfaced as one Telegram line instead
+    of being silently absorbed. Bounds: never today (today's backup is the run in progress), never at or before
+    the oldest surviving backup (a fresh install, and nights the rotation legitimately removed, are not missed).
+    """
+    now = today or _now()
+    have: set[str] = set()
+    if dest.is_dir():
+        for p in dest.glob("market-*.meta.json"):
+            stamp = p.name.split("-")[1].split(".")[0]
+            try:
+                datetime.strptime(stamp, "%Y%m%d")  # noqa: DTZ007 - a local date, like the file names
+            except ValueError:
+                continue
+            have.add(stamp)
+    if not have:
+        return []
+    oldest = min(have)
+    missed = [stamp for back in range(1, max(0, int(lookback)) + 1)
+              if (stamp := (now - timedelta(days=back)).strftime("%Y%m%d")) > oldest and stamp not in have]
+    return sorted(missed)
+
+
+def _recorded_missed_nights(dest: Path) -> set[str]:
+    """Stamps an earlier meta already names in its missed_nights: a gap night is said ONCE on Telegram (the run
+    that first sees it), not re-alerted every night for the week it stays inside the lookback window. The metas
+    rotate with their backups, always later than the stamp leaves the window, so the dedup never forgets early."""
+    seen: set[str] = set()
+    if dest.is_dir():
+        for p in dest.glob("market-*.meta.json"):
+            try:
+                val = json.loads(p.read_text()).get("missed_nights")
+            except (OSError, ValueError):
+                continue
+            if isinstance(val, list):
+                seen.update(str(s) for s in val)
+    return seen
 
 
 def _open_source(db: Path) -> sqlite3.Connection:
@@ -416,6 +468,11 @@ def run(db: Path = snap.DB, dest: Path = DEST_DEFAULT, pointer: Path = snap.POIN
         job_queue_db: Path | None = None, paper_fo_db: Path | None = None, ask_audit_db: Path | None = None) -> dict:
     dest.mkdir(parents=True, exist_ok=True)
     stamp = _now().strftime("%Y%m%d")
+    # Read BEFORE anything is written tonight: the nights in the rotation window with no verified copy (a backup
+    # is point-in-time, so a missed night cannot be back-dated; it is recorded, and the controller says so once —
+    # missed_nights_new carries only the stamps no earlier meta has named, so the Telegram line never repeats).
+    missed_nights = missed_backup_days(dest)
+    missed_new = sorted(set(missed_nights) - _recorded_missed_nights(dest))
     # The small SQLite stores first (tiny, seconds): a DuckDB failure below must not cost the night's copies.
     prefs = _backup_prefs_safely(prefs_db, dest, stamp)
     alerts = _backup_alerts_safely(alerts_db, dest, stamp)
@@ -437,7 +494,8 @@ def run(db: Path = snap.DB, dest: Path = DEST_DEFAULT, pointer: Path = snap.POIN
     meta = {"rows": rows, "sha256": _sha256(out), "src": src_kind,
             "src_mtime_ns": src.stat().st_mtime_ns if src.exists() else None,
             "compressed": compressed, "created_at": _now().isoformat(timespec="seconds"),
-            "file": out.name, "bytes": out.stat().st_size}
+            "file": out.name, "bytes": out.stat().st_size,
+            "missed_nights": missed_nights, "missed_nights_new": missed_new}
     (dest / f"market-{stamp}.meta.json").write_text(json.dumps(meta, indent=1))
     meta["rotated"] = rotate(dest)
     meta["prefs"] = prefs

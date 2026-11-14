@@ -917,7 +917,7 @@ export const getRbiMpc = () =>
   client.get<{ next: { start: string; end: string } | null; upcoming: { start: string; end: string }[]; source: string | null; stale: boolean }>('/api/market/rbi-mpc')
 
 // ECO: economic calendar (India CPI / WPI / IIP / core / GDP from the official release calendars, RBI and Fed decisions)
-export interface EcoEvent { date: string; time: string | null; kind: string; what: string; country: 'IN' | 'US'; source: string | null; moved: boolean }
+export interface EcoEvent { id?: string | null; date: string; time: string | null; kind: string; what: string; country: 'IN' | 'US'; source: string | null; moved: boolean }
 export type EcoCalendarResponse = { today: string; events: EcoEvent[]; sources: Record<string, string>; note: string | null; valid_until: string | null; fed_available: boolean }
 /** The query BRIEF and the session clocks share (today … +7 days; NSE holidays are read for today only). */
 export const ECO_SHARED_QUERY = { back: 0, ahead: 7 } as const
@@ -929,6 +929,18 @@ export const getEcoCalendar = (back = 14, ahead = 60) => {
   const fetchIt = () => client.get<EcoCalendarResponse>('/api/market/eco-calendar', { params: { back, ahead } })
   return back === ECO_SHARED_QUERY.back && ahead === ECO_SHARED_QUERY.ahead ? ecoCache.get(`${back}:${ahead}`, fetchIt) : fetchIt()
 }
+
+// EVTS commodity lane (R5-EVTS): MCX holidays & special sessions (shared/mcx_specs, dated constants with their
+// circulars) + the US releases the gold program stores (gold_events) — context rows, each covering the eco-calendar
+// id that carries the same event so the page draws it once. Stored tables and constants only, no new fetches.
+export interface CommodityEvent { id: string; date: string; time: string | null; kind: string; what: string
+  closure: string | null; circular: string | null; impact: string | null; forecast: string | null
+  previous: string | null; actual: string | null; source: string; covers_eco_id: string | null }
+export type CommodityCalendarResponse = { today: string; from: string; to: string; rows: CommodityEvent[]
+  covers_eco_ids: string[]; mcx_calendar_years: number[]; badges: Record<string, string>; note: string | null
+  errors: Record<string, string> | null }
+export const getCommodityCalendar = (back = 7, ahead = 40) =>
+  client.get<CommodityCalendarResponse>('/api/market/commodity-calendar', { params: { back, ahead } })
 
 // GIFT NIFTY (NSE IX, trades 06:30–15:40 and 16:35–02:45 IST): the overnight cue for the NIFTY open
 export interface GiftNifty { last: number | null; change: number | null; change_pct: number | null; expiry: string | null; time: string | null

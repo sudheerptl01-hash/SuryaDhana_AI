@@ -680,6 +680,11 @@ def curve_history(store: Any, *, exchange: str = "MCX", symbol: str = "GOLD", da
 
 
 MCX_DAILY_DEFAULT_DAYS = 180
+# Quotation units of the non-gold MCX families the CMDT desks read (R5-CMDTY): gold_mcx_daily is keyed
+# (trade_date, family, expiry) and family-generic; these rows arrive once the gold_breeze_daily family
+# extension is approved (pending patch request). ingest_india.QUOTE_UNIT stays gold-only.
+MCX_DAILY_EXTRA_UNITS: dict[str, str] = {"SILVER": "INR/kg", "SILVERM": "INR/kg", "SILVERMIC": "INR/kg",
+                                         "CRUDEOIL": "INR/bbl", "CRUDEOILM": "INR/bbl"}
 
 
 def mcx_daily(store: Any, *, family: str | None = None, expiry: date | None = None, start: date | None = None,
@@ -703,7 +708,8 @@ def mcx_daily(store: Any, *, family: str | None = None, expiry: date | None = No
     df = db.query_df(store, sql + " ORDER BY family, expiry, trade_date", params).tail(limit)
     rows = db.records(df)
     for r in rows:
-        r["unit"] = ingest_india.QUOTE_UNIT.get(str(r.get("family")))
+        fam = str(r.get("family"))
+        r["unit"] = ingest_india.QUOTE_UNIT.get(fam) or MCX_DAILY_EXTRA_UNITS.get(fam)
     return {"rows": rows, "count": len(rows), "from": start.isoformat(), "to": end.isoformat() if end else None, "family": family,
             "expiry": expiry.isoformat() if expiry else None, "source": mcx_daily_mod.SOURCE, "quality": mcx_daily_mod.QUALITY,
             "note": ("ICICI Breeze daily bars per LIVE contract (fetched 09:35 for the previous session); volume and OI in lots; "

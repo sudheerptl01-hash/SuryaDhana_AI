@@ -17,8 +17,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiError } from '@/lib/errors'
 import { BadgeChip, Btn, Chip, ErrorBox, Input, Loading, Panel, T, undatedSource } from '@/components/terminal'
 import { askAudit, askHealth, askQuestion, runRead, type AskAuditRow, type AskHealth } from './api'
-import { auditLineLabel, cellText, EXAMPLE_QUESTIONS, OFFLINE_LINE, renderableLines, snapshotAgeLine, sourceLabel,
-         type AskPayload, type ReadPayload } from './model'
+import { auditLineLabel, cellText, EXAMPLE_QUESTIONS, listPreview, OFFLINE_LINE, renderableLines, snapshotAgeLine,
+         sourceLabel, type AskPayload, type ReadPayload } from './model'
 
 const mono = { fontFamily: T.mono } as const
 
@@ -194,6 +194,17 @@ export function AskPanel() {
                 </div>
               ))}
             </div>
+            {res.list_shaped && res.columns.length > 0 && (() => {
+              // R5-ASK2: a list-shaped answer — the grid IS the answer, so the top rows render openly here
+              // (the summary line above is the one cited count; the full set stays under THE QUERY details).
+              const pv = listPreview(res.rows)
+              return (
+                <div>
+                  <RowsGrid columns={res.columns} rows={pv.rows} truncated={false} />
+                  {pv.note && <div style={{ fontSize: 10, color: T.muted, marginTop: 4 }}>{pv.note}</div>}
+                </div>
+              )
+            })()}
             {(res.withheld > 0 || (painted?.withheldHere ?? 0) > 0) && (
               <div style={{ fontSize: 10, color: T.muted, marginTop: 6 }}>
                 {res.withheld + (painted?.withheldHere ?? 0)} line(s) withheld: a number without its source table + as-of never renders here

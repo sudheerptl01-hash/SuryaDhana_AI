@@ -780,6 +780,193 @@ def test_r4_audit_schema_migrates_in_place(tmp_path: Path, monkeypatch: pytest.M
     assert tail[0]["refused"] is True and tail[1]["question"] == "old row" and tail[1]["refused"] is False
 
 
+# ── R5-ASK2 (FINAL ROUND): sample-value hints + list-shaped answers + signature-keyed caches ────────────────────
+# F4 §3 Research 8.5: "the most natural question ('last NIFTY close') still honest-zeroes on value-form residue;
+# 200-row list questions compose no prose" — EVAL2's own two named residuals, built here.
+
+from ask_engine import (LIST_ROWS_THRESHOLD, MAX_HINT_LINES, _list_summary, key_column,
+                        sample_tokens)
+
+
+def test_r5_key_column_priority_pure() -> None:
+    assert key_column(["date", "Symbol", "name"]) == "Symbol"          # symbol wins, case preserved
+    assert key_column(["date", "contract", "close"]) == "contract"
+    assert key_column(["n"]) is None and key_column([]) is None
+
+
+def test_r5_sample_tokens_pure() -> None:
+    toks = sample_tokens("What was the last stored NIFTY close?")
+    assert toks == ["NIFTY"]                                           # stopwords + schema-ish words dropped
+    assert sample_tokens("top 5 by delivery percentage") == []         # all schema-ish -> fallback sampling
+    assert sample_tokens("") == [] and len(sample_tokens("aaa bbb ccc ddd eee fff")) == 4
+    for t in sample_tokens("x'; DROP TABLE t; -- %_ NIFTY"):           # the LIKE literal can never be escaped
+        assert __import__("re").fullmatch(r"[A-Z0-9]{3,}", t), t
+
+
+def test_r5_value_samples_question_matched(snap: Path) -> None:
+    eng = AskEngine(llm=ScriptedLLM())
+    vals = eng.value_samples("index_ohlc_daily", "What was the last stored NIFTY close?")
+    assert vals == ["BANKNIFTY", "NIFTY"]                              # DISTINCT, LIKE-matched, ordered
+    assert vals == eng.value_samples("index_ohlc_daily", "What was the last stored NIFTY close?")  # cached+stable
+
+
+def test_r5_value_samples_fallback_and_no_key_column(snap: Path) -> None:
+    eng = AskEngine(llm=ScriptedLLM())
+    assert eng.value_samples("index_ohlc_daily", "zzz qqq") == ["BANKNIFTY", "NIFTY"]  # alphabetical fallback
+    assert eng.value_samples("big", "anything") == []                  # no symbol/id column -> no samples
+    assert eng.value_samples("no_such_table", "NIFTY") == []           # unknown table degrades to none
+
+
+def test_r5_sample_injection_tokens_cannot_break_the_query(snap: Path) -> None:
+    eng = AskEngine(llm=ScriptedLLM())
+    out = eng.value_samples("index_ohlc_daily", "'; DROP TABLE index_ohlc_daily; -- NIFTY")
+    assert out == ["BANKNIFTY", "NIFTY"]                               # tokens sanitized, nothing raised
+    assert eng.run_query("SELECT count(*) FROM index_ohlc_daily")[1][0][0] == 3   # the table survived
+
+
+@pytest.fixture()
+def snap_forms(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """EVAL2 case 1's exact residue: the stored symbol forms are 'NIFTY50' and 'NIFTY 50', never 'NIFTY'."""
+    path = tmp_path / "evening-20261113-1920.duckdb"
+    con = duckdb.connect(str(path))
+    con.execute("CREATE TABLE market_index_daily (symbol VARCHAR, date DATE, close DOUBLE)")
+    con.execute("INSERT INTO market_index_daily VALUES ('NIFTY50', DATE '2026-11-13', 25144.3), "
+                "('NIFTYBANK', DATE '2026-11-13', 56210.0)")
+    con.execute("CREATE TABLE index_ohlc_daily (symbol VARCHAR, date DATE, close DOUBLE)")
+    con.execute("INSERT INTO index_ohlc_daily VALUES ('NIFTY 50', DATE '2026-11-12', 25299.35)")
+    con.close()
+    live = tmp_path / "market.duckdb"
+    duckdb.connect(str(live)).close()
+    monkeypatch.setenv("ASK_SNAPSHOT_DB", str(path))
+    monkeypatch.setenv("ASK_AUDIT_DB", str(tmp_path / "ask_audit.sqlite"))
+    monkeypatch.setenv("DATABASE_URL", str(live))
+    return path
+
+
+def test_r5_prompt_carries_the_stored_value_forms(snap_forms: Path) -> None:
+    """The value-form residue dies at the prompt: the model SEES 'NIFTY 50' and 'NIFTY50', plus the
+    match-exactly instruction — it never has to guess 'NIFTY'."""
+    eng, llm = scripted_engine("NO_QUERY")
+    eng.ask("What was the last stored NIFTY close?")
+    prompt = "\n".join(m["content"] for m in llm.calls[0] if m["role"] == "user")
+    assert "'NIFTY 50'" in prompt and "'NIFTY50'" in prompt
+    assert "stored symbol values look like:" in prompt
+    assert "Match symbol/id values EXACTLY as sampled" in prompt
+
+
+def test_r5_hint_block_stays_bounded(snap: Path) -> None:
+    eng, llm = scripted_engine(PLAN_OHLC, CITED_LINE)
+    eng.ask("What was the last stored NIFTY close?")
+    prompt = "\n".join(m["content"] for m in llm.calls[0] if m["role"] == "user")
+    assert prompt.count("\n") <= MAX_HINT_LINES, "the hinted prompt must stay bounded"
+    eng2, llm2 = scripted_engine("NO_QUERY")
+    eng2.ask("zzzz qqqq xxxx")                                          # the full-catalog fallback shape
+    prompt2 = "\n".join(m["content"] for m in llm2.calls[0] if m["role"] == "user")
+    assert prompt2.count("\n") <= MAX_HINT_LINES + 8                    # table lines themselves are capped
+
+
+def test_r5_catalog_cap_is_enforced_on_a_wide_catalog() -> None:
+    """Pure shape check of the fallback cap: past MAX_HINT_LINES-2 tables the list truncates with a count."""
+    import ask_engine as ae
+    lines = [f"- t{i}(a, b)" for i in range(200)]
+    if len(lines) > ae.MAX_HINT_LINES - 2:
+        extra = len(lines) - (ae.MAX_HINT_LINES - 2)
+        lines = lines[:ae.MAX_HINT_LINES - 2] + [f"- … and {extra} more tables (ask names one)"]
+    assert len(lines) == ae.MAX_HINT_LINES - 1 and "82 more tables" in lines[-1]
+
+
+def test_r5_list_shaped_skips_compose_and_cites_deterministically(snap: Path) -> None:
+    """50 rows > LIST_ROWS_THRESHOLD: ONE llm call (plan only), one deterministic cited summary line,
+    list_shaped=true for the panel's grid, the audit row carries the real row count."""
+    eng, llm = scripted_engine("```sql\nSELECT n FROM big ORDER BY n\n```")
+    out = eng.ask("List every n stored in big")
+    assert LIST_ROWS_THRESHOLD == 20 and out["list_shaped"] is True
+    assert len(llm.calls) == 1                                          # no compose call over a row dump
+    assert len(out["answer"]) == 1 and out["answer"][0]["cited"]
+    assert "50 rows match" in out["answer"][0]["text"] and "[big]" in out["answer"][0]["text"]
+    assert out["withheld"] == 0 and len(out["rows"]) == 50
+    row = sqlite3.connect(os.environ["ASK_AUDIT_DB"]).execute(
+        "SELECT rows_returned, refused FROM ask_audit ORDER BY id DESC LIMIT 1").fetchone()
+    assert row == (50, 0)
+
+
+def test_r5_list_shaped_summary_notes_the_row_cap(snap: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ASK_ROW_CAP", "30")
+    eng, _ = scripted_engine("```sql\nSELECT n FROM big ORDER BY n\n```")
+    out = eng.ask("List every n stored in big")
+    assert out["truncated"] and out["list_shaped"]
+    assert "row cap reached" in out["answer"][0]["text"] and "30 rows match" in out["answer"][0]["text"]
+
+
+def test_r5_small_results_still_compose_prose(snap: Path) -> None:
+    eng, llm = scripted_engine(PLAN_OHLC, CITED_LINE)
+    out = eng.ask("What was the last stored NIFTY close?")
+    assert out["list_shaped"] is False and len(llm.calls) == 2          # plan + compose, unchanged
+    assert any(l["cited"] for l in out["answer"])
+
+
+def test_r5_list_summary_pure_shapes() -> None:
+    line = _list_summary(200, False, [{"table": "iv_expiry_daily", "as_of": "2026-11-12"}])
+    assert line.startswith("200 rows match") and "[iv_expiry_daily · as-of 2026-11-12]" in line
+    assert "row cap" in _list_summary(200, True, [{"table": "t", "as_of": None}])
+    no_src = _list_summary(50, False, [])
+    assert not any(ch.isdigit() for ch in no_src)                       # no number -> renders uncited, never withheld
+    out, withheld = cited_lines([no_src], set())
+    assert withheld == 0
+
+
+def test_r5_caches_invalidate_when_the_snapshot_is_recut_at_the_same_path(snap: Path) -> None:
+    """The 21:40 snapshot_ask_refresh patch swaps the file at a STABLE path: as-of, catalog and samples must
+    follow the new file, never the old cache (citations would otherwise date against yesterday's cut)."""
+    eng = AskEngine(llm=ScriptedLLM())
+    assert eng.table_as_of("index_ohlc_daily") == "2026-11-12"
+    assert eng.value_samples("index_ohlc_daily", "NIFTY close") == ["BANKNIFTY", "NIFTY"]
+    import time as _time
+    _time.sleep(0.01)                                                   # a distinct mtime_ns on coarse filesystems
+    con = duckdb.connect(str(snap))
+    con.execute("INSERT INTO index_ohlc_daily VALUES ('NIFTYNXT', DATE '2026-11-13', 70011.2)")
+    con.close()
+    assert eng.table_as_of("index_ohlc_daily") == "2026-11-13"          # the re-cut is seen, not the cache
+    assert "NIFTYNXT" in eng.value_samples("index_ohlc_daily", "NIFTY close")
+
+
+def test_r5_snapshot_db_prefers_the_fresher_copy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The 21:40 ASK re-cut vs the 19:20 evening snapshot: the fresher file wins, a missing override falls
+    back to the evening copy (so the PM can set ASK_SNAPSHOT_DB before the job's first run), and the
+    live-DB refusal still fires on whichever path is chosen."""
+    live = tmp_path / "market.duckdb"
+    duckdb.connect(str(live)).close()
+    evening = tmp_path / "evening-20261113-1920.duckdb"
+    con = duckdb.connect(str(evening)); con.execute("CREATE TABLE t (a INT)"); con.execute("INSERT INTO t VALUES (1)"); con.close()
+    (tmp_path / ".evening_snapshot.json").write_text(json.dumps({"path": str(evening), "rows": 1}))
+    ask_copy = tmp_path / "ask_evening.duckdb"
+    con = duckdb.connect(str(ask_copy)); con.execute("CREATE TABLE t (a INT)"); con.close()
+    monkeypatch.setenv("DATABASE_URL", str(live))
+    monkeypatch.setenv("ASK_AUDIT_DB", str(tmp_path / "audit.sqlite"))
+    eng = AskEngine(llm=ScriptedLLM())
+    now = os.stat(str(evening)).st_mtime
+    # the ask copy is the 21:40 re-cut (newer) -> it wins
+    monkeypatch.setenv("ASK_SNAPSHOT_DB", str(ask_copy))
+    os.utime(ask_copy, (now + 100, now + 100))
+    assert eng.snapshot_db() == str(ask_copy)
+    # the re-cut failed tonight (the ask copy is OLDER than the evening cut) -> the evening copy wins
+    os.utime(ask_copy, (now - 100, now - 100))
+    assert eng.snapshot_db() == str(evening)
+    # the env names a copy that does not exist yet -> honest fallback to the evening snapshot
+    monkeypatch.setenv("ASK_SNAPSHOT_DB", str(tmp_path / "not_cut_yet.duckdb"))
+    assert eng.snapshot_db() == str(evening)
+    # the live DB is refused even as the override, fresher or not
+    monkeypatch.setenv("ASK_SNAPSHOT_DB", str(live))
+    os.utime(live, (now + 500, now + 500))
+    with pytest.raises(AskError, match="live market.duckdb"):
+        eng.snapshot_db()
+
+
+def test_r5_health_guardrail_contract_unchanged(snap: Path) -> None:
+    body = AskEngine(llm=ScriptedLLM()).health()
+    assert len(body["guardrails"]) == 8                                 # the pinned contract stays the contract
+
+
 def test_f3_citation_tag_inside_the_sql_fence_is_stripped():
     """F3-RISK live defect: the model appended its citation tag inside the fenced SQL and DuckDB died at the
     middle dot. The tag lines are dropped; the statement survives; a tag-only block yields None."""

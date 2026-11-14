@@ -38,16 +38,16 @@ def _as_of(store: Any, symbol: str) -> str | None:
 
 def summary(store: Any, symbol: str, *, days: int = 750) -> dict[str, Any]:
     sym = symbol.upper()
-    df = db.query_df(store, f"""SELECT {', '.join(SUMMARY_COLS)} FROM iv_summary_daily WHERE symbol = ? ORDER BY date DESC LIMIT ?""", [sym, days])
-    df = df.sort_values("date")
-    rows = db.records(df, DATE_COLS)
-    vix = db.query_df(store, "SELECT date, close FROM vix_daily ORDER BY date DESC LIMIT ?", [days]).sort_values("date")
-    events = db.query_df(store, "SELECT released_at, pre_session, post_session, crush_pct FROM iv_event_log WHERE symbol = ? ORDER BY released_at DESC LIMIT 40", [sym])
+    rows = db.records_sql(store, f"""SELECT * FROM (SELECT {', '.join(SUMMARY_COLS)} FROM iv_summary_daily WHERE symbol = ?
+                                     ORDER BY date DESC LIMIT ?) t ORDER BY date""", [sym, days], DATE_COLS)
+    vix = db.records_sql(store, "SELECT * FROM (SELECT date, close FROM vix_daily ORDER BY date DESC LIMIT ?) t ORDER BY date", [days], ("date",))
+    events = db.records_sql(store, "SELECT released_at, pre_session, post_session, crush_pct FROM iv_event_log WHERE symbol = ? ORDER BY released_at DESC LIMIT 40",
+                            [sym], DATE_COLS)
     as_of = _as_of(store, sym)
     r, r_src = rate_for(store, date.fromisoformat(as_of)) if as_of else (None, None)
     return {"symbol": sym, "as_of": as_of, "since": _since(store, sym), "model_version": MODEL_VERSION, "r": r, "r_source": r_src,
-            "rows": rows, "vix": db.records(vix, ("date",)),
-            "events": [{"date": e["post_session"], "kind": "results", "crush_pct": e["crush_pct"]} for e in db.records(events, DATE_COLS)],
+            "rows": rows, "vix": vix,
+            "events": [{"date": e["post_session"], "kind": "results", "crush_pct": e["crush_pct"]} for e in events],
             "badges": BADGES, "verdict": "IV history: describes, does not predict"}
 
 
@@ -56,15 +56,19 @@ def surface(store: Any, symbol: str, *, day: date | None = None, compare_days: i
     d = day or db.to_date(db.scalar(store, "SELECT MAX(date) FROM iv_expiry_daily WHERE symbol = ?", [sym]))
     if d is None:
         return {"symbol": sym, "as_of": None, "expiries": [], "smile": {}, "badges": BADGES}
-    exp = db.query_df(store, """SELECT expiry, dte, forward, forward_source, atm_iv, iv_25d_put, iv_25d_call, skew_25d, iv_10d_put, iv_10d_call,
-                                n_iv_strikes, call_oi, put_oi, pcr, expected_move_pct, quality_flags, model_version, r
-                                FROM iv_expiry_daily WHERE symbol = ? AND date = ? ORDER BY expiry""", [sym, d])
-    smile = db.query_df(store, """SELECT expiry, strike, opt_type, iv, delta, log_moneyness, price_source, oi, oi_chg, volume
-                                  FROM iv_surface_daily WHERE symbol = ? AND date = ? ORDER BY expiry, strike, opt_type""", [sym, d])
-    out: dict[str, Any] = {"symbol": sym, "as_of": d.isoformat(), "model_version": MODEL_VERSION, "expiries": db.records(exp, DATE_COLS),
-                           "smile": {k.isoformat() if hasattr(k, "isoformat") else str(k)[:10]: db.records(g.drop(columns=["expiry"]), ())
-                                     for k, g in smile.groupby("expiry")} if not smile.empty else {},
-                           "surface_stored": not smile.empty, "badges": BADGES}
+    exp = db.records_sql(store, """SELECT expiry, dte, forward, forward_source, atm_iv, iv_25d_put, iv_25d_call, skew_25d, iv_10d_put, iv_10d_call,
+                                   n_iv_strikes, call_oi, put_oi, pcr, expected_move_pct, quality_flags, model_version, r
+                                   FROM iv_expiry_daily WHERE symbol = ? AND date = ? ORDER BY expiry""", [sym, d], DATE_COLS)
+    # the smile key keeps the shipped shape exactly: groupby on a datetime64 expiry produced Timestamp.isoformat(),
+    # i.e. 'YYYY-MM-DDT00:00:00' (verified live on /db/fo-iv/surface/NIFTY before this change)
+    smile_rows = db.records_sql(store, """SELECT strftime(expiry, '%Y-%m-%dT00:00:00') AS _k, strike, opt_type, iv, delta, log_moneyness,
+                                          price_source, oi, oi_chg, volume
+                                          FROM iv_surface_daily WHERE symbol = ? AND date = ? ORDER BY expiry, strike, opt_type""", [sym, d], ())
+    smile: dict[str, list[dict[str, Any]]] = {}
+    for rrow in smile_rows:
+        smile.setdefault(rrow.pop("_k"), []).append(rrow)
+    out: dict[str, Any] = {"symbol": sym, "as_of": d.isoformat(), "model_version": MODEL_VERSION, "expiries": exp,
+                           "smile": smile, "surface_stored": bool(smile_rows), "badges": BADGES}
     if compare_days:
         ghost_day = db.to_date(db.scalar(store, "SELECT MAX(date) FROM iv_expiry_daily WHERE symbol = ? AND date <= ?",
                                          [sym, d - pd.Timedelta(days=compare_days).to_pytimedelta()]))
@@ -97,9 +101,9 @@ def cone(store: Any, symbol: str, *, years: tuple[int, ...] = (1, 3, 5)) -> dict
 
 def events(store: Any, symbol: str, *, n: int = 8) -> dict[str, Any]:
     sym = symbol.upper()
-    df = db.query_df(store, """SELECT released_at, expiry, pre_session, post_session, iv_pre_5d, iv_pre_1d, iv_post_1d, crush_pct, implied_move_pct,
-                               realised_move_pct, implied_method FROM iv_event_log WHERE symbol = ? ORDER BY released_at DESC LIMIT ?""", [sym, n])
-    return {"symbol": sym, "rows": db.records(df, DATE_COLS), "badges": {"crush": "context", "implied_vs_realised": "context"},
+    rows = db.records_sql(store, """SELECT released_at, expiry, pre_session, post_session, iv_pre_5d, iv_pre_1d, iv_post_1d, crush_pct, implied_move_pct,
+                                    realised_move_pct, implied_method FROM iv_event_log WHERE symbol = ? ORDER BY released_at DESC LIMIT ?""", [sym, n], DATE_COLS)
+    return {"symbol": sym, "rows": rows, "badges": {"crush": "context", "implied_vs_realised": "context"},
             "verdict": "Results IV-crush ledger: describes past events, does not predict the next"}
 
 
@@ -109,15 +113,15 @@ def vol_screen(store: Any, *, sort: str = "iv_pctile", results_within: int | Non
     d = day or db.to_date(db.scalar(store, "SELECT MAX(date) FROM iv_summary_daily"))
     if d is None:
         return {"as_of": None, "rows": [], "badges": BADGES}
-    df = db.query_df(store, f"""SELECT s.symbol, s.spot, s.iv30_cm, s.iv_rank_252, s.iv_pctile_252, s.rv20_yz, s.rv20_cc, s.iv_minus_rv20, s.term_slope_30_90,
-                                s.skew_25d_30, s.near_expiry, s.near_dte, s.quality_flags,
-                                (SELECT MIN(e.event_date) FROM nse_events e WHERE e.symbol = s.symbol AND e.kind = 'RESULTS' AND e.event_date >= s.date) AS next_results,
-                                (SELECT c.fut_equiv_oi / NULLIF(c.mwpl, 0) * 100 FROM nse_combined_oi c WHERE c.symbol = s.symbol AND c.date = s.date) AS mwpl_pct
-                                FROM iv_summary_daily s WHERE s.date = ? ORDER BY {sort_col} DESC NULLS LAST""", [d]) if db.table_exists(store, "nse_events") else \
-        db.query_df(store, f"""SELECT symbol, spot, iv30_cm, iv_rank_252, iv_pctile_252, rv20_yz, rv20_cc, iv_minus_rv20, term_slope_30_90, skew_25d_30,
-                               near_expiry, near_dte, quality_flags, NULL AS next_results, NULL AS mwpl_pct FROM iv_summary_daily WHERE date = ?
-                               ORDER BY {sort_col} DESC NULLS LAST""", [d])
-    rows = db.records(df, ("near_expiry", "next_results"))
+    rows = db.records_sql(store, f"""SELECT s.symbol, s.spot, s.iv30_cm, s.iv_rank_252, s.iv_pctile_252, s.rv20_yz, s.rv20_cc, s.iv_minus_rv20, s.term_slope_30_90,
+                                     s.skew_25d_30, s.near_expiry, s.near_dte, s.quality_flags,
+                                     (SELECT MIN(e.event_date) FROM nse_events e WHERE e.symbol = s.symbol AND e.kind = 'RESULTS' AND e.event_date >= s.date) AS next_results,
+                                     (SELECT c.fut_equiv_oi / NULLIF(c.mwpl, 0) * 100 FROM nse_combined_oi c WHERE c.symbol = s.symbol AND c.date = s.date) AS mwpl_pct
+                                     FROM iv_summary_daily s WHERE s.date = ? ORDER BY {sort_col} DESC NULLS LAST""", [d], ("near_expiry", "next_results")) \
+        if db.table_exists(store, "nse_events") else \
+        db.records_sql(store, f"""SELECT symbol, spot, iv30_cm, iv_rank_252, iv_pctile_252, rv20_yz, rv20_cc, iv_minus_rv20, term_slope_30_90, skew_25d_30,
+                                  near_expiry, near_dte, quality_flags, NULL AS next_results, NULL AS mwpl_pct FROM iv_summary_daily WHERE date = ?
+                                  ORDER BY {sort_col} DESC NULLS LAST""", [d], ("near_expiry", "next_results"))
     if results_within is not None:
         lim = (d + pd.Timedelta(days=results_within).to_pytimedelta()).isoformat()
         rows = [r for r in rows if r.get("next_results") and r["next_results"] <= lim]
@@ -150,14 +154,15 @@ def intraday(store: Any, symbol: str, *, day: date | None = None) -> dict[str, A
 
 
 def vix(store: Any, *, days: int = 3000) -> dict[str, Any]:
-    df = db.query_df(store, "SELECT date, open, high, low, close, prev_close, source FROM vix_daily ORDER BY date DESC LIMIT ?", [days]).sort_values("date")
-    return {"rows": db.records(df, ("date",)), "as_of": str(df["date"].iloc[-1])[:10] if not df.empty else None, "badge": "context"}
+    rows = db.records_sql(store, "SELECT * FROM (SELECT date, open, high, low, close, prev_close, source FROM vix_daily ORDER BY date DESC LIMIT ?) t ORDER BY date",
+                          [days], ("date",))
+    return {"rows": rows, "as_of": rows[-1]["date"] if rows else None, "badge": "context"}
 
 
 def index_ohlc(store: Any, symbol: str, *, days: int = 3000) -> dict[str, Any]:
-    df = db.query_df(store, "SELECT date, open, high, low, close, source FROM index_ohlc_daily WHERE symbol = ? ORDER BY date DESC LIMIT ?",
-                     [symbol.upper(), days]).sort_values("date")
-    return {"symbol": symbol.upper(), "rows": db.records(df, ("date",)), "as_of": str(df["date"].iloc[-1])[:10] if not df.empty else None}
+    rows = db.records_sql(store, """SELECT * FROM (SELECT date, open, high, low, close, source FROM index_ohlc_daily WHERE symbol = ?
+                                    ORDER BY date DESC LIMIT ?) t ORDER BY date""", [symbol.upper(), days], ("date",))
+    return {"symbol": symbol.upper(), "rows": rows, "as_of": rows[-1]["date"] if rows else None}
 
 
 def catalog() -> dict[str, Any]:
@@ -185,41 +190,42 @@ def _latest_on_or_before(store: Any, table: str, symbol: str, day: date | None) 
 def contract_summary(store: Any, symbol: str, *, days: int = 750) -> dict[str, Any]:
     """``iv_summary_daily`` for ``symbol``, the last ``days`` sessions, ascending; ``model_version`` / ``r_source`` on the payload."""
     sym = symbol.upper()
-    df = db.query_df(store, "SELECT * FROM iv_summary_daily WHERE symbol = ? ORDER BY date DESC LIMIT ?", [sym, days]).sort_values("date")
-    as_of = str(df["date"].iloc[-1])[:10] if not df.empty else None
+    rows = db.records_sql(store, "SELECT * FROM (SELECT * FROM iv_summary_daily WHERE symbol = ? ORDER BY date DESC LIMIT ?) t ORDER BY date",
+                          [sym, days], DATE_COLS)
+    as_of = rows[-1]["date"] if rows else None
     r, r_src = rate_for(store, date.fromisoformat(as_of)) if as_of else (None, None)
-    return {"symbol": sym, "as_of": as_of, "model_version": MODEL_VERSION, "r": r, "r_source": r_src, "rows": db.records(df, DATE_COLS)}
+    return {"symbol": sym, "as_of": as_of, "model_version": MODEL_VERSION, "r": r, "r_source": r_src, "rows": rows}
 
 
 def contract_expiry(store: Any, symbol: str, *, day: date | None = None) -> dict[str, Any]:
     """``iv_expiry_daily`` on ``day`` (the latest stored session on or before it; default the latest)."""
     sym = symbol.upper()
     d = _latest_on_or_before(store, "iv_expiry_daily", sym, day)
-    df = db.query_df(store, "SELECT * FROM iv_expiry_daily WHERE symbol = ? AND date = ? ORDER BY expiry", [sym, d]) if d else None
-    return {"symbol": sym, "requested": day.isoformat() if day else None, "as_of": d.isoformat() if d else None, "rows": db.records(df, DATE_COLS)}
+    rows = db.records_sql(store, "SELECT * FROM iv_expiry_daily WHERE symbol = ? AND date = ? ORDER BY expiry", [sym, d], DATE_COLS) if d else []
+    return {"symbol": sym, "requested": day.isoformat() if day else None, "as_of": d.isoformat() if d else None, "rows": rows}
 
 
 def contract_surface(store: Any, symbol: str, *, day: date | None = None) -> dict[str, Any]:
     """``iv_surface_daily`` on ``day`` (same date rule as ``contract_expiry``)."""
     sym = symbol.upper()
     d = _latest_on_or_before(store, "iv_surface_daily", sym, day)
-    df = db.query_df(store, "SELECT * FROM iv_surface_daily WHERE symbol = ? AND date = ? ORDER BY expiry, strike, opt_type", [sym, d]) if d else None
-    return {"symbol": sym, "requested": day.isoformat() if day else None, "as_of": d.isoformat() if d else None, "rows": db.records(df, DATE_COLS)}
+    rows = db.records_sql(store, "SELECT * FROM iv_surface_daily WHERE symbol = ? AND date = ? ORDER BY expiry, strike, opt_type", [sym, d], DATE_COLS) if d else []
+    return {"symbol": sym, "requested": day.isoformat() if day else None, "as_of": d.isoformat() if d else None, "rows": rows}
 
 
 def contract_events(store: Any, symbol: str, *, n: int = 8) -> dict[str, Any]:
     """``iv_event_log`` for ``symbol``, newest first."""
     sym = symbol.upper()
-    df = db.query_df(store, "SELECT * FROM iv_event_log WHERE symbol = ? ORDER BY released_at DESC LIMIT ?", [sym, n])
-    return {"symbol": sym, "rows": db.records(df, DATE_COLS)}
+    rows = db.records_sql(store, "SELECT * FROM iv_event_log WHERE symbol = ? ORDER BY released_at DESC LIMIT ?", [sym, n], DATE_COLS)
+    return {"symbol": sym, "rows": rows}
 
 
 def contract_intraday(store: Any, symbol: str, *, day: date | None = None) -> dict[str, Any]:
     """``iv_intraday`` rows for ``day`` (default the latest stored day; a named day is that day only, never an older one)."""
     sym = symbol.upper()
     d = day or db.to_date(db.scalar(store, "SELECT MAX(ts)::DATE FROM iv_intraday WHERE symbol = ?", [sym]))
-    df = db.query_df(store, "SELECT * FROM iv_intraday WHERE symbol = ? AND ts::DATE = ? ORDER BY ts, expiry, strike, opt_type", [sym, d]) if d else None
-    return {"symbol": sym, "as_of": d.isoformat() if d else None, "rows": db.records(df, DATE_COLS)}
+    rows = db.records_sql(store, "SELECT * FROM iv_intraday WHERE symbol = ? AND ts::DATE = ? ORDER BY ts, expiry, strike, opt_type", [sym, d], DATE_COLS) if d else []
+    return {"symbol": sym, "as_of": d.isoformat() if d else None, "rows": rows}
 
 
 def contract_vix(store: Any, *, days: int = 3000) -> dict[str, Any]:
@@ -362,10 +368,10 @@ def near_skew(store: Any, symbol: str, *, days: int = 750) -> dict[str, Any]:
     sym = symbol.upper()
     if not db.table_exists(store, "iv_expiry_daily"):
         return {"symbol": sym, "rows": []}
-    df = db.query_df(store, """SELECT date, expiry, dte, skew_25d FROM iv_expiry_daily WHERE symbol = ? AND dte >= ? AND atm_iv IS NOT NULL
-                               QUALIFY ROW_NUMBER() OVER (PARTITION BY date ORDER BY expiry) = 1 ORDER BY date DESC LIMIT ?""", [sym, NEAR_MIN_DTE, days])
-    df = df.sort_values("date")
-    return {"symbol": sym, "rows": db.records(df, DATE_COLS), "series": "near expiry (dte > 2) 25Δ put − call", "badge": "context"}
+    rows = db.records_sql(store, """SELECT * FROM (SELECT date, expiry, dte, skew_25d FROM iv_expiry_daily WHERE symbol = ? AND dte >= ? AND atm_iv IS NOT NULL
+                                    QUALIFY ROW_NUMBER() OVER (PARTITION BY date ORDER BY expiry) = 1 ORDER BY date DESC LIMIT ?) t ORDER BY date""",
+                          [sym, NEAR_MIN_DTE, days], DATE_COLS)
+    return {"symbol": sym, "rows": rows, "series": "near expiry (dte > 2) 25Δ put − call", "badge": "context"}
 
 
 def contract_delta(store: Any, symbol: str, *, expiry: date | None = None, day: date | None = None) -> dict[str, Any]:
@@ -432,9 +438,9 @@ def contract_screen(store: Any, *, ban_dir: Path | None = None) -> dict[str, Any
               ORDER BY e.expiry LIMIT 1 OFFSET 1)""" if db.table_exists(store, "iv_expiry_daily") else "NULL")
     nx_iv, nx_dte = nx.replace("{c}", "atm_iv"), nx.replace("{c}", "dte")
     n_ph = 2 if nx != "NULL" else 0
-    df = db.query_df(store, f"""SELECT s.*, {nxt} AS next_results, {mw} AS mwpl_pct, {mwd} AS mwpl_date, {nx_iv} AS next_atm_iv, {nx_dte} AS next_dte
-                                FROM iv_summary_daily s WHERE s.date = ? ORDER BY s.symbol""", [*([NEAR_MIN_DTE] * n_ph), d])
-    rows = db.records(df, (*DATE_COLS, "next_results", "mwpl_date"))
+    rows = db.records_sql(store, f"""SELECT s.*, {nxt} AS next_results, {mw} AS mwpl_pct, {mwd} AS mwpl_date, {nx_iv} AS next_atm_iv, {nx_dte} AS next_dte
+                                     FROM iv_summary_daily s WHERE s.date = ? ORDER BY s.symbol""", [*([NEAR_MIN_DTE] * n_ph), d],
+                          (*DATE_COLS, "next_results", "mwpl_date"))
     banned, ban_date = ban_list(ban_dir, d)
     for r in rows:
         r["ban"] = (r["symbol"] in banned) if banned is not None else _ban(r.get("mwpl_pct"))

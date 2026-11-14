@@ -18,6 +18,30 @@ from fo_iv import jobs, reads
 
 router = APIRouter(tags=["fo-iv"])
 
+# ── R5-GIL: orjson for the big read payloads ───────────────────────────────────────────────────────────────────────────
+# orjson (3.11.6) is installed in the canonical jupyter_env but NOT declared in requirements.txt, so the import is guarded:
+# with it, the big reads return a pre-rendered response (C serialization, skipping FastAPI's per-cell encoder walk; NaN →
+# null, numpy via OPT_SERIALIZE_NUMPY); without it (a bare CI env) the plain dict goes through FastAPI's default path
+# unchanged. Own subclass, not fastapi.responses.ORJSONResponse, which deprecation-warns on EVERY instantiation under
+# FastAPI ≥ 0.141. The JSON bytes are shape-identical: every wrapped payload is already strings / numbers / None / bool
+# (db.records / db.records_sql shaping), pinned by tests/test_r5_gil_reads.py.
+try:
+    import orjson
+except ImportError:                                       # pragma: no cover — present in the canonical env
+    orjson = None  # type: ignore[assignment]
+
+if orjson is not None:
+    from fastapi.responses import JSONResponse
+
+    class _FastJSON(JSONResponse):
+        def render(self, content: Any) -> bytes:
+            return orjson.dumps(content, option=orjson.OPT_NON_STR_KEYS | orjson.OPT_SERIALIZE_NUMPY)
+
+
+def _fast(payload: dict[str, Any]) -> Any:
+    """A big read payload, orjson-rendered when available (R5-GIL); the plain dict otherwise."""
+    return _FastJSON(payload) if orjson is not None else payload
+
 _get_store: Callable[[], Any] | None = None
 _submit: Callable[..., dict[str, Any]] | None = None
 _paths: dict[str, Path] = {}

@@ -35,6 +35,9 @@ export type AskPayload = {
   sources: AskSource[]
   answer: AnswerLine[]
   withheld: number
+  /** R5-ASK2: true when the result ran past the server's list threshold — the row grid IS the answer
+   *  (one deterministic cited summary line, no prose); optional so an older server payload still renders. */
+  list_shaped?: boolean
 }
 
 export type ReadPayload = {
@@ -148,6 +151,21 @@ export function statusParts(p: Pick<AskPayload, 'provider' | 'model' | 'snapshot
   parts.push(p.snapshot ? `snapshot ${p.snapshot.as_of ?? p.snapshot.file}` : 'no snapshot yet')
   if (p.degraded && p.degraded_reason) parts.push(p.degraded_reason)
   return parts
+}
+
+/** R5-ASK2: how many rows a list-shaped answer paints in its grid before pointing at the full set. */
+export const LIST_PREVIEW_ROWS = 20
+
+/**
+ * R5-ASK2: the top rows a list-shaped answer renders openly (the full set stays under THE QUERY details).
+ * Pure: at or under the cap the rows pass through with no note; past it the top `cap` rows return with a
+ * factual note naming both counts (a count is arithmetic, not a judgement).
+ */
+export function listPreview(rows: readonly unknown[][], cap: number = LIST_PREVIEW_ROWS,
+                            ): { rows: unknown[][]; note: string | null } {
+  if (rows.length <= cap) return { rows: [...rows], note: null }
+  return { rows: rows.slice(0, cap),
+           note: `top ${cap} of ${rows.length} returned rows — the full set is under THE QUERY below` }
 }
 
 /** Cell → text. The grid paints strings only: row content is data, never markup (G4's renderer half). */

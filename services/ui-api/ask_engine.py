@@ -26,6 +26,14 @@ Eight guardrails, each enforced here in code and each tested by `tests/test_ask_
   G8  the eval set: 12 canned question -> expected-shape cases in the test file (3 injection attempts,
       2 forecast baits, 1 write attempt).
 
+R5-ASK2 (FINAL ROUND, F4 §3): (1) sample-value hints — each hinted table shows up to 3 DISTINCT stored values
+of its key symbol/id column (question-matched LIKE, deterministic, cached per snapshot file signature), so the
+value-form residue ('NIFTY' vs the stored 'NIFTY 50'/'NIFTY50') dies at the prompt; (2) list-shaped answers —
+past LIST_ROWS_THRESHOLD rows the compose call is skipped and ONE deterministic cited summary line plus the
+row grid carry the answer (no 200-row prose dumps); (3) every snapshot cache keys on (path, mtime, size) so
+the 21:40 ASK-snapshot re-cut (a PM patch request; the 19:20 cut is frozen — the S1 shadow reads it) can swap
+the file at a stable ASK_SNAPSHOT_DB path without serving stale as-ofs.
+
 Labelling (PLAN §1, binding): badge `heuristic`; the disclosure "an LLM wrote this from the cited rows — verify
 before acting on it"; "describes, does not predict"; nothing here feeds the Decision Desk, the S1 shadow, a
 directional alert or a ticket price. No local Ollama model at ask time -> the analyst degrades to
@@ -79,6 +87,15 @@ SYSTEM_PROMPT = (
 DEFAULT_TIMEOUT_S = 10.0
 DEFAULT_ROW_CAP = 200
 MAX_QUESTION_LEN = 500
+# R5-ASK2 (EVAL2 case 4, F4 §3 "Research"): a result past this many rows is LIST-SHAPED — prose over a
+# 200-row dump produced nothing usable on either model, so the engine writes ONE deterministic cited summary
+# line, skips the compose call entirely, and the panel renders the rows as a table (the grid IS the answer).
+LIST_ROWS_THRESHOLD = 20
+# R5-ASK2 (EVAL2 case 1, the value-form residue): per hinted table, up to this many DISTINCT sample values of
+# its key symbol/id column go into the SQL prompt, so the model writes the STORED form ('NIFTY 50' /
+# 'NIFTY50'), never a guessed 'NIFTY'. Deterministic; cached per snapshot file signature.
+SAMPLE_VALUES_N = 3
+MAX_HINT_LINES = 120     # the schema block stays bounded — the prompt never becomes a wall again
 READY_TIMEOUT_S = 2.0     # R3-ASK: the analyst probe never stalls health — 2 s hard timeout
 READY_TTL_S = 60.0        # R3-ASK: probe result cached per provider+model for 60 s
 DEFAULT_LLM_TIMEOUT_S = 60.0   # R3-ASK eval D1: qwen3.5:9b composes in ~57 s on this box — ASK_LLM_TIMEOUT_S
@@ -245,6 +262,42 @@ _HINT_SYNONYMS: dict[str, tuple[str, ...]] = {
     "gold": ("gold",), "mcx": ("mcx", "gold"), "results": ("results",), "deals": ("deals",),
     "fii": ("fii",), "dii": ("dii",), "participant": ("participant",),
 }
+
+
+# R5-ASK2: the key symbol/id column a table's sample values come from, by priority (first match wins).
+_KEY_VALUE_COLS = ("symbol", "index_name", "contract", "series", "ticker", "underlying", "scheme", "name")
+# Question words that are schema-ish, not value-ish — a LIKE on these would crowd the 3 samples with noise.
+_SAMPLE_SKIP = frozenset((
+    "close", "closes", "closing", "open", "opening", "high", "low", "price", "prices", "value", "values",
+    "volume", "percent", "percentage", "delivery", "expiry", "expiries", "date", "dates", "session",
+    "sessions", "history", "rows", "row", "count", "average", "total", "daily", "weekly", "monthly",
+    "list", "first", "top", "highest", "lowest", "latest", "describe", "data", "relevant",
+))
+
+
+def key_column(cols: list[str]) -> Optional[str]:
+    """The table's key symbol/id column for value sampling, or None (pure; _KEY_VALUE_COLS priority)."""
+    lower = {c.lower(): c for c in cols}
+    for cand in _KEY_VALUE_COLS:
+        if cand in lower:
+            return lower[cand]
+    return None
+
+
+def sample_tokens(question: str) -> list[str]:
+    """Up to 4 distinctive question tokens (A–Z0–9 only, 3+ chars, stopwords and schema-ish words dropped),
+    uppercased for the LIKE match — pure and deterministic; the regex guarantees the token is safe inside a
+    single-quoted SQL literal (no quote, no %, no _ can survive it)."""
+    toks: list[str] = []
+    for w in re.findall(r"[a-z0-9]{3,}", (question or "").lower()):
+        if w in _HINT_STOPWORDS or w in _SAMPLE_SKIP or w.isdigit():
+            continue
+        u = w.upper()
+        if u not in toks:
+            toks.append(u)
+        if len(toks) >= 4:
+            break
+    return toks
 
 
 def table_hints(question: str, catalog: dict[str, list[str]], top_n: int = 5) -> list[str]:
@@ -433,8 +486,12 @@ class AskEngine:
                  probe: Optional[Callable[[Provider], bool]] = None) -> None:
         self._llm = llm
         self._probe = probe
-        self._catalog_cache: tuple[str, dict[str, list[str]]] | None = None   # (snapshot path, table -> columns)
-        self._asof_cache: dict[tuple[str, str], Optional[str]] = {}
+        # R5-ASK2: every snapshot cache keys on (path, mtime_ns, size), not path alone — the 21:40
+        # snapshot_ask_refresh patch re-cuts the ASK copy at a STABLE path, and a stale catalog / as-of /
+        # sample cache after that swap would cite yesterday's dates against today's rows.
+        self._catalog_cache: tuple[tuple[str, int, int], dict[str, list[str]]] | None = None
+        self._asof_cache: dict[tuple[tuple[str, int, int], str], Optional[str]] = {}
+        self._samples_cache: dict[tuple[tuple[str, int, int], str, tuple[str, ...]], list[str]] = {}
         self._ready_cache: tuple[float, str, bool] | None = None              # (expires_at, provider key, ready)
 
     # ── G1: the snapshot is the only database ───────────────────────────────────────────────────────────────
@@ -443,9 +500,19 @@ class AskEngine:
 
     def snapshot_db(self) -> str:
         """The readable snapshot path, or AskError. ASK_SNAPSHOT_DB overrides (tests/ops); otherwise the shared
-        19:20 evening snapshot pointer. The live DB path is refused even if something points at it."""
+        19:20 evening snapshot pointer. The live DB path is refused even if something points at it.
+        R5-ASK2: with BOTH an override and an evening snapshot on disk, the FRESHER file wins — the 21:40
+        snapshot_ask_refresh job (patch request) can fail a night, or the env can land before its first run,
+        and ASK must then fall back to the 19:20 copy instead of refusing or serving an older cut."""
         override = (os.environ.get("ASK_SNAPSHOT_DB") or "").strip()
-        path = override or evening_snapshot(self._live_db())
+        evening = evening_snapshot(self._live_db())
+        path: Optional[str]
+        if override and os.path.exists(override):
+            path = override
+            if evening and os.path.exists(evening) and os.stat(evening).st_mtime > os.stat(override).st_mtime:
+                path = evening
+        else:
+            path = evening or override or None
         if not path or not os.path.exists(path):
             raise AskError(NO_SNAPSHOT_LINE)
         if os.path.realpath(path) == os.path.realpath(self._live_db()):
@@ -504,12 +571,23 @@ class AskEngine:
         rows = [[_plain(v) for v in r] for r in raw[:cap]]
         return cols, rows, truncated
 
-    def catalog(self) -> dict[str, list[str]]:
-        """table -> columns of the snapshot (cached per snapshot path)."""
+    def _snap_key(self) -> tuple[str, int, int]:
+        """The snapshot identity the caches key on: (path, mtime_ns, size). A re-cut at the SAME path (the
+        21:40 snapshot_ask_refresh job the R5 patch request schedules) changes the signature and so
+        invalidates every cache; raises AskError exactly as snapshot_db does when no snapshot exists."""
         path = self.snapshot_db()
-        if self._catalog_cache and self._catalog_cache[0] == path:
+        try:
+            st = os.stat(path)
+        except OSError:
+            raise AskError(NO_SNAPSHOT_LINE) from None
+        return (path, st.st_mtime_ns, st.st_size)
+
+    def catalog(self) -> dict[str, list[str]]:
+        """table -> columns of the snapshot (cached per snapshot file signature)."""
+        key = self._snap_key()
+        if self._catalog_cache and self._catalog_cache[0] == key:
             return self._catalog_cache[1]
-        con = duckdb.connect(path, read_only=True, config={"enable_external_access": False})  # R2-REDTEAM MAJOR-1: no file reads, ever
+        con = duckdb.connect(key[0], read_only=True, config={"enable_external_access": False})  # R2-REDTEAM MAJOR-1: no file reads, ever
         try:
             rows = con.execute(
                 "SELECT table_name, column_name FROM information_schema.columns "
@@ -519,13 +597,55 @@ class AskEngine:
         cat: dict[str, list[str]] = {}
         for t, c in rows:
             cat.setdefault(t, []).append(c)
-        self._catalog_cache = (path, cat)
+        self._catalog_cache = (key, cat)
         return cat
 
+    def value_samples(self, table: str, question: str) -> list[str]:
+        """R5-ASK2 (EVAL2 case 1, the value-form residue): up to SAMPLE_VALUES_N DISTINCT values of the
+        table's key symbol/id column for the SQL prompt — question-matched first (one tiny LIKE per
+        distinctive token, in question order), alphabetical fallback when nothing matches. Deterministic,
+        cached per (snapshot signature, table, tokens); the sample SQL runs through the SAME run_query fence
+        as every other statement, and any failure degrades to no samples, never to a broken hint block."""
+        try:
+            cols = self.catalog().get(table, [])
+        except AskError:
+            return []
+        col = key_column(cols)
+        if col is None:
+            return []
+        toks = tuple(sample_tokens(question))
+        try:
+            key = (self._snap_key(), table, toks)
+        except AskError:
+            return []
+        if key in self._samples_cache:
+            return self._samples_cache[key]
+        col_q, tbl_q = '"' + col.replace('"', '""') + '"', '"' + table.replace('"', '""') + '"'
+        base = f"SELECT DISTINCT {col_q} AS v FROM {tbl_q}"
+        out: list[str] = []
+        try:
+            for tok in toks:
+                if len(out) >= SAMPLE_VALUES_N:
+                    break
+                _, rows, _ = self.run_query(
+                    f"{base} WHERE upper(CAST({col_q} AS VARCHAR)) LIKE '%{tok}%' ORDER BY v LIMIT {SAMPLE_VALUES_N}",
+                    row_cap=SAMPLE_VALUES_N)
+                for r in rows:
+                    v = str(r[0])[:40]
+                    if v not in out:
+                        out.append(v)
+            if not out:
+                _, rows, _ = self.run_query(f"{base} ORDER BY v LIMIT {SAMPLE_VALUES_N}", row_cap=SAMPLE_VALUES_N)
+                out = [str(r[0])[:40] for r in rows]
+        except AskError:
+            pass                                     # partial or no samples — the hint block degrades, never breaks
+        out = out[:SAMPLE_VALUES_N]
+        self._samples_cache[key] = out
+        return out
+
     def table_as_of(self, table: str) -> Optional[str]:
-        """max(date-ish column) of a snapshot table — the as-of for its citations (cached)."""
-        path = self.snapshot_db()
-        key = (path, table)
+        """max(date-ish column) of a snapshot table — the as-of for its citations (cached per signature)."""
+        key = (self._snap_key(), table)
         if key in self._asof_cache:
             return self._asof_cache[key]
         cols = {c.lower(): c for c in self.catalog().get(table, [])}
@@ -647,7 +767,8 @@ class AskEngine:
                                 "feeds_nothing": FEEDS_NOTHING, "question": q, "refused": refused,
                                 "refusal": REFUSAL_LINE if refused else None, "degraded": False,
                                 "degraded_reason": None, "sql": None, "columns": [], "rows": [],
-                                "truncated": False, "sources": [], "answer": [], "withheld": 0}
+                                "truncated": False, "sources": [], "answer": [], "withheld": 0,
+                                "list_shaped": False}
         p = resolve_provider()
         base["provider"], base["model"], base["provider_note"] = p.name, p.model, p.fallback_note
         try:
@@ -666,12 +787,28 @@ class AskEngine:
         hints = table_hints(describe_q, cat)
         if hints:
             hint_set = set(hints)
-            hint_lines = "\n".join(f"- {t}({', '.join(cat[t][:40])})" for t in hints)
+            # R5-ASK2: each hinted table also shows up to 3 DISTINCT stored values of its key symbol/id
+            # column (question-matched LIKE, deterministic, cached) — the model filters on the STORED form
+            # ('NIFTY 50' / 'NIFTY50'), never a guessed one. One line per table: the block stays bounded.
+            lines: list[str] = []
+            for t in hints:
+                line = f"- {t}({', '.join(cat[t][:40])})"
+                vals = self.value_samples(t, q)       # the RAW question: its symbol words drive the LIKE match
+                kc = key_column(cat[t])
+                if vals and kc:
+                    line += f"  — stored {kc} values look like: " + " | ".join(f"'{v}'" for v in vals)
+                lines.append(line)
             other_names = ", ".join(t for t in sorted(cat) if t not in hint_set)
-            schema_block = ("Most relevant tables (keyword-matched — prefer one of these):\n" + hint_lines
+            schema_block = ("Most relevant tables (keyword-matched — prefer one of these):\n" + "\n".join(lines)
+                            + "\nMatch symbol/id values EXACTLY as sampled above — stored forms differ from "
+                              "common names."
                             + (f"\n\nOther tables (names only): {other_names}" if other_names else ""))
         else:
-            schema_block = "Tables:\n" + "\n".join(f"- {t}({', '.join(cols[:24])})" for t, cols in sorted(cat.items()))
+            all_lines = [f"- {t}({', '.join(cols[:24])})" for t, cols in sorted(cat.items())]
+            if len(all_lines) > MAX_HINT_LINES - 2:                     # the block never becomes a wall
+                extra = len(all_lines) - (MAX_HINT_LINES - 2)
+                all_lines = all_lines[:MAX_HINT_LINES - 2] + [f"- … and {extra} more tables (ask names one)"]
+            schema_block = "Tables:\n" + "\n".join(all_lines)
         try:
             plan = llm([
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -700,7 +837,18 @@ class AskEngine:
             self._audit(q, None, 0, p.model, refused=True)
             return base
         sources = self._sources(checked)
-        base.update(sql=checked, columns=cols, rows=rows, truncated=truncated, sources=sources)
+        list_shaped = len(rows) > LIST_ROWS_THRESHOLD
+        base.update(sql=checked, columns=cols, rows=rows, truncated=truncated, sources=sources,
+                    list_shaped=list_shaped)
+        if list_shaped:
+            # R5-ASK2 (EVAL2 case 4): past LIST_ROWS_THRESHOLD rows the table IS the answer. The compose
+            # call is skipped (an LLM asked to prose 200 rows produced nothing usable on either model) and
+            # the engine writes ONE deterministic cited summary line; the panel renders the rows as a grid.
+            summary = _list_summary(len(rows), truncated, sources)
+            answer, withheld = cited_lines([summary], {s["table"] for s in sources})
+            base.update(answer=answer, withheld=withheld)
+            self._audit(q, checked, len(rows), p.model, refused=refused)
+            return base
 
         source_lines = "\n".join(f"- [{s['table']} · as-of {s['as_of'] or 'undated'}]" for s in sources) or "- (none)"
         data_block = json.dumps({"columns": cols, "rows": rows[:50]}, default=str)
@@ -729,6 +877,18 @@ class AskEngine:
         except AskError:
             return []
         return [{"table": t, "as_of": self.table_as_of(t)} for t in tables_in_sql(sql, known)]
+
+
+def _list_summary(n: int, truncated: bool, sources: list[dict[str, Any]]) -> str:
+    """R5-ASK2: the one deterministic summary line a list-shaped result renders (pure). Cited with the
+    primary source so it survives cited_lines; with no source it carries no number, so it renders uncited.
+    Descriptive words only — a count and a pointer at the table, never a judgement."""
+    if not sources:
+        return "a list answer — the matching rows render in the table below, not prose"
+    s = sources[0]
+    cite = f"[{s['table']} · as-of {s['as_of']}]" if s.get("as_of") else f"[{s['table']}]"
+    cap_note = " (row cap reached — narrow the question for the rest)" if truncated else ""
+    return f"{n} rows match{cap_note} — a list answer: the table below carries it {cite}"
 
 
 def _plain(v: Any) -> Any:

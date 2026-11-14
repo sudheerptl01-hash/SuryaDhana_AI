@@ -130,6 +130,23 @@ check('the ask POST waits past the server LLM budget (2 × ASK_LLM_TIMEOUT_S + q
   (() => { const m = api.match(/ASK_CLIENT_TIMEOUT_MS = (\d+)_?(\d*)/); if (!m) return false
            const v = Number(`${m[1]}${m[2]}`); return v >= 310_000 })())
 
+// ── R5-ASK2: list-shaped answers — the grid is the answer, never a 200-row prose dump ───────────────────────
+
+check('LIST_PREVIEW_ROWS is 20', M.LIST_PREVIEW_ROWS === 20)
+{
+  const small = [[1], [2], [3]]
+  const pv = M.listPreview(small)
+  check('at or under the cap the rows pass through with no note', pv.rows.length === 3 && pv.note === null)
+  const big = Array.from({ length: 200 }, (_, i) => [i])
+  const pv2 = M.listPreview(big)
+  check('past the cap only the top rows render', pv2.rows.length === 20 && pv2.rows[0][0] === 0 && pv2.rows[19][0] === 19)
+  check('the note names both counts and points at THE QUERY', pv2.note === 'top 20 of 200 returned rows — the full set is under THE QUERY below')
+  check('listPreview never mutates its input', big.length === 200)
+}
+check('the payload type carries list_shaped (optional, older servers still render)', model.includes('list_shaped?: boolean'))
+check('the panel renders the list grid when the server says list_shaped',
+  panel.includes('res.list_shaped') && panel.includes('listPreview(res.rows)'))
+
 // ── R3-ASK: the snapshot-age tone (F2-design: louder when degraded) ─────────────────────────────────────────
 
 const SNAP = { file: 'evening-20261113-1920.duckdb', as_of: '2026-11-13' }

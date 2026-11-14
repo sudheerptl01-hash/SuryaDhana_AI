@@ -320,6 +320,72 @@ def test_main_reports_job_queue_and_ask_audit_failures(tmp_path, monkeypatch, ca
     assert "ask_audit backup FAILED" in capsys.readouterr().err
 
 
+# ── missed nights (R5-OPS2, F4 §1d: "a multi-night outage loses a night") ────────────────────────────────
+# A backup is point-in-time, so a missed night can never be re-created; the catch-up runs ONE backup and the
+# gap is *recorded*: missed_backup_days names the uncovered nights, run() writes them into tonight's meta.
+
+
+def meta_for(dest: Path, stamp: str) -> None:
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / f"market-{stamp}.meta.json").write_text("{}")
+
+
+def test_missed_backup_days_fresh_install_and_missing_dir_are_empty(tmp_path):
+    assert db_backup.missed_backup_days(tmp_path / "absent", today=datetime(2026, 11, 14)) == []
+    (tmp_path / "b").mkdir()
+    assert db_backup.missed_backup_days(tmp_path / "b", today=datetime(2026, 11, 14)) == []
+
+
+def test_missed_backup_days_finds_the_12_nov_gap_night(tmp_path):
+    """The F4 case verbatim: 11 Nov 02:15 ran, the Mac was off for 12 Nov, the 13 Nov 14:45 catch-up ran —
+    12 Nov has no backup set at all, and until now nothing ever said so."""
+    dest = tmp_path / "b"
+    meta_for(dest, "20261111")
+    meta_for(dest, "20261113")
+    assert db_backup.missed_backup_days(dest, today=datetime(2026, 11, 14)) == ["20261112"]
+    # a killed run's partial copy (file, no meta) does not cover a night — same convention as backup_done_today
+    (dest / "market-20261112.duckdb").write_bytes(b"partial")
+    assert db_backup.missed_backup_days(dest, today=datetime(2026, 11, 14)) == ["20261112"]
+    meta_for(dest, "20261112")
+    assert db_backup.missed_backup_days(dest, today=datetime(2026, 11, 14)) == []
+
+
+def test_missed_backup_days_multi_night_outage_and_bounds(tmp_path):
+    dest = tmp_path / "b"
+    meta_for(dest, "20261110")
+    # 3-night outage: 11, 12, 13 missing; the catch-up on the 14th reports all three, ascending
+    assert db_backup.missed_backup_days(dest, today=datetime(2026, 11, 14)) == ["20261111", "20261112", "20261113"]
+    # today is never a missed night (today's backup is the run in progress)
+    assert "20261114" not in db_backup.missed_backup_days(dest, today=datetime(2026, 11, 14))
+    # nothing at or before the oldest surviving copy: a fresh install on the 10th did not "miss" the 9th
+    assert "20261109" not in db_backup.missed_backup_days(dest, today=datetime(2026, 11, 14))
+    # the lookback bounds the window to what the rotation could still hold (default = KEEP_DAILY)
+    assert db_backup.missed_backup_days(dest, today=datetime(2026, 11, 20), lookback=3) == \
+        ["20261117", "20261118", "20261119"]
+    # malformed names are ignored, never crash the 02:15 run
+    (dest / "market-notadate.meta.json").write_text("{}")
+    (dest / "market-.meta.json").write_text("{}")
+    assert "notadate" not in "".join(db_backup.missed_backup_days(dest, today=datetime(2026, 11, 14)))
+
+
+def test_run_records_missed_nights_in_the_meta(world):
+    dest = world["dest"]
+    two_ago = f"{datetime.now() - timedelta(days=2):%Y%m%d}"
+    yesterday = f"{datetime.now() - timedelta(days=1):%Y%m%d}"
+    meta_for(dest, two_ago)                                     # a backup ran two nights ago; last night was lost
+    meta = db_backup.run(db=world["db"], dest=dest, pointer=world["pointer"])
+    assert meta["missed_nights"] == [yesterday]
+    assert meta["missed_nights_new"] == [yesterday], "first sighting: this is what the one Telegram line names"
+    saved = json.loads((dest / f"market-{datetime.now():%Y%m%d}.meta.json").read_text())
+    assert saved["missed_nights"] == [yesterday], "the gap is recorded in the rotation's own record"
+    assert yesterday in json.loads(json.dumps(meta))["missed_nights"]    # survives the RESULT json round-trip
+    # a later run: the gap is still on record, but it is never alerted twice (missed_nights_new deduplicates
+    # against every earlier meta, so the controller's Telegram line fires once per gap night, not nightly)
+    meta2 = db_backup.run(db=world["db"], dest=dest, pointer=world["pointer"])
+    assert meta2["missed_nights"] == [yesterday], "still named while it sits inside the lookback window"
+    assert meta2["missed_nights_new"] == [], "already recorded by the first run: said once"
+
+
 def test_default_store_paths_follow_env(monkeypatch, tmp_path):
     monkeypatch.setenv("JOB_QUEUE_DB", str(tmp_path / "q.sqlite"))
     assert db_backup.default_job_queue_db() == tmp_path / "q.sqlite"
