@@ -76,6 +76,14 @@ export function BudgetPanel() {
           {refused} call{refused === 1 ? '' : 's'} refused today — something asked for data and got none.
         </div>
       )}
+      {/* F13: failures were counted by the ledger and shown nowhere here, although this is the page the chip
+          sends the owner to when it says "N ERR". A refusal and a failure are different facts: refused means
+          the budget said no, failed means ICICI did. */}
+      {(b.errors_today ?? 0) > 0 && (
+        <div style={{ color: T.muted, marginBottom: 6 }}>
+          {b.errors_today} broker call{b.errors_today === 1 ? '' : 's'} failed today (all methods).
+        </div>
+      )}
       {callers.length === 0 ? (
         <div style={{ color: T.dim }}>No broker calls recorded today.</div>
       ) : (
@@ -106,7 +114,9 @@ export function BudgetPanel() {
       {b.last_call?.at && (
         <div style={{ color: T.dim, marginTop: 6 }}>
           last: {b.last_call.caller} · {b.last_call.method} · {b.last_call.at.slice(11, 19)}
-          {b.last_call.ok === false ? ' · failed' : ''}
+          {/* truthy, not `=== false`: the API may send 0/1 rather than a JSON boolean, and a strict
+              comparison would silently call a failed call successful */}
+          {b.last_call.ok ? '' : ' · failed'}
         </div>
       )}
     </div>

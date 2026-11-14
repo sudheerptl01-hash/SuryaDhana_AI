@@ -283,8 +283,14 @@ def test_every_caller_name_in_the_code_has_a_quota() -> None:
 
     from shared.breeze_budget import DEFAULT_CALLER_QUOTAS
 
+    # F13: the roots are DERIVED, the way SCANNED_ROOTS derives its own — every services/* tree plus the
+    # non-service trees that hold callers. Hand-listing roots is how the ledger gate was blind five times, and
+    # this gate was quietly repeating it: a new service could add a Breeze caller with no quota and nothing
+    # would notice.
+    from test_breeze_ledger_coverage import SCANNED_ROOTS
+
     repo = Path(__file__).resolve().parents[3]
-    roots = (*(p for p in (repo / "services").iterdir() if p.is_dir()), repo / "scripts", repo / "shared")
+    roots = SCANNED_ROOTS
     #: `ledger().guard("caller", ...)`, `budget.guard("caller", ...)`, `_breeze_call(..., caller="caller")`,
     #: and a *_CALLER constant. That last pattern is not optional: `ui-api.positions` — the biggest spender in
     #: the ledger — is declared as `BREEZE_BUDGET_CALLER = "ui-api.positions"` and passed by name, so without

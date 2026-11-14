@@ -45,7 +45,11 @@ import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 
 /** Release ids: YYYYmmdd-HHMMSS-<7 hex>. They sort chronologically as plain strings. */
-export const RELEASE_ID_RE = /^\d{8}-\d{6}-[0-9a-f]{7}$/
+// A release id is <IST timestamp>-<7-hex sha>, with an explicit `-dirty` suffix when the UI tree did not
+// match that commit at build time. Without it the id named a commit the bundle was never built from, which
+// is the one thing a build id exists to tell you — `git_dirty` was in the manifest, but the id people read
+// and quote claimed otherwise.
+export const RELEASE_ID_RE = /^\d{8}-\d{6}-[0-9a-f]{7}(-dirty)?$/
 /** File types worth gzip-precompressing (text-like). Already-compressed formats are skipped. */
 export const COMPRESSIBLE_EXT = new Set([
   '.html', '.js', '.mjs', '.css', '.txt', '.json', '.svg', '.xml', '.map', '.webmanifest', '.ttf', '.otf', '.csv',

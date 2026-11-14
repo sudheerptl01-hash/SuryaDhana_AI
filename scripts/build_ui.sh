@@ -212,8 +212,11 @@ make_id() {
   GIT_SHA="$(git -C "$ROOT" rev-parse --short=7 HEAD 2> /dev/null || echo 0000000)"
   [ ${#GIT_SHA} = 7 ] || GIT_SHA="$(printf '%s' "$GIT_SHA" | cut -c1-7)"
   if [ -n "$(git -C "$ROOT" status --porcelain -- ui/app ui/components ui/lib ui/context ui/public 2> /dev/null | head -1)" ]; then GIT_DIRTY=1; fi
-  RELEASE_ID="${BUILD_UI_RELEASE_ID:-$(TZ=Asia/Kolkata date +%Y%m%d-%H%M%S)-$GIT_SHA}"
-  echo "$RELEASE_ID" | grep -Eq '^[0-9]{8}-[0-9]{6}-[0-9a-f]{7}$' || die "bad release id: $RELEASE_ID"
+  # the id says `-dirty` when the UI tree did not match HEAD, because the id is what gets quoted in a report
+  # or a bug — a manifest field nobody reads cannot correct an id that claims the wrong commit
+  _suffix=""; [ "$GIT_DIRTY" = 1 ] && _suffix="-dirty"
+  RELEASE_ID="${BUILD_UI_RELEASE_ID:-$(TZ=Asia/Kolkata date +%Y%m%d-%H%M%S)-$GIT_SHA$_suffix}"
+  echo "$RELEASE_ID" | grep -Eq '^[0-9]{8}-[0-9]{6}-[0-9a-f]{7}(-dirty)?$' || die "bad release id: $RELEASE_ID"
   NEXT_VERSION="$(node -e 'process.stdout.write(require(process.argv[1]).version)' "$UI_DIR/node_modules/next/package.json" 2> /dev/null || echo unknown)"
 }
 

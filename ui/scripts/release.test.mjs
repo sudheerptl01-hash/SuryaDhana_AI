@@ -283,3 +283,21 @@ test('list reports pointers and sizes; CLI rejects bad input', () => {
   assert.throws(() => runCli(['swap', '--dist', dist]), /--id is required/)
   assert.throws(() => runCli(['prune', '--dist', dist, '--keep', 'x']), /non-negative integer/)
 })
+
+test('a dirty build declares itself in the release id, not only in the manifest', () => {
+  // The id is what gets quoted in a report, a bug or a commit message; `git_dirty` sits in a manifest field
+  // nobody reads. An id that names a commit the bundle was never built from defeats the one thing a build id
+  // exists for — and /version served exactly that for most of 14 Nov.
+  assert.ok(RELEASE_ID_RE.test('20261114-133000-abc1234-dirty'))
+  assert.ok(RELEASE_ID_RE.test('20261114-133000-abc1234'))
+  assert.ok(!RELEASE_ID_RE.test('20261114-133000-abc1234-DIRTY'))
+  assert.ok(!RELEASE_ID_RE.test('20261114-133000-abc1234-dirty-dirty'))
+  assert.ok(!RELEASE_ID_RE.test('20261114-133000-abc1234-wip'))
+})
+
+test('build_ui.sh appends -dirty from the same flag the manifest records', () => {
+  const sh = fs.readFileSync(new URL('../../scripts/build_ui.sh', import.meta.url), 'utf8')
+  const code = sh.split('\n').filter((l) => !l.trim().startsWith('#')).join('\n')
+  assert.match(code, /GIT_DIRTY.*=.*1.*_suffix="-dirty"|_suffix="-dirty"/)
+  assert.match(code, /\(-dirty\)\?\$/)       // the validator accepts it too, or every dirty build would die
+})

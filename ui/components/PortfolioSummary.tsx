@@ -290,6 +290,13 @@ export function PortfolioSummary() {
             {!!totp?.login_running && <div style={{ marginTop: 4, color: T.cyan }}>An auto-login is running right now — wait for it before sending /login.</div>}
           </Notice>
           <IciciTotpPanel connected={false} onSessionLive={refresh} onStatus={setTotp} />
+          {/* F13: the budget panel needs no broker session — it reads the ledger's own counters. It belongs
+              HERE most of all: a day with no session is exactly when the owner wants to know whether the
+              budget refused the login, and the chip's hover sends them to this page to find out. */}
+          <Panel title="Broker budget" subtitle="Breeze calls today, by caller — the quota the chip refers to"
+            source={sourceOf(new Date().toISOString(), { source: 'ui-api budget ledger', maxAgeDays: 1 })}>
+            <BudgetPanel />
+          </Panel>
           {backendEntries.length > 0 && (
             <Panel source={sourceOf(lastRefresh ? lastRefresh.toISOString() : null, { source: 'ICICI sync', maxAgeDays: 1 })} title="Backend sync status">
               <KV items={backendEntries.map(([name, info]) => {
