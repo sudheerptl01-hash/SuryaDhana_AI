@@ -268,3 +268,46 @@ def test_a_flood_of_successes_does_not_erase_a_failure(tmp_path) -> None:
     assert kept_errors == 1, "the failure was pruned by successes — the exact 13 Nov evidence loss"
     assert kept_done == 5, f"successes should still be capped at keep=5, got {kept_done}"
     con.close()
+
+
+def test_job_failures_counts_crashes_and_states_the_window_it_can_speak_for(tmp_path) -> None:
+    """F11-06: the DATA page printed only the LAST run's word, so `nse_results` read FRESH on 14 Nov although
+    its job had died twice the evening before — on the one page whose whole job is data trust, for a table
+    EVTS reads before the open.
+
+    Two things must hold for the count to be honest: a crash-REQUEUED row counts (a job killed by a restart
+    becomes 'queued', not 'error', and a restart is what every deploy does), and the window the store can
+    speak for travels with the number — a 0 over a period the store never held is a claim, not a measurement.
+    """
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from data_health.reads import job_failures
+
+    db = tmp_path / "jq.sqlite"
+    mgr = DurableJobManager(db, keep=50)
+    con = mgr._connect()
+
+    def _row(job_id: str, kind: str, status: str, at: str, requeued: int = 0) -> None:
+        con.execute(
+            "INSERT INTO jobs (job_id, kind, status, progress, total, attempt, requeued, submitted_at, error) "
+            "VALUES (?, ?, ?, 0, 0, 1, ?, ?, ?)",
+            (job_id, kind, status, requeued, at, "TypeError: boom" if status == "error" else None))
+
+    _row("a", "nse_results", "error", "2026-11-13T15:15:00+00:00")
+    _row("b", "nse_results", "done", "2026-11-13T22:45:00+00:00")          # a later success must not hide it
+    _row("c", "fo_iv:iv_repair", "queued", "2026-11-13T18:19:00+00:00", requeued=1)   # killed by a restart
+    _row("d", "ingest_bhavcopy", "done", "2026-11-14T06:00:00+00:00")
+    con.commit()
+    con.close()
+
+    counts, since = job_failures(db)
+    assert counts.get("nse_results") == 1, f"a crash hidden by a later success: {counts}"
+    assert counts.get("fo_iv:iv_repair") == 1, "a crash-requeued row is a crash"
+    assert counts.get("iv_repair") == 1, "the bare job id must resolve too — catalog rows key on it"
+    assert "ingest_bhavcopy" not in counts, "a healthy job must not be given a crash"
+    assert since == "2026-11-13T15:15:00+00:00", f"the window must be the oldest row held: {since}"
+
+    # and a store that does not exist says so rather than claiming zero crashes
+    empty, no_since = job_failures(tmp_path / "missing.sqlite")
+    assert empty == {} and no_since is None

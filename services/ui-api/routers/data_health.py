@@ -415,8 +415,12 @@ def compose_b1_health(payload: Any, jobs: list[dict[str, Any]], holidays: list[d
                      "lag_sessions": lag, "state": state, "unrecoverable": bool(r.get("unrecoverable")),
                      **_job_info(jobs, r.get("job_id")), "catchup_at": _catchup_at(jobs, r.get("job_id")) if state in ("amber", "red") else None,
                      "note": note, "dictionary_anchor": r.get("dictionary_anchor") or "", "badge": r.get("badge") or "context",
-                     "max_age_sessions": r.get("max_age_sessions"), "job_check": r.get("job_check")})
+                     "max_age_sessions": r.get("max_age_sessions"), "job_check": r.get("job_check"),
+                     "job_failures": r.get("job_failures")})
     return {"rows": _sorted(rows), "summary": _summary(rows),
+            # F11-06: the window the Crashes column can speak for. Relayed rather than invented here — a count
+            # of 0 over a period the job store never held would be a claim the data does not support.
+            "failures_since": payload.get("failures_since"),
             "last_session": str(payload.get("last_session") or last_close_session(now, holidays).isoformat())}
 
 

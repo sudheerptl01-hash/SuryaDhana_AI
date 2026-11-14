@@ -11,11 +11,18 @@ export interface HealthRow {
   as_of: string | null; lag_sessions: number | null; state: HealthState | string; unrecoverable: boolean; job_id: string | null
   // last_run: a catalogued job that never ran comes back with all three fields null (SYS › DATA crashed on it, 5 Nov)
   last_run: { ts: string | null; status: string | null; ms: number | null } | null; next_run: string | null; catchup_at: string | null
+  /** F11-06: crashes of the job that produces this dataset, since `failures_since` on the payload. The row's
+   *  STATE answers "is the data fresh"; this answers "did the job that makes it die" — they disagree exactly
+   *  when a later run papers over an earlier failure, which is how nse_results read FRESH on 14 Nov while its
+   *  job had crashed twice the evening before. */
+  job_failures?: number | null
   note: string; dictionary_anchor: string | null; badge?: string; max_age_sessions?: number | null
 }
 export interface DataHealth {
   as_of: string; rows: HealthRow[]; summary: { green: number; amber: number; red: number; gaps: number; rows?: number }
-  last_session: string | null; catalog_source: string; inputs_unavailable: Record<string, string>; controller_online: boolean
+  last_session: string | null
+  /** the oldest row the job store still holds — the window `job_failures` can speak for */
+  failures_since?: string | null; catalog_source: string; inputs_unavailable: Record<string, string>; controller_online: boolean
   status?: string; service?: string; data_service?: { reachable: boolean }; note: string; badge?: string; ok?: boolean
 }
 

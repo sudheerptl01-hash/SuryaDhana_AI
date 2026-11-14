@@ -156,6 +156,7 @@ def health(store: Any, archive_root: Path, *, now: datetime | None = None, holid
     last_fetch = ingest_log.last_fetch_by_dataset(store)
     from data_health import watermarks                 # local import: watermarks imports reads (cycle-safe at call time)
     job_checks = watermarks.last_checks(store)
+    failures, failures_since = job_failures()
     out_rows: list[dict[str, Any]] = []
     summary = {"fresh": 0, "amber": 0, "red": 0, "gap": 0, "unknown": 0}
     for row in cat:
@@ -169,10 +170,53 @@ def health(store: Any, archive_root: Path, *, now: datetime | None = None, holid
                "verdict": row["verdict"], "badge": row["badge"], "catalog_note": row.get("note"),
                "last_fetch": last_fetch.get(str(row["id"])), "gap_dates": sorted(d.isoformat() for d in gap_map.get(str(row["id"]), ())),
                "job_check": job_checks.get(str(row.get("ingest_job") or "")),
+               # F11-06: the row's state is "is the DATA fresh"; this is "did the JOB that produces it crash".
+               # They differ exactly when a later run papers over an earlier failure — which is what happened
+               # to nse_results on 13 Nov, read as FRESH while its job had died twice.
+               "job_failures": failures.get(str(row.get("ingest_job") or ""), 0),
                **st}
         out_rows.append(rec)
     return {"as_of": db.iso_utc(now or db.utcnow()), "now_ist": now_ist.isoformat(), "last_session": calendar.last_completed_session(now_ist, holidays, extra_sessions).isoformat(),
-            "rows": out_rows, "summary": summary, "badges": {"state": "arithmetic"}, "note": "no composite score; endpoint rows are completed by ui-api"}
+            "rows": out_rows, "summary": summary, "badges": {"state": "arithmetic"},
+            # the window the failure counts can speak for — without it a 0 claims more than the store knows
+            "failures_since": failures_since,
+            "note": "no composite score; endpoint rows are completed by ui-api"}
+
+
+def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | None]:
+    """``({job_id: failures}, oldest_row_iso)`` from the durable job store.
+
+    A failure is `status = 'error'` OR a row requeued after a crash — `resume_on_start` rewrites a job killed
+    mid-run (which every restart does) back to 'queued', so 'error' alone misses the status a crash actually
+    produces. The second element is the oldest row the store still holds: the counts cannot speak for anything
+    before it, and a page that renders 0 without saying so is making a claim the data does not support.
+    """
+    import sqlite3
+
+    path = db_path or (Path(__file__).resolve().parents[3] / "data" / "job_queue.sqlite")
+    if not path.exists():
+        return {}, None
+    try:
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5.0)
+    except sqlite3.Error:                                      # pragma: no cover — a locked or missing store
+        return {}, None
+    try:
+        counts: dict[str, int] = {}
+        for kind, n in con.execute(
+                "SELECT kind, COUNT(*) FROM jobs WHERE status = 'error' OR (status = 'queued' AND requeued > 0)"
+                " GROUP BY kind"):
+            # job kinds are "<job_id>" or "<group>:<job_id>" (e.g. fo_iv:iv_repair) — count against both
+            k = str(kind)
+            counts[k] = counts.get(k, 0) + int(n)
+            if ":" in k:
+                tail = k.split(":", 1)[1]
+                counts[tail] = counts.get(tail, 0) + int(n)
+        oldest = con.execute("SELECT MIN(submitted_at) FROM jobs").fetchone()[0]
+        return counts, (str(oldest) if oldest else None)
+    except sqlite3.Error:                                      # pragma: no cover
+        return {}, None
+    finally:
+        con.close()
 
 
 def catalog(store: Any) -> dict[str, Any]:

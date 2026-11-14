@@ -55,6 +55,13 @@ export function DataHealthView() {
     { key: 'pages', label: 'Pages', render: r => <span style={{ color: T.muted }}>{(r.pages ?? []).join(' ')}</span> },
     { key: 'pub', label: 'Publisher', sort: r => r.publisher, render: r => <span style={{ color: T.muted }}>{r.publisher}</span> },
     { key: 'job', label: 'Job · last run', render: r => <span style={{ color: T.muted }}>{r.job_id ?? '—'}{r.last_run?.ts ? ` · ${r.last_run.ts.slice(5, 16).replace('T', ' ')} ${r.last_run.status ?? ''}` : r.last_run ? ' · never run' : ''}</span> },
+    // F11-06: the page printed only the LAST run's word, so a job that crashed and was re-run later read
+    // FRESH — which is what nse_results did on 14 Nov after dying twice the evening before, on the one page
+    // whose whole job is data trust. A dash, never a 0, when the store cannot speak for the period.
+    { key: 'fails', label: 'Crashes', align: 'right', sort: r => r.job_failures ?? -1,
+      title: 'runs of this dataset\u2019s job that ended in an error or were re-queued after a crash, within the window the job store still holds',
+      render: r => r.job_failures == null ? <span style={{ color: T.dim }}>—</span>
+        : <span style={{ color: r.job_failures > 0 ? T.amber : T.dim }}>{r.job_failures || '·'}</span> },
     { key: 'note', label: 'What it means', render: r => <span style={{ color: T.text, whiteSpace: 'normal', display: 'inline-block', minWidth: 260 }}>{rowSentence(r)}</span> },
   ], [])
   const n = staleCount(d)
@@ -62,7 +69,7 @@ export function DataHealthView() {
     <div style={{ display: 'grid', gap: 12 }} data-sys-view="data">
       <Panel title="Data health · every dataset" accent={T.cyan} pad={0} badge={d?.badge ?? 'context'}
         source={sourceOf(d?.as_of ?? null, { source: 'ui-api /api/data/health', maxAgeDays: 1, hint: err })}
-        subtitle={d ? `${d.summary.green} fresh · ${d.summary.amber} amber · ${d.summary.red} red · ${d.summary.gaps} gaps · last session ${d.last_session ?? '—'} · catalog: ${d.catalog_source}` : undefined}
+        subtitle={d ? `${d.summary.green} fresh · ${d.summary.amber} amber · ${d.summary.red} red · ${d.summary.gaps} gaps · last session ${d.last_session ?? '—'} · catalog: ${d.catalog_source}${d.failures_since ? ` · crashes since ${d.failures_since.slice(0, 10)}` : ''}` : undefined}
         right={<span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }} data-health-pages>
           <Chip color={T.muted} active={!page} onClick={() => setPage(null)}>ALL</Chip>
           {pages.map(p => <Chip key={p} color={T.cyan} active={page === p} onClick={() => setPage(q => (q === p ? null : p))} title={`datasets ${p} reads`}>{p}</Chip>)}
