@@ -2199,8 +2199,17 @@ def monthly_leaderboard(contrib: list[dict[str, Any]], fit: list[dict[str, Any]]
             sessions[d[:7]].add(d)
     actual: dict[str, float] = _defaultdict(float)
     bad: dict[str, list[str]] = _defaultdict(list)
+    # F11-10: the month's OPENING index level, taken from the earliest session's prev_index_level, so each
+    # month's points can be shown with the percentage they represent. "-73.3 pts" on a ~25,000 index says
+    # nothing on its own, and this table is read to compare months whose index levels differ by thousands.
+    month_open: dict[str, tuple[str, float]] = {}
     for f in fit:
         d, a = _day(f.get("date")), _num(f.get("actual_points"))
+        lvl = _num(f.get("prev_index_level"))
+        if d and lvl:
+            ym_ = d[:7]
+            if ym_ not in month_open or d < month_open[ym_][0]:
+                month_open[ym_] = (d, lvl)
         if d and a is not None:
             actual[d[:7]] += a
         res = _num(f.get("residual_points"))
@@ -2213,7 +2222,10 @@ def monthly_leaderboard(contrib: list[dict[str, Any]], fit: list[dict[str, Any]]
         ranked = sorted(m.items(), key=lambda kv: -kv[1])
         leader = max(m.items(), key=lambda kv: abs(kv[1]))[0]
         tot_abs = sum(abs(v) for v in m.values())
+        _open = month_open.get(ym, (None, None))[1]
         out.append({"month": ym, "sessions": len(sessions[ym]), "index_move_pts": round(actual[ym], 1) if ym in actual else None,
+                    # the same month's own opening level — never a different window's
+                    "index_move_pct": (round(actual[ym] / _open * 100, 2) if (ym in actual and _open) else None),
                     "explained_pts": round(sum(m.values()), 1), "leader": leader, "leader_pts": round(m[leader], 1),
                     "leader_share": round(abs(m[leader]) / tot_abs, 3) if tot_abs else None,
                     "leader_changed": prev_leader is not None and leader != prev_leader,

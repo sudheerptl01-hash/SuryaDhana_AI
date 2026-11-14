@@ -427,3 +427,60 @@ def test_stop_and_start_agree_on_what_start_set_means(tree):
     assert "ALL_SERVICES" in stop_body, "…and must still default to every service when START_SET is unset"
     start_body = _code_lines(src.split("start_services() {")[1].split("\n}")[0])
     assert "START_SET" in start_body, "start_services must still honour START_SET"
+
+
+# ── F11-07: a digest too long for Telegram was DELIVERED NOWHERE ──────────────────────────────────────────
+# The controller's own log carries `400 Bad Request: message is too long`. Telegram does not truncate an
+# oversized sendMessage, it rejects the whole thing — so the owner silently never received that digest, and
+# the only trace was an error line in a file nobody reads. A long message is usually the EOD or data digest.
+
+def _splitter():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "mc_for_split", Path(__file__).resolve().parents[1] / "master_controller.py")
+    assert spec and spec.loader
+    import sys
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["mc_for_split"] = mod
+    spec.loader.exec_module(mod)
+    return mod.AlertDispatcher._split_for_telegram
+
+
+def test_a_long_digest_is_split_instead_of_dropped() -> None:
+    split = _splitter()
+    limit = 3900
+
+    short = "NIFTY 25,144 · breadth 45/5"
+    assert split(short) == [short], "a normal message must not be touched"
+
+    body = "\n".join(f"{i:03d} RELIANCE +1.2% delivery 48% · a line of roughly sixty characters" for i in range(200))
+    assert len(body) > 4096, "the fixture must actually exceed Telegram's limit"
+    parts = split(body)
+    assert len(parts) > 1, "an oversized digest was not split"
+    assert all(len(p) <= limit + 20 for p in parts), [len(p) for p in parts]   # +suffix
+    assert all(f"({i + 1}/{len(parts)})" in p for i, p in enumerate(parts)), "parts must be numbered"
+    # nothing may be lost: every original line survives somewhere
+    joined = "\n".join(parts)
+    for line in body.split("\n"):
+        assert line in joined, f"a line was dropped in the split: {line!r}"
+
+    # a single monstrous line (no newlines to split on) must still be chunked, not dropped
+    monster = "x" * 10_000
+    mparts = split(monster)
+    assert len(mparts) >= 3 and sum(p.count("x") for p in mparts) == 10_000
+
+
+def test_the_stop_summary_names_the_set_it_actually_stopped(tree):
+    """F11-08: once `restart` passed its own set, START_SET could be unset while only three services stopped —
+    and the summary still read "All local services stopped". A message naming a different set than the loop
+    touched is the same defect class as a guard asking about a different set than it stops."""
+    body = (tree / "start-local.sh").read_text().split("stop_services() {")[1].split("\n}")[0]
+    code = _code_lines(body)
+    assert 'print_success "All local services stopped' in code
+    # the branch must key on what was stopped, not on how it was asked for
+    for line in code.split("\n"):
+        if "print_success" in line or "print_info" in line:
+            continue
+        if "if [" in line and "print" not in line:
+            assert "START_SET" not in line, (
+                f"the summary branch still keys on START_SET rather than $targets: {line.strip()}")

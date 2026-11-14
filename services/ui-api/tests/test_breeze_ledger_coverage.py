@@ -300,12 +300,19 @@ def test_the_login_backoff_grows_and_then_holds() -> None:
     assert waits == list(_CLIENT_RETRY_BACKOFF_S), waits            # one step per consecutive failure
     assert waits == sorted(waits), "each wait must be at least the previous one"
     assert _retry_wait_s(99) == _CLIENT_RETRY_BACKOFF_S[-1], "it must cap, not grow forever"
-    # the whole point: the day's worth of attempts is bounded well under the cap
+    # The bound this ladder provides, stated precisely (F11-02): ONE process, ONE failing token, no restarts.
+    # The live ledger on 14 Nov read 160 generate_session calls against this test's 59, and the difference is
+    # not a broken backoff — the gaps prove it works (fifteen 960 s waits at the 900 s cap, seven 300 s steps).
+    # It is that 131 of the 160 came BEFORE this fix was deployed that morning, that every ui-api restart
+    # clears the in-memory cache and starts the ladder again (six restarts that day), and that
+    # `icici_admin`'s force-login is a SECOND path which deliberately bypasses this cache — the owner asking
+    # for a login should not be told to wait fifteen minutes. So this asserts the ladder's own arithmetic, and
+    # the day's true total is this times the number of fresh starts.
     day, spent, n = 14 * 3600, 0.0, 0
     while spent <= day:
         n += 1
         spent += _retry_wait_s(n)
-    assert n < 120, f"{n} attempts across a trading day is too many for a metered call"
+    assert n < 120, f"{n} attempts per process-lifetime across a trading day is too many for a metered call"
 
 
 def test_a_new_session_token_bypasses_the_backoff_entirely(monkeypatch) -> None:

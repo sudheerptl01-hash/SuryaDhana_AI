@@ -364,18 +364,54 @@ _log = LogRingBuffer()
 
 # ── Alert dispatcher (Telegram + Discord) ──────────────────────────────────────
 class AlertDispatcher:
+    #: Telegram rejects a sendMessage body over 4,096 characters OUTRIGHT — it does not truncate. Split below
+    #: that with room for the " (1/3)" suffix.
+    TELEGRAM_LIMIT = 4096
+    _CHUNK = 3900
+
+    @staticmethod
+    def _split_for_telegram(text: str, limit: int = _CHUNK) -> list[str]:
+        """`text` as chunks Telegram will accept, split on line boundaries where possible.
+
+        F11-07: this used to post the whole body in one call, and Telegram answers a long one with
+        `400 Bad Request: message is too long` and delivers NOTHING. It happened for real — the controller's
+        own log carries that exact line — so the owner simply never received whichever digest was too long,
+        and the only trace was an error line in a file they do not read. A long message is usually the EOD or
+        data digest, i.e. the one most worth reading.
+        """
+        if len(text) <= limit:
+            return [text]
+        chunks, cur = [], ""
+        for line in text.split("\n"):
+            while len(line) > limit:                       # a single monstrous line: hard-split it
+                if cur:
+                    chunks.append(cur)
+                    cur = ""
+                chunks.append(line[:limit])
+                line = line[limit:]
+            if len(cur) + len(line) + 1 > limit:
+                chunks.append(cur)
+                cur = line
+            else:
+                cur = f"{cur}\n{line}" if cur else line
+        if cur:
+            chunks.append(cur)
+        n = len(chunks)
+        return [f"{c}\n\n({i + 1}/{n})" for i, c in enumerate(chunks)] if n > 1 else chunks
+
     async def _telegram(self, text: str) -> None:
         if not (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID):
             return
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         try:
             async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"})
-                # Markdown rejects a stray "_" or "*" (job names, some tickers): resend as plain text rather than lose it
-                if r.status_code == 400 and "parse" in r.text.lower():
-                    r = await client.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": text.replace("*", "")})
-                if r.status_code != 200:
-                    _log.error("alerts", f"Telegram rejected the message: HTTP {r.status_code} {r.text[:200]}")
+                for part in self._split_for_telegram(text):
+                    r = await client.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": part, "parse_mode": "Markdown"})
+                    # Markdown rejects a stray "_" or "*" (job names, some tickers): resend as plain text rather than lose it
+                    if r.status_code == 400 and "parse" in r.text.lower():
+                        r = await client.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": part.replace("*", "")})
+                    if r.status_code != 200:
+                        _log.error("alerts", f"Telegram rejected the message: HTTP {r.status_code} {r.text[:200]}")
         except Exception as exc:
             _log.error("alerts", f"Telegram failed: {exc}")
 

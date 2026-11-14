@@ -262,3 +262,56 @@ def test_generate_session_refused_at_the_cap_before_the_sdk_runs(pos_ledger, mon
     client, err, kind = pos._build_breeze_client("k", "s", "tok")
     assert client is None and kind == "budget" and "budget" in (err or "").lower()
     assert _FakeBreezeConnect.sessions == [] and bb.ledger().status()["refused_today"] == 1
+
+
+def test_every_caller_name_in_the_code_has_a_quota() -> None:
+    """A caller that can spend quota must have a quota — enforced from the SOURCE, not from the live ledger.
+
+    F11-01: the first quota pass covered the callers that had just been named in that same commit and left the
+    stack's actual spenders unbounded. Measured against data/breeze_budget.sqlite at the time: 7 of the 9
+    entries belonged to callers that had never made a single call, while `ui-api.positions` (1,039 calls
+    all-time, including the 14 Nov login runaway) had none at all. That is the same scope-not-logic mistake the
+    ledger gate made with its roots, one commit later.
+
+    Reading the ledger would only ever catch a caller AFTER it had spent; reading the code catches it before it
+    ever runs, which is the point of a quota.
+    """
+    import ast
+    import re
+
+    from shared.breeze_budget import DEFAULT_CALLER_QUOTAS
+
+    repo = Path(__file__).resolve().parents[3]
+    roots = (*(p for p in (repo / "services").iterdir() if p.is_dir()), repo / "scripts", repo / "shared")
+    #: `ledger().guard("caller", ...)`, `budget.guard("caller", ...)`, `_breeze_call(..., caller="caller")`,
+    #: and a *_CALLER constant. That last pattern is not optional: `ui-api.positions` — the biggest spender in
+    #: the ledger — is declared as `BREEZE_BUDGET_CALLER = "ui-api.positions"` and passed by name, so without
+    #: it this gate could not see the one caller it most needed to. Caught by mutation-testing this very test:
+    #: deleting that quota left it green.
+    pats = (re.compile(r'\.guard\(\s*["\']([\w.\-]+)["\']'),
+            re.compile(r'caller\s*=\s*["\']([\w.\-]+)["\']'),
+            re.compile(r'^[A-Z_]*CALLER[A-Z_]*\s*=\s*["\']([\w.\-]+)["\']', re.M))
+    found: dict[str, str] = {}
+    scanned = 0
+    for root in roots:
+        for path in sorted(root.rglob("*.py")):
+            if "/tests/" in str(path):
+                continue
+            scanned += 1
+            src = path.read_text(encoding="utf-8")
+            try:                                        # comments and strings-in-prose must not count
+                code = "\n".join(ln.split("#", 1)[0] for ln in src.split("\n"))
+                ast.parse(src)
+            except SyntaxError:                         # pragma: no cover
+                continue
+            for pat in pats:
+                for m in pat.finditer(code):
+                    found.setdefault(m.group(1), str(path.relative_to(repo)))
+
+    assert scanned > 100, f"only {scanned} modules scanned — are the roots right?"
+    assert len(found) >= 8, f"only {len(found)} caller names found — the patterns stopped matching: {found}"
+    missing = {c: where for c, where in found.items()
+               if c not in DEFAULT_CALLER_QUOTAS and not c.isupper()}      # CALLER constants resolve at runtime
+    assert not missing, (
+        "these callers can spend Breeze quota with no quota of their own — one unbounded path can empty the "
+        f"day and the chain fails mid-session: {missing}")

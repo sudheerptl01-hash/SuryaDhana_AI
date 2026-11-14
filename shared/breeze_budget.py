@@ -61,6 +61,27 @@ DEFAULT_CALLER_QUOTAS: dict[str, int] = {
     "data-service.history": 600,          # a backfill walks this in chunks; it must not own the whole day
     "execution.ltp": 200, "execution.order_status": 200, "execution.portfolio": 100,
     "live_execution.ltp": 200,
+    # F11-01: the first pass gave quotas to the callers it had just NAMED in code and left the ones that
+    # actually spend unbounded — measured from the live ledger, 7 of 9 entries belonged to callers that had
+    # never made a single call, while ui-api.positions (1,039 all-time, including the 14 Nov login runaway)
+    # had none. The same scope-not-logic mistake as the gate's roots, one commit later. Every caller that
+    # exists in the code now has one, and a test enforces that (test_breeze_budget.py).
+          # holdings / funds / positions, plus the metered generate_session
+    "ui-api.positions": 600,          # holdings / funds / positions, plus the metered generate_session
+    "ui-api.probe": 150,              # the connection probe
+    "ui-api.margin": 200,             # OSTR's SPAN calls
+    "ui-api.gold_settlement": 100,
+    "data-service.gold_vwap30": 150,  # the 23:58 MCX settlement VWAP
+    "data-service.gold_breeze_daily": 100,
+    "iv_expiry_replay": 200,
+    # Found by the source gate, NOT by the ledger — neither has spent a call yet, so a ledger-driven list
+    # would have missed both. ui-api.mcx is the F6-01 path itself: four Breeze calls that bypassed metering
+    # entirely until 14 Nov and still have not run under a live session.
+    "ui-api.mcx": 500,               # MCX quotes, 35 s TTL against a 30 s poll across ~5 contracts
+    "ui-api.gold-preopen": 100,
+    # the Monday MCX-options probe: a hand-run script, but it IS metered, so it gets a bound like everything
+    # else rather than an exemption (scripts/probe_mcx_options.py, 2N+2 calls per snapshot)
+    "probe.mcx_options": 150,
     # These deliberately SUM ABOVE cap_day: a quota caps one caller's share so no single path can empty the
     # day, while cap_day remains the real ceiling. Scaling them down to sum to the cap would reserve quota for
     # callers that are idle on most days (the execution ones are dormant entirely) and starve the live ones.

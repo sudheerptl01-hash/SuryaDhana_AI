@@ -50,7 +50,7 @@ export interface DriverTimeline extends DriverStoreMeta {
 }
 export interface MonthRow {
   month: string; sessions: number; leader: string | null; leader_pts: number | null; leader_share: number | null; leader_changed: boolean
-  index_move_pts: number | null; explained_pts: number | null
+  index_move_pts: number | null; index_move_pct?: number | null; explained_pts: number | null
   top3_add: { symbol: string; points: number }[]; top3_drag: { symbol: string; points: number }[]
   /** m026: index move − Σ members, sessions the weights missed by > 150 pts, and a note when any did. */
   residual_pts?: number | null; bad_sessions?: string[]; note?: string | null

@@ -86,7 +86,14 @@ export function sessionExpected(ist: IstClock, nseOnly = false): boolean {
  *   bad   — no session while a market is open. Red, because quotes, the chain and margin are all degraded.
  */
 export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist: IstClock): BrokerFace | null {
-  const expected = sessionExpected(ist)
+  // F11-03: the holiday calendar is read ONCE, here, and gates every branch below. The first version threaded
+  // it into the amber pre-open rung only, so the red one still ran on `sessionExpected`'s weekday test — and
+  // on Guru Nanak Jayanti (Tue 24 Nov 2026, a date in the holiday master this very payload carries) the chip
+  // would have shown red BRKR DOWN from 09:15 to 23:30 over a market that was shut. A fix applied to one
+  // branch of a ladder is not applied to the ladder.
+  const weekday = ist.day >= 1 && ist.day <= 5
+  const tradingDay = budget?.trading_day == null ? weekday : budget.trading_day === true
+  const expected = tradingDay && sessionExpected(ist)
   const connected = live?.breeze_session === true
   const errors = Number(budget?.errors_today ?? 0)
   const refused = Number(budget?.refused_today ?? 0)
@@ -94,6 +101,19 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
 
   if (!live && !budget) return null                               // nothing fetched yet: say nothing, never guess
 
+  // F11-04: a refusal is reported FIRST when there is no session, because `generate_session` is itself metered
+  // — the budget refusing the login is exactly what makes `connected` false. The original order put REFUSED
+  // below all three !connected rungs, so in the one case it was written for (an exhausted budget) it could
+  // never fire and the owner saw a bare "no session" with no cause. Cause beats symptom.
+  if (!connected && refused > 0 && (expected || (tradingDay && ist.hm >= 815 && ist.hm < 915))) {
+    return {
+      label: `BRKR ${refused} REFUSED`,
+      tone: 'bad',
+      title: `No broker session, and the Breeze budget refused ${refused} call${refused === 1 ? '' : 's'} today `
+        + '— the login itself is metered, so an exhausted budget is why there is no session. Quotes, the chain '
+        + 'and margin are on stored or delayed data. The BRKR page shows which caller spent the quota.',
+    }
+  }
   if (!connected && expected) {
     return {
       label: 'BRKR DOWN',
@@ -118,10 +138,8 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
   // F10-05: `day >= 1 && day <= 5` is WEEKDAYS, and the first version of this branch called that comment
   // "trading days only". On an exchange holiday that falls midweek — Guru Nanak Jayanti, Tue 24 Nov 2026, a
   // date this repo already records — it would have cried about a login that was never scheduled. The server
-  // owns the holiday master and now reports `trading_day` on the payload this chip already reads; unknown
-  // (null/absent, e.g. the calendar was unreachable) falls back to the weekday test, i.e. no worse than before.
-  const weekday = ist.day >= 1 && ist.day <= 5
-  const tradingDay = budget?.trading_day == null ? weekday : budget.trading_day === true
+  // owns the holiday master and reports `trading_day` on the payload this chip already reads; `tradingDay` is
+  // computed once at the top of this function (F11-03) so the red rung honours the calendar too.
   if (!connected && tradingDay && ist.hm >= 815 && ist.hm < 915) {
     return {
       label: 'BRKR PRE',
@@ -147,7 +165,7 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
       tone: 'warn',
       title: `The Breeze budget refused ${refused} call${refused === 1 ? '' : 's'} today, so quotes, the option `
         + 'chain or margin asked for data and got none — the panels that depend on them fall back to stored or '
-        + `delayed values. ${errors} other broker call${errors === 1 ? '' : 's'} failed today. SYS › BRKR shows `
+        + `delayed values. ${errors} other broker call${errors === 1 ? '' : 's'} failed today. The BRKR page shows `
         + 'which caller spent the day\u2019s quota.',
     }
   }

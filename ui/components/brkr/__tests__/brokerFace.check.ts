@@ -159,5 +159,40 @@ check('F10-05 an unknown calendar falls back to the weekday test (no worse than 
 check('F10-05 …and stays quiet on a weekend even when the calendar is unknown',
   brokerFace(DEAD, COUNTS, at(2026, 11, 14, 8, 30))?.tone === 'idle')
 
+// ── F11-03: the calendar must gate the RED rung too, not only the amber one ────────────────────────────
+// F10-05 was fixed on the pre-open branch and the DOWN branch kept running on sessionExpected's weekday test,
+// so on Guru Nanak Jayanti (Tue 24 Nov 2026 — in the holiday master this payload carries) the chip would have
+// shown red BRKR DOWN from 09:15 to 23:30 over a shut market. A whole day of false alarm.
+const HOL = { ...COUNTS, trading_day: false }
+check('F11-03 midday on a HOLIDAY is not red', brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0))?.tone !== 'bad',
+  brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0)))
+check('F11-03 …it is the grey idle rung', brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0))?.tone === 'idle')
+check('F11-03 22:00 on a holiday (inside the MCX window) is not red either',
+  brokerFace(DEAD, HOL, at(2026, 11, 24, 22, 0))?.tone === 'idle')
+check('F11-03 the same clock on a TRADING day is still red',
+  brokerFace(DEAD, { ...COUNTS, trading_day: true }, at(2026, 11, 24, 12, 0))?.tone === 'bad')
+check('F11-03 an unknown calendar still goes red midday on a weekday (no worse than before)',
+  brokerFace(DEAD, COUNTS, at(2026, 11, 16, 12, 0))?.tone === 'bad')
+
+// ── F11-04: the REFUSED rung has to fire in the case it was written for ────────────────────────────────
+// `generate_session` is itself metered, so an exhausted budget is WHY there is no session — and the first
+// version put REFUSED below every !connected rung, where it could never be reached in that exact case.
+const REFUSED = { errors_today: 4, refused_today: 9, trading_day: true }
+check('F11-04 a refused login shows the CAUSE, not a bare "no session"',
+  brokerFace(DEAD, REFUSED, at(2026, 11, 16, 12, 0))?.label === 'BRKR 9 REFUSED',
+  brokerFace(DEAD, REFUSED, at(2026, 11, 16, 12, 0)))
+check('F11-04 it is red during market hours (the session really is gone)',
+  brokerFace(DEAD, REFUSED, at(2026, 11, 16, 12, 0))?.tone === 'bad')
+check('F11-04 it also fires in the pre-open hour',
+  brokerFace(DEAD, REFUSED, at(2026, 11, 16, 8, 30))?.label === 'BRKR 9 REFUSED')
+check('F11-04 but NOT on a holiday, where no session is expected at all',
+  brokerFace(DEAD, { ...REFUSED, trading_day: false }, at(2026, 11, 24, 12, 0))?.tone === 'idle')
+check('F11-04 with a session up, refusals stay the amber rung',
+  brokerFace({ breeze_session: true }, REFUSED, at(2026, 11, 16, 12, 0))?.tone === 'warn')
+// F11-05: the tooltip must name a page that exists — SYS has only system|data sub-views; BRKR is top-level
+check('F11-05 no tooltip points at a SYS sub-view that does not exist',
+  !JSON.stringify([brokerFace(DEAD, REFUSED, at(2026, 11, 16, 12, 0)),
+                   brokerFace({ breeze_session: true }, REFUSED, at(2026, 11, 16, 12, 0))]).includes('SYS \u203a BRKR'))
+
 console.log(`brokerChip.check: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)

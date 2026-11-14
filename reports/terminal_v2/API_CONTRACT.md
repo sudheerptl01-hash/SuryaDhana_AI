@@ -819,6 +819,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `months[]` | object |
 | `months[].bad_sessions` | array |
 | `months[].explained_pts` | number |
+| `months[].index_move_pct` | number |
 | `months[].index_move_pts` | number |
 | `months[].leader` | string |
 | `months[].leader_changed` | bool |

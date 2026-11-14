@@ -178,7 +178,11 @@ export function MonthlyLeaderboard({ index }: { index: string }) {
                     either lists fewer, never a negative "add" */}
                 <td style={{ padding: '4px 8px', color: T.muted }}>{r.top3_add.filter(x => x.points > 0).map(x => `${x.symbol} ${fmtPts(x.points, 0)}`).join(' · ') || '—'}</td>
                 <td style={{ padding: '4px 8px', color: T.muted }}>{r.top3_drag.filter(x => x.points < 0).map(x => `${x.symbol} ${fmtPts(x.points, 0)}`).join(' · ') || '—'}</td>
-                <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmtPts(r.index_move_pts)}</td>
+                {/* F11-10: the percentage beside the points, from this month's own opening level — a bare
+                    "-73.3 pts" cannot be compared across months whose index levels differ by thousands */}
+                <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmtPts(r.index_move_pts)}
+                  {r.index_move_pct == null ? '' : <span style={{ color: T.muted }}>{` (${r.index_move_pct > 0 ? '+' : ''}${r.index_move_pct.toFixed(2)}%)`}</span>}
+                </td>
                 {/* m026: a month with a session the weights missed by > 150 pts is marked †; its note names the sessions */}
                 <td style={{ padding: '4px 8px', textAlign: 'right', color: r.note ? T.dim : T.muted }} title={r.note ?? undefined} data-drivers-month-flag={r.note ? r.month : undefined}>
                   {fmtPts(r.explained_pts)}{r.note ? ' †' : ''}</td>

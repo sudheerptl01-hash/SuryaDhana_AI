@@ -592,13 +592,19 @@ stop_services() {
   # told to ignore them — bare `restart` used to stop and pause all seven and start only the three core ones.
   local targets="${1:-${START_SET:-$ALL_SERVICES}}"
   print_header "Stopping Local Services"
-  [ -n "${START_SET:-}" ] && print_info "START_SET is set: stopping only $targets"
+  # F11-08: both lines key on $targets, not on $START_SET. Once `restart` began passing its own set (F10-07),
+  # START_SET could be unset while targets was only the three core services — and this printed "All local
+  # services stopped" over a partial stop. A summary that names a different set than the loop just touched is
+  # the same class of defect as a guard that asks about a different set than it stops.
+  if [ "$targets" != "$ALL_SERVICES" ]; then
+    print_info "stopping only: $targets"
+  fi
   for name in $(reverse_list "$targets"); do
     mark_paused "$name"
     stop_one "$name"
   done
-  if [ -n "${START_SET:-}" ]; then
-    print_success "Stopped: $targets (others left running; Redis untouched)"
+  if [ "$targets" != "$ALL_SERVICES" ]; then
+    print_success "Stopped: $targets (others left as they were; Redis untouched)"
   else
     print_success "All local services stopped (Redis left running: redis-cli shutdown)"
   fi

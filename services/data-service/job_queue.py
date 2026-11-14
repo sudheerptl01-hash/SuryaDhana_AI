@@ -363,13 +363,29 @@ class DurableJobManager:
         This used to prune both by recency together, so a busy day of successful jobs silently erased the
         evidence of a crash: on 14 Nov the two `nse_results` failures of 13 Nov (a TypeError that killed the
         whole job and with it every company's results data) were already gone from this table, while 83
-        successful rows remained. A failure is the row worth keeping — it is the only durable record outside a
-        log line, and the DATA page reads this store to say whether a dataset's job is healthy.
+        successful rows remained. A failure is the row worth keeping — it is the only durable record of a
+        crash outside a log line.
+
+        It is NOT yet read by the DATA page: the first version of this docstring claimed it was, and nothing
+        imports this module outside data-service's own main and tests (F11-06). Retention comes first because
+        a reader cannot be built on rows that have already been deleted — but until that column exists, a
+        crashed job still shows FRESH on the DATA page, and that gap is real.
+
+        A row REQUEUED after a crash is kept on the same footing as an error: `resume_on_start` rewrites a
+        job killed mid-run — by a restart, which is what every deploy does — back to 'queued', so the status
+        that actually happens on a crash is not 'error' at all. `data/job_queue.sqlite` currently holds one
+        such orphan (`fo_iv:iv_repair`, started 13 Nov 18:19, requeued at 23:50, still queued) which nothing
+        will ever adopt because iv_repair is manual-only.
         """
         con.execute(
             "DELETE FROM jobs WHERE status = 'done' AND job_id NOT IN ("
             " SELECT job_id FROM jobs WHERE status = 'done'"
             " ORDER BY submitted_at DESC LIMIT ?)", (self._keep,))
+        # a crash-requeued row is evidence too, and it is the status a crash actually produces
+        con.execute(
+            "DELETE FROM jobs WHERE status = 'queued' AND requeued > 0 AND job_id NOT IN ("
+            " SELECT job_id FROM jobs WHERE status = 'queued' AND requeued > 0"
+            " ORDER BY submitted_at DESC LIMIT ?)", (self.KEEP_ERRORS,))
         con.execute(
             "DELETE FROM jobs WHERE status = 'error' AND job_id NOT IN ("
             " SELECT job_id FROM jobs WHERE status = 'error'"
