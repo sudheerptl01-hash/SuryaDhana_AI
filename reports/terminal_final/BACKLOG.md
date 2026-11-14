@@ -48,3 +48,25 @@ enforcement, gold program behaviours, GO bar, atomic UI releases + rollback, wat
 - F-29 (W7) ASK: example questions + recent-audit list in the empty state; louder snapshot-age when stale; F-25 eval run on qwen3.5:9b.
 - F-30 (W4) GOLD gauge-delta sub clipping; WTCH one-time settings-import prompt; LAYOUT SAVE toast.
 - F-31 (W1) /jobs/recent retention bump; NIFTY BANK drivers recalibration; off-machine DB copy (owner disk).
+
+## Commodities 9-bar: the MCX-options question, answered (14 Nov 08:10)
+
+The rating's last Commodities item — "MCX gold/silver/crude option chains with IV (after the Breeze MCX probe)"
+— carried "pending a live session" for three reports. Half of it is answerable offline, from the installed SDK:
+
+- **There is NO one-call MCX option chain.** `breeze_connect`'s `get_option_chain_quotes` refuses every exchange
+  but NFO and BFO (its own guard: `exchange_code.lower() not in ["nfo", "bfo"]` -> validation error). That is a
+  vendor restriction, not a session or permission problem, so the NSE-style chain call can never serve MCX.
+- **The per-contract paths DO allow MCX with options**: `EXCHANGE_CODES_HIST_V2` and `FNO_EXCHANGE_TYPES` both
+  list `mcx`, and `PRODUCT_TYPES*` list `options`. A chain is therefore assemblable STRIKE BY STRIKE — one call
+  per (strike, right).
+- **The cost is what decides whether to build it**: a +/-N-strike window is 2N+2 calls per contract per snapshot
+  against the shared 4,000/day Breeze ledger. +/-10 strikes = 42 calls: fine once or twice a day per contract,
+  impossible as a live tape. IV would be computed locally (Black-76 on the futures price, as the NSE path does).
+- `scripts/probe_mcx_options.py` answers the rest in ONE command on the next trading day: read-only, every call
+  through the ledger, 10 calls by default, refuses to run without a live session, and writes the payload shape
+  plus a verdict on whether price and open interest are present to compute IV from.
+
+**F-31b**: run the probe Monday, then the owner decides scope — build the per-strike chain at that budget cost,
+or accept Commodities without MCX options (which caps that area below 9 on free data, by scope, not by defect).
+
