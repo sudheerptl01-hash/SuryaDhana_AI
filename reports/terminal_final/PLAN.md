@@ -82,6 +82,12 @@ them; the brief has to point the critic at the recent diff.
 | F7 | 8.39 | seven defects in code written that morning, incl. a gate that could pass while blind and a TTL fix applied to one file but not its twin |
 | F8 | 8.4 | five more: a freeze guard **defeated by the function it guards**; a gate asserting strings that existed only in a comment; the ledger gate blind wherever a comment names the metering helper; the new BRKR chip making the nightly noise its own docstring forbids; and reading the market clock in the browser's timezone |
 | F9 | 8.4 (held) | the gate hardened in F6/F7/F8 was scanning **one seventh of the repo** — three unmetered Breeze calls on the busiest live path in data-service, invisible to the budget panel; and F8-04's accepted fix had silently deleted the only pre-open broker alarm |
+| F10 | 8.4 (held) | the gate's sixth root held a **byte-for-byte copy of the file the same commit metered**; the new quota bounded nothing and surfaced nothing |
+| F11 | 8.5 | two fixes that failed in the exact case they were written for — a holiday calendar wired into one branch of a ladder, a REFUSED rung below the state that causes it |
+| F12 | 8.6 | the Crashes column keyed on the wrong namespace (55 of 69 rows could never light), printed a confident 0 where the store could not speak, and its floor overstated its window by 42 h |
+| F13 | 8.7 | a login quota set at **96% of the day it was measured from**; an MCX hardcode silent over the settlement window and crying on full closures |
+| F14 | 8.8 | serving MCX's real window changed what `expected` meant and deleted the pre-open repair message — while two tests asserting that exact window passed, blinded by a fixture missing the new field |
+| F15 | 8.9 | a test that asserted a derived tuple **against itself**; a calendar speaking for a year it has no data for |
 
 Rules that came out of it, for whoever runs round N+1:
 1. **Point the critic at `git log --oneline -8` and the diff**, not only at the deployed pages.
@@ -100,3 +106,14 @@ Rules that came out of it, for whoever runs round N+1:
    the alarm could still change the outcome.
 8. **Verify navigation, not just presence.** A check that loaded `?page=` six times never left the default page
    and still "passed", because the thing it looked for lives in the header. The key is `?tab=`.
+9. **Derive, never transcribe.** Every list written by hand went stale: the gate's roots (five times), the
+   quota map, the kind map, the dirty-check exclusions, the datasets behind one job. Each had an authority
+   already in the repo — `services/*`, the job's own validation set, `STAGE_EXCLUDE_TOP`, `TERMINAL_DATASETS`.
+   Reading the authority is one line longer and cannot rot.
+10. **A fix that changes what a word means must re-check everything that reads it.** F14's `expected` is the
+    canonical case: serving MCX's real window was right, and it silently deleted a message 150 lines away.
+11. **Ask what a number claims.** A `0` says "this did not happen"; a dash says "we cannot see". A freshness
+    chip fed `new Date()` always looks fresh. A quota at 96% of a measured peak is not a bound. A floor
+    computed from the oldest row held is not the window the store can speak for.
+12. **Mutation-test every gate, and check it is not testing itself.** Two gates here asserted their own
+    output; one compared a constant to a regex that the constant satisfied by construction.
