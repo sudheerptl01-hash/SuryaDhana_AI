@@ -121,8 +121,21 @@ def _invalidate_breeze_client() -> None:
 
 
 _client_lock = threading.Lock()
-_client_cache: dict[str, Any] = {"key": None, "client": None, "error": None, "error_kind": None, "at": 0.0}
-_CLIENT_RETRY_AFTER_FAIL_S = 60.0
+_client_cache: dict[str, Any] = {"key": None, "client": None, "error": None, "error_kind": None,
+                                 "at": 0.0, "fails": 0}
+#: how long a FAILED login is remembered before another attempt is allowed, by consecutive failure count.
+#: Each attempt is a metered generate_session, so a flat 60 s was up to 1,440 calls a day — 36% of the daily cap
+#: spent discovering the same failure (measured: 126 attempts on 14 Nov with no session obtainable). A new token
+#: changes the cache key and bypasses this entirely, so recovery is never delayed.
+_CLIENT_RETRY_BACKOFF_S = (60.0, 120.0, 300.0, 900.0)
+_CLIENT_RETRY_AFTER_FAIL_S = _CLIENT_RETRY_BACKOFF_S[0]   # kept: the first wait, and what older callers read
+
+
+def _retry_wait_s(fails: int) -> float:
+    """The wait before the next login attempt after `fails` consecutive failures (capped at the last step)."""
+    if fails <= 0:
+        return 0.0
+    return _CLIENT_RETRY_BACKOFF_S[min(fails, len(_CLIENT_RETRY_BACKOFF_S)) - 1]
 
 
 def _client_error_kind(err: str | None) -> str:
@@ -190,11 +203,17 @@ def _get_breeze_client():
     key = (api_key, api_secret, extract_session_token(raw_token))
     with _client_lock:
         c = _client_cache
-        fresh_failure = c["error"] and time.monotonic() - c["at"] < _CLIENT_RETRY_AFTER_FAIL_S
-        if c["key"] == key and (c["client"] is not None or fresh_failure):
+        same_key = c["key"] == key
+        # a NEW token (the 08:00 job, a paste, the session guard) changes the key: the backoff never delays it
+        waited = time.monotonic() - c["at"]
+        fresh_failure = bool(c["error"]) and same_key and waited < _retry_wait_s(int(c.get("fails") or 0))
+        if same_key and (c["client"] is not None or fresh_failure):
             return c["client"], c["error"]
         client, err, kind = _build_breeze_client(*key)
-        c.update(key=key, client=client, error=err, error_kind=kind, at=time.monotonic())
+        # count consecutive failures of THIS token so each attempt waits longer than the last; any success, or a
+        # token change, resets the count to zero
+        fails = 0 if (client is not None or not err) else (int(c.get("fails") or 0) + 1 if same_key else 1)
+        c.update(key=key, client=client, error=err, error_kind=kind, at=time.monotonic(), fails=fails)
         return client, err
 
 

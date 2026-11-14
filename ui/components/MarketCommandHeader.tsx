@@ -46,6 +46,7 @@ import { AlertsBell } from '@/components/AlertsBell'
 import { T } from '@/components/terminal'
 import { goToPage } from '@/lib/navigate'
 import { DataStaleChip } from '@/components/datahealth/DataHealthView'
+import { BrokerChip } from '@/components/brkr/BrokerChip'   // F7-05: a dead broker session was invisible
 import { DisciplineHeaderChips } from '@/components/risk/HeaderChips'
 import { newWindow } from '@/lib/platform'
 import { chromePollMs, isFreshPrint, liveQuoteAt, niftySourceChip, nseTimeToEpoch, pickNiftySource } from '@/lib/feedState'
@@ -610,6 +611,7 @@ export function MarketCommandHeader({ onRefresh, refreshing, totalStocks, latest
           <IciciLight connected={ds.connected} provider={ds.provider} known={ds.lastChecked != null} />
           {/* terminal v2 PLAN 1.4: DATA n STALE (amber + red + gaps of the catalogued datasets) → SYS › DATA */}
           <DataStaleChip />
+          <BrokerChip />
         </div>
         {!desktop && <HeaderClock />}
         <div className="sd-h-actions" style={{ padding: '0 12px', borderLeft: `1px solid ${T.border}`, height: '100%', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>

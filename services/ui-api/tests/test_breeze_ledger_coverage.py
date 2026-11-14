@@ -123,3 +123,59 @@ def test_the_quote_cache_outlasts_the_poll_that_drives_it(router: str, component
     poll_ms = int(re.search(r"QUOTE_MS\s*=\s*([\d_]+)", ui).group(1).replace("_", ""))
     assert ttl >= poll_ms / 1000, (f"{router}: cache {ttl}s must span {component}'s {poll_ms / 1000:g}s poll, "
                                   f"or every poll costs a metered broker call")
+
+
+# ── a failed login must not spend the day's quota rediscovering itself (F7-05 follow-up, 14 Nov 2026) ─────────
+# Measured that day: by_method.generate_session reached 126 on a Saturday with no session obtainable, climbing
+# while the terminal sat open, because a failure was retried every 60 s and the desk quote paths call the client
+# on every poll. Each attempt is metered, so a flat 60 s is up to 840 calls across a 14 h day — a fifth of the
+# cap spent learning the same thing. These pin the backoff AND, more importantly, that recovery is never delayed.
+
+def test_the_login_backoff_grows_and_then_holds() -> None:
+    import sys
+    sys.path.insert(0, str(UI_API))
+    from routers.positions import _CLIENT_RETRY_BACKOFF_S, _retry_wait_s
+
+    assert _retry_wait_s(0) == 0.0                                  # no failures: no wait
+    waits = [_retry_wait_s(n) for n in range(1, len(_CLIENT_RETRY_BACKOFF_S) + 1)]
+    assert waits == list(_CLIENT_RETRY_BACKOFF_S), waits            # one step per consecutive failure
+    assert waits == sorted(waits), "each wait must be at least the previous one"
+    assert _retry_wait_s(99) == _CLIENT_RETRY_BACKOFF_S[-1], "it must cap, not grow forever"
+    # the whole point: the day's worth of attempts is bounded well under the cap
+    day, spent, n = 14 * 3600, 0.0, 0
+    while spent <= day:
+        n += 1
+        spent += _retry_wait_s(n)
+    assert n < 120, f"{n} attempts across a trading day is too many for a metered call"
+
+
+def test_a_new_session_token_bypasses_the_backoff_entirely(monkeypatch) -> None:
+    """The recovery path that must never regress: when the 08:00 job (or a paste, or the session guard) writes a
+    NEW token, the cache key differs and the client rebuilds at once — a long backoff on the OLD token must not
+    keep the terminal broker-less after the thing that fixes it has run."""
+    import sys
+    sys.path.insert(0, str(UI_API))
+    from routers import positions as pos
+
+    attempts: list[str] = []
+
+    def fake_build(api_key, api_secret, token):
+        attempts.append(token)
+        return (None, "session invalid", "session") if token == "OLD" else (object(), None, None)
+
+    monkeypatch.setattr(pos, "_build_breeze_client", fake_build)
+    monkeypatch.setattr(pos, "extract_session_token", lambda raw: raw)
+    for k, v in (("ICICI_API_KEY", "k"), ("ICICI_API_SECRET", "s"), ("ICICI_SESSION_TOKEN", "OLD")):
+        monkeypatch.setenv(k, v)
+    pos._client_cache.update(key=None, client=None, error=None, error_kind=None, at=0.0, fails=0)
+
+    assert pos._get_breeze_client()[0] is None and attempts == ["OLD"]
+    pos._get_breeze_client()                                        # immediately again: the backoff holds it
+    assert attempts == ["OLD"], f"a second attempt inside the backoff window: {attempts}"
+    assert pos._client_cache["fails"] == 1
+
+    monkeypatch.setenv("ICICI_SESSION_TOKEN", "NEW")                # the login job lands a working token
+    client, err = pos._get_breeze_client()
+    assert client is not None and err is None, (client, err)
+    assert attempts == ["OLD", "NEW"], f"the new token must be tried at once: {attempts}"
+    assert pos._client_cache["fails"] == 0, "a success resets the failure count"
