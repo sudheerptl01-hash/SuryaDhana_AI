@@ -60,8 +60,14 @@ export function DataHealthView() {
     // whose whole job is data trust. A dash, never a 0, when the store cannot speak for the period.
     { key: 'fails', label: 'Crashes', align: 'right', sort: r => r.job_failures ?? -1,
       title: 'runs of this dataset\u2019s job that ended in an error or were re-queued after a crash, within the window the job store still holds',
-      render: r => r.job_failures == null ? <span style={{ color: T.dim }}>—</span>
-        : <span style={{ color: r.job_failures > 0 ? T.amber : T.dim }}>{r.job_failures || '·'}</span> },
+      // R15-E: `0` and `—` were both T.dim, and `0 || '·'` rendered the clean case as a middot — so "this
+      // job ran and did not crash" looked exactly like "this store has never seen this job". Those are the
+      // two meanings this column exists to separate, so they must not share a glyph OR a colour.
+      render: r => r.job_failures == null
+        ? <span style={{ color: T.dim }} title="this job has not entered the durable queue, so there is nothing to count">—</span>
+        : r.job_failures > 0
+          ? <span style={{ color: T.amber }}>{r.job_failures}</span>
+          : <span style={{ color: T.muted }} title="this job ran and did not crash in the counted window">0</span> },
     { key: 'note', label: 'What it means', render: r => <span style={{ color: T.text, whiteSpace: 'normal', display: 'inline-block', minWidth: 260 }}>{rowSentence(r)}</span> },
   ], [])
   const n = staleCount(d)

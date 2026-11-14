@@ -362,6 +362,47 @@ def _declared_callers() -> dict[str, str]:
     return found
 
 
+def test_no_quota_belongs_to_a_caller_the_code_never_declares() -> None:
+    """A quota for a caller nothing declares is dead weight that READS as coverage.
+
+    R16: this assertion used to sit inside the peak test, AFTER a `pytest.skip("no live ledger")` on
+    data/breeze_budget.sqlite — which is gitignored. So the one check that caught `chain_poller` (700/day
+    reserved for a caller that never existed) was dead in CI and on every fresh checkout, and would have
+    stayed dead silently. It is pure source analysis and needs no ledger, so it runs on its own.
+    """
+    from shared.breeze_budget import DEFAULT_CALLER_QUOTAS
+
+    orphans = sorted(c for c in DEFAULT_CALLER_QUOTAS if c not in _declared_callers())
+    assert not orphans, (
+        f"quota(s) for callers no code declares — either the caller was renamed and its quota left behind, "
+        f"or the quota is aspirational: {orphans}")
+
+
+def test_every_generate_session_site_shares_one_caller_label() -> None:
+    """The login's bound is a CALLER quota, so two labels on the same call means two bounds and neither one
+    governs it — which is what `ui-api.probe` vs `ui-api.login` was. The comment next to the fix says "a bound
+    you can dodge by relabelling is not a bound"; nothing asserted it (R16). The ledger has no method
+    dimension, so this is the only place that can."""
+    import re
+
+    from test_breeze_ledger_coverage import SCANNED_ROOTS
+
+    labels: dict[str, str] = {}
+    for root in SCANNED_ROOTS:
+        for path in sorted(root.rglob("*.py")):
+            if "/tests/" in str(path):
+                continue
+            code = "\n".join(ln.split("#", 1)[0] for ln in path.read_text(encoding="utf-8").split("\n"))
+            for m in re.finditer(r'\.guard\(\s*([^,]+),\s*["\']generate_session["\']', code):
+                labels[m.group(1).strip()] = str(path)
+
+    assert labels, "no generate_session guard site found — the patterns stopped matching"
+    resolved = {("ui-api.login" if "LOGIN" in lbl.upper() else lbl.strip('"\'')) for lbl in labels}
+    assert len(resolved) == 1, (
+        f"generate_session is guarded under more than one caller label, so no single quota governs the login: "
+        f"{labels}")
+
+
 def test_no_quota_sits_at_its_observed_peak() -> None:
     """A quota must have real headroom over what that caller has actually spent in a day.
 
@@ -411,11 +452,7 @@ def test_no_quota_sits_at_its_observed_peak() -> None:
         f"the login quota ({DEFAULT_CALLER_QUOTAS['ui-api.login']}) must clear its worst observed day "
         f"({login_peak} generate_session calls) with room to spare")
 
-    # …and the other direction: a quota for a caller no code declares is dead weight that reads as coverage
-    orphans = sorted(c for c in DEFAULT_CALLER_QUOTAS if c not in _declared_callers())
-    assert not orphans, (
-        f"quota(s) for callers no code declares — either the caller was renamed and its quota left behind, "
-        f"or the quota is aspirational: {orphans}")
+
 
 
 def test_the_mcx_window_is_not_served_for_years_the_calendar_cannot_speak_for() -> None:
