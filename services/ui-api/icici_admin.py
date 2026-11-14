@@ -415,7 +415,10 @@ def probe_breeze_connection(api_key: str, api_secret: str, session_token: str,
         try:
             breeze = BreezeConnect(api_key=api_key)
             from shared.breeze_budget import ledger as _ledger      # PLAN §0.11: the probe's two ICICI calls are metered too
-            with _ledger().guard("ui-api.probe", "generate_session"):
+            # the LOGIN label, not the probe's: generate_session is the same ICICI call whichever path
+            # makes it, and two labels meant two quotas, so neither governed the thing they both spend. The
+            # one call the terminal cannot do without needs a single bound (F15 / Architecture).
+            with _ledger().guard("ui-api.login", "generate_session"):
                 breeze.generate_session(api_secret=api_secret, session_token=token)
             with _ledger().guard("ui-api.probe", "get_customer_details"):
                 details = breeze.get_customer_details(api_session=token)

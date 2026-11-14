@@ -103,8 +103,9 @@ def test_caps_clamp_to_the_documented_ceiling(tmp_path: Path) -> None:
     assert led.cap_minute == bb.DOC_LIMIT_PER_MINUTE == 100 and led.cap_day == bb.DOC_LIMIT_PER_DAY == 5000
     led2 = bb.BreezeBudget(tmp_path / "d.sqlite", cap_minute=0, cap_day=-1)       # nonsense → defaults
     assert led2.cap_minute == bb.DEFAULT_CAP_PER_MINUTE and led2.cap_day == bb.DEFAULT_CAP_PER_DAY
-    # The O-T6 pilot values must not drift…
-    assert bb.DEFAULT_CALLER_QUOTAS["chain_poller"] == 700
+    # The O-T6 pilot value that still has a caller must not drift.  was removed in F15: no code
+    # ever declared it, so its 700/day reserved a share of the cap for a caller that does not exist.
+    assert "chain_poller" not in bb.DEFAULT_CALLER_QUOTAS
     assert bb.DEFAULT_CALLER_QUOTAS["iv_intraday"] == 800          # the fo_iv pilot's caller, PLAN 1.1
     # …and F10-02: every caller that spends quota must HAVE a quota. The live-quote poller went unmetered and
     # therefore unbounded until 14 Nov, and it is the biggest spender in the stack (~1,580/day for the NIFTY
@@ -325,6 +326,42 @@ def test_every_caller_name_in_the_code_has_a_quota() -> None:
         f"day and the chain fails mid-session: {missing}")
 
 
+def _declared_callers() -> dict[str, str]:
+    """Every Breeze caller label the CODE declares, as {label: file}.
+
+    Shared by both quota gates: one asserts every declared caller has a quota, the other that every quota
+    belongs to a declared caller. They were two copies of this scan, and the second copy referenced the
+    first's locals — so it raised NameError instead of checking anything.
+    """
+    import ast
+    import re as _re
+
+    from test_breeze_ledger_coverage import SCANNED_ROOTS
+
+    pats = (_re.compile(r'\.guard\(\s*["\']([\w.\-]+)["\']'),
+            _re.compile(r'caller\s*=\s*["\']([\w.\-]+)["\']'),
+            _re.compile(r'^[A-Z_]*CALLER[A-Z_]*\s*=\s*["\']([\w.\-]+)["\']', _re.M))
+    found: dict[str, str] = {}
+    scanned = 0
+    for root in SCANNED_ROOTS:
+        for path in sorted(root.rglob("*.py")):
+            if "/tests/" in str(path):
+                continue
+            scanned += 1
+            src = path.read_text(encoding="utf-8")
+            try:
+                ast.parse(src)
+            except SyntaxError:                                # pragma: no cover
+                continue
+            code_only = "\n".join(ln.split("#", 1)[0] for ln in src.split("\n"))
+            for pat in pats:
+                for m in pat.finditer(code_only):
+                    found.setdefault(m.group(1), str(path))
+    assert scanned > 100, f"only {scanned} modules scanned — are the roots right?"
+    assert len(found) >= 8, f"only {len(found)} caller labels found — the patterns stopped matching: {found}"
+    return found
+
+
 def test_no_quota_sits_at_its_observed_peak() -> None:
     """A quota must have real headroom over what that caller has actually spent in a day.
 
@@ -359,10 +396,26 @@ def test_no_quota_sits_at_its_observed_peak() -> None:
         "quota(s) within 20% of a peak this caller has already reached — the day it is exceeded is the day "
         f"the terminal needs the call most: {tight}")
 
-    # and the login specifically, because its refusal is the one that cannot be worked around
-    login_peak = peaks.get("ui-api.login", 0) or peaks.get("ui-api.positions", 0)
-    assert DEFAULT_CALLER_QUOTAS["ui-api.login"] >= max(200, login_peak * 2), (
-        "the login quota must clear its worst observed day with room to spare")
+    # The login specifically, because its refusal is the one that cannot be worked around. Sized off the
+    # METHOD rather than any caller label: generate_session is the same ICICI call whoever makes it, and the
+    # first version read `peaks["ui-api.login"] or peaks["ui-api.positions"]`, an `or` chain that silently
+    # measured nothing once the calls moved to a third label. A method-level peak cannot be relabelled away.
+    con = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True, timeout=5.0)
+    try:
+        login_peak = max((int(n) for _d, n in con.execute(
+            "SELECT day, COUNT(*) FROM calls WHERE method = 'generate_session' GROUP BY day")), default=0)
+    finally:
+        con.close()
+    assert login_peak > 0, "no generate_session rows — this assertion would pass vacuously"
+    assert DEFAULT_CALLER_QUOTAS["ui-api.login"] >= max(200, login_peak * 1.5), (
+        f"the login quota ({DEFAULT_CALLER_QUOTAS['ui-api.login']}) must clear its worst observed day "
+        f"({login_peak} generate_session calls) with room to spare")
+
+    # …and the other direction: a quota for a caller no code declares is dead weight that reads as coverage
+    orphans = sorted(c for c in DEFAULT_CALLER_QUOTAS if c not in _declared_callers())
+    assert not orphans, (
+        f"quota(s) for callers no code declares — either the caller was renamed and its quota left behind, "
+        f"or the quota is aspirational: {orphans}")
 
 
 def test_the_mcx_window_is_not_served_for_years_the_calendar_cannot_speak_for() -> None:

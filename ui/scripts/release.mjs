@@ -57,7 +57,7 @@ export const COMPRESSIBLE_EXT = new Set([
 /** Top-level entries of ui/ that never belong in a staging copy (build outputs, deps, local state). */
 // package-lock.json stays out so Next sees ONE lockfile (ui/package-lock.json, found upward) and does not
 // warn about an ambiguous workspace root; modules resolve upward to ui/node_modules either way.
-const STAGE_EXCLUDE_TOP = new Set([
+export const STAGE_EXCLUDE_TOP = new Set([
   'node_modules', 'dist', 'out', 'scripts', '.build-ui', '.gstack', 'tsconfig.tsbuildinfo', 'package-lock.json',
 ])
 /** Marker that ui/next.config.js requires before it allows NEXT_OUTPUT=export. */
@@ -538,6 +538,13 @@ function intOpt(opts, k, d) {
 export function runCli(argv) {
   const { cmd, opts } = parseCli(argv)
   switch (cmd) {
+    // What a build does NOT ship. The dirty check reads this instead of hand-listing paths: a change to
+    // ui/scripts or package-lock.json cannot alter the exported bundle, and counting it as "dirty" would
+    // make the -dirty suffix fire for edits that provably cannot affect what the page renders — a signal
+    // that cries for everything is one nobody reads. Derived, never transcribed (R15-A's lesson).
+    case 'stage-excludes':
+      process.stdout.write(JSON.stringify({ excludes: [...STAGE_EXCLUDE_TOP].sort() }))
+      return
     case 'stage':
       return stage(req(opts, 'src'), req(opts, 'dest'))
     case 'verify':

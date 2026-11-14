@@ -13,6 +13,7 @@ import zlib from 'node:zlib'
 import {
   NATIVE_MANIFEST,
   RELEASE_ID_RE,
+  STAGE_EXCLUDE_TOP,
   STAGING_MARKER,
   atomicPoint,
   carry,
@@ -300,4 +301,22 @@ test('build_ui.sh appends -dirty from the same flag the manifest records', () =>
   const code = sh.split('\n').filter((l) => !l.trim().startsWith('#')).join('\n')
   assert.match(code, /GIT_DIRTY.*=.*1.*_suffix="-dirty"|_suffix="-dirty"/)
   assert.match(code, /\(-dirty\)\?\$/)       // the validator accepts it too, or every dirty build would die
+})
+
+test('the dirty check excludes exactly what the build does not ship', () => {
+  // R15 / Platform: the exclusion list went stale twice — five hand-written directories while the build
+  // staged every top-level entry, then the whole tree including paths the build provably never ships. The
+  // shell now reads STAGE_EXCLUDE_TOP itself, so "could an uncommitted file have changed the bundle?" is
+  // answered by the only code that knows which files those are.
+  const sh = fs.readFileSync(new URL('../../scripts/build_ui.sh', import.meta.url), 'utf8')
+  const code = sh.split('\n').filter((l) => !l.trim().startsWith('#')).join('\n')
+  assert.match(code, /STAGE_EXCLUDE_TOP/, 'the dirty check no longer derives its exclusions')
+  assert.match(code, /:\(exclude\)ui\//, 'the exclusions are not applied as a git pathspec')
+  // and it must refuse rather than silently widen: an empty list would quietly re-include everything, which
+  // is exactly how the first version of this failed (a two-stage pipe produced nothing and still "worked")
+  assert.match(code, /\[ -n "\$_ex" \] \|\| die/, 'an unreadable exclusion list must stop the build, not widen it')
+  // the set itself must still cover the obvious non-bundle inputs
+  for (const top of ['node_modules', 'dist', 'scripts', 'package-lock.json', 'tsconfig.tsbuildinfo']) {
+    assert.ok(STAGE_EXCLUDE_TOP.has(top), `${top} must not count toward a dirty bundle`)
+  }
 })

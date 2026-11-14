@@ -23,7 +23,7 @@ Rules:
 
 Environment: ``BREEZE_BUDGET_DB`` (SQLite path; under pytest a temp file so a test can never write ``data/``),
 ``BREEZE_BUDGET_CAP_DAY`` (default 4000), ``BREEZE_BUDGET_CAP_MINUTE`` (default 60),
-``BREEZE_BUDGET_QUOTAS`` (``caller=n,caller=n``; defaults ``chain_poller=700,iv_intraday=800``).
+``BREEZE_BUDGET_QUOTAS`` (``caller=n,caller=n``; defaults ``iv_intraday=800,ui-api.login=500``, …).
 """
 from __future__ import annotations
 
@@ -47,7 +47,11 @@ DOC_LIMIT_PER_DAY = 5000
 DEFAULT_CAP_PER_MINUTE = 60         # the owner's budget, below the ceiling (O-T6 pending; PLAN 1.1: "≤ 30/min" for the poller)
 DEFAULT_CAP_PER_DAY = 4000
 DEFAULT_CALLER_QUOTAS: dict[str, int] = {
-    "chain_poller": 700, "iv_intraday": 800,
+    # `chain_poller` was removed (F15): it was the O-T6 pilot's name and no code ever declared that caller,
+    # so it reserved 700/day of a 4,000 cap for something that does not exist while reading as coverage. The
+    # companion gate requires a quota for every caller the code DOES declare, so a real chain poller added
+    # tomorrow fails the suite until it is given one.
+    "iv_intraday": 800,
     # F10-02: until 14 Nov 2026 the live-quote poller was not metered at all, so it had no quota either — and
     # it is the biggest spender in the stack: data-service's NIFTY poller calls get_live_quote whenever the
     # websocket tick is older than 5 s (its own comment prices that at ~1,580/day), and the watchlist poller
@@ -79,7 +83,11 @@ DEFAULT_CALLER_QUOTAS: dict[str, int] = {
     # a refused generate_session means no broker session for the REST OF THE DAY even if the owner answers
     # the OTP. The one call the terminal cannot do without gets the most headroom, not the least.
     "ui-api.positions": 1200,         # holdings / funds / positions
-    "ui-api.login": 300,              # generate_session only — kept separate so holdings cannot starve it
+    # 500 against a MEASURED method-level peak of 202 generate_session calls in a day. The caller-label view
+    # showed only 115 because the attempts were split across two labels — which is the same reason both login
+    # paths now share one label: a bound you can dodge by relabelling is not a bound. Still an eighth of
+    # cap_day 4,000.
+    "ui-api.login": 500,              # generate_session only — kept separate so holdings cannot starve it
     "ui-api.probe": 250,              # the connection probe (peak 122)
     "ui-api.margin": 200,             # OSTR's SPAN calls
     "ui-api.gold_settlement": 100,
@@ -170,7 +178,7 @@ def _clamp_cap(value: int | None, default: int, ceiling: int) -> int:
 
 
 def parse_quotas(text: str | None, default: Mapping[str, int] | None = None) -> dict[str, int]:
-    """``"chain_poller=700,tick_engine=1200"`` → dict; malformed items are ignored; defaults fill the rest."""
+    """``"iv_intraday=700,ui-api.login=400"`` → dict; malformed items are ignored; defaults fill the rest."""
     out = dict(default or DEFAULT_CALLER_QUOTAS)
     for item in (text or "").split(","):
         if "=" not in item:
