@@ -38,6 +38,13 @@ in_freeze_window() {   # in_freeze_window <service> -> 0 when a restart of it is
   { [ "$hm" -ge 745 ] && [ "$hm" -le 920 ]; } || { [ "$hm" -ge 1830 ] && [ "$hm" -le 2115 ]; }
 }
 
+refuse_in_freeze_set() {   # refuse_in_freeze_set <action> "<svc> <svc> …" — guards each frozen service in the set
+  local action=$1 svc
+  for svc in $2; do
+    refuse_in_freeze "$action" "$svc"
+  done
+}
+
 refuse_in_freeze() {   # refuse_in_freeze <action> <service>  -> exits 3 unless overridden or run by the watchdog
   local action=$1 svc=$2 now; now=$(TZ=Asia/Kolkata date "+%H:%M")
   in_freeze_window "$svc" || return 0
@@ -1105,13 +1112,22 @@ main() {
       ;;
     stop)
       if [ -n "$svc" ]; then require_service "$svc"; refuse_in_freeze stop "$svc"; mark_paused "$svc"; stop_one "$svc"
-      else stop_services; fi
+      else
+        # F7-03: the bare form stops BOTH frozen services and was refused by nothing — it would have left
+        # data-service and master-controller down AND paused straight through the 08:00 ICICI login. Only the
+        # frozen services actually IN the set are guarded, so `START_SET='ui-api frontend' stop` is unaffected.
+        refuse_in_freeze_set stop "${START_SET:-$CORE_SERVICES}"
+        stop_services
+      fi
       ;;
     restart)
       if [ -n "$svc" ]; then
         require_service "$svc"; refuse_in_freeze restart "$svc"
         stop_one "$svc"; clear_paused "$svc"; clear_hang_history "$svc"; start_redis; start_one "$svc"
       else
+        # F7-03: same hole on the bare form — `./start-local.sh restart` restarts data-service AND
+        # master-controller, so it must face the same window the per-service form does (set-aware, below).
+        refuse_in_freeze_set restart "${START_SET:-$CORE_SERVICES}"
         stop_services
         check_prerequisites "${START_SET:-$CORE_SERVICES}"
         install_deps "${START_SET:-$CORE_SERVICES}"

@@ -18,6 +18,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 UI_API = Path(__file__).resolve().parents[1]
 
 #: the SDK methods that cost a call against ICICI's quota (reads and the margin calculator; order methods are
@@ -25,7 +27,9 @@ UI_API = Path(__file__).resolve().parents[1]
 METERED_METHODS = ("get_quotes", "get_historical_data_v2", "get_historical_data", "get_option_chain_quotes",
                    "margin_calculator", "get_margin", "get_portfolio_holdings", "get_portfolio_positions",
                    "get_funds", "get_customer_details", "get_trade_list", "get_order_detail")
-_CALL = re.compile(r"\bbreeze\.(" + "|".join(METERED_METHODS) + r")\s*\(")
+# any receiver, not just a local literally named `breeze` (F7-02: self.client.get_quotes(...) and
+# clients[0].get_quotes(...) were invisible to the first version of this gate)
+_CALL = re.compile(r"[\w.\[\]()]+\.(" + "|".join(METERED_METHODS) + r")\s*\(")
 #: how many lines above a call the metering may appear (a guard block plus the call's own argument lines)
 _WINDOW = 8
 
@@ -69,21 +73,53 @@ def test_the_four_f6_sites_are_metered_with_their_own_caller_labels() -> None:
     assert gold.count('_breeze_call(breeze.get_historical_data_v2, caller="ui-api.gold-preopen"') == 1
 
 
-def test_the_detector_would_catch_a_bare_call(tmp_path: Path) -> None:
-    """Negative control: the regex and the window really do flag an unmetered call, and really do allow a
-    metered one — otherwise this gate could pass by being blind."""
-    bare = "def f(breeze):\n    q = breeze.get_quotes(stock_code='GOLD')\n"
-    metered = ("def f(breeze):\n    with ledger().guard('x', 'get_quotes'):\n"
-               "        q = breeze.get_quotes(stock_code='GOLD')\n")
-    assert _CALL.search(bare) and _CALL.search(metered)                     # both are call sites
-    assert "ledger().guard(" not in bare and "ledger().guard(" in metered   # only one is metered
+def test_the_detector_actually_runs_and_separates_bare_from_metered(tmp_path, monkeypatch) -> None:
+    """F7-02: the first version of this control only substring-tested two strings and never called the detector,
+    so the gate could have passed while scanning nothing. This plants a two-file tree, points the scanner at it
+    and asserts it returns EXACTLY the bare call — including the receiver forms and the window edge a reviewer
+    found it blind to."""
+    import test_breeze_ledger_coverage as mod
+
+    (tmp_path / "routers").mkdir()
+    (tmp_path / "routers" / "bare.py").write_text(
+        "def f(c):\n    q = c.get_quotes(stock_code='GOLD')\n"                       # receiver NOT named breeze
+        "def g(self):\n    h = self.client.get_historical_data_v2(x=1)\n")          # attribute chain
+    (tmp_path / "routers" / "metered.py").write_text(
+        "def f(breeze):\n    with ledger().guard('x', 'get_quotes'):\n"
+        "        q = breeze.get_quotes(stock_code='GOLD')\n"
+        "def g(breeze):\n    q = _breeze_call(breeze.get_quotes, caller='x')\n")
+    monkeypatch.setattr(mod, "UI_API", tmp_path)
+    found = mod._bare_sdk_calls()
+    assert len(found) == 2, found                      # both bare forms seen, neither metered one flagged
+    assert all("bare.py" in f for f in found), found
+
+    # and it must not pass by scanning nothing: an empty tree yields no files, which is itself a failure mode
+    empty = tmp_path / "empty"
+    (empty / "routers").mkdir(parents=True)
+    monkeypatch.setattr(mod, "UI_API", empty)
+    assert mod._bare_sdk_calls() == []
+    assert list(empty.rglob("*.py")) == [], "the empty-tree case is only meaningful while the tree is empty"
 
 
-def test_the_quote_cache_outlasts_the_desk_poll() -> None:
-    """F6-01's other half: commodity_desk cached quotes for 15 s while the UI polls every 30 s, so EVERY poll
-    was a deliberate cache miss and the comment "concurrent viewers share one broker call" was false."""
-    desk = (UI_API / "routers" / "commodity_desk.py").read_text(encoding="utf-8")
-    ttl = int(re.search(r"^QUOTE_TTL_S\s*=\s*(\d+)", desk, re.M).group(1))
-    ui = (UI_API.parents[1] / "ui" / "components" / "commodity" / "CommodityDesk.tsx").read_text(encoding="utf-8")
+def test_the_gate_scans_a_non_trivial_number_of_files() -> None:
+    """F7-02: with UI_API pointing anywhere wrong, every assertion above passes vacuously. Pin the floor."""
+    scanned = [p for p in UI_API.rglob("*.py") if "/tests/" not in str(p)]
+    assert len(scanned) > 40, f"only {len(scanned)} ui-api modules scanned — is UI_API right?"
+    assert (UI_API / "routers" / "mcx.py").exists()
+
+
+#: every (router that caches a broker quote, component that polls it) pair. F7-01: the first version of this
+#: test hard-coded the commodity pair, so mcx.py kept the identical 15 s-vs-30 s mismatch — and once the path was
+#: metered, each miss became a real ledger call. A new desk must be added here.
+QUOTE_PAIRS = (("commodity_desk.py", "commodity/CommodityDesk.tsx"), ("mcx.py", "McxGoldDesk.tsx"))
+
+
+@pytest.mark.parametrize("router,component", QUOTE_PAIRS)
+def test_the_quote_cache_outlasts_the_poll_that_drives_it(router: str, component: str) -> None:
+    """A cache shorter than the poll means EVERY poll is a guaranteed miss — and on a metered path, a call."""
+    src = (UI_API / "routers" / router).read_text(encoding="utf-8")
+    ttl = int(re.search(r"^QUOTE_TTL_S\s*=\s*(\d+)", src, re.M).group(1))
+    ui = (UI_API.parents[1] / "ui" / "components" / component).read_text(encoding="utf-8")
     poll_ms = int(re.search(r"QUOTE_MS\s*=\s*([\d_]+)", ui).group(1).replace("_", ""))
-    assert ttl >= poll_ms / 1000, f"cache {ttl}s must span the {poll_ms / 1000:g}s poll or every poll costs a call"
+    assert ttl >= poll_ms / 1000, (f"{router}: cache {ttl}s must span {component}'s {poll_ms / 1000:g}s poll, "
+                                  f"or every poll costs a metered broker call")

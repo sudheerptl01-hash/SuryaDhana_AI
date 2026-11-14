@@ -21,7 +21,7 @@ this account, what the payload looks like (is there an LTP? an OI? enough to com
 because that cost decides whether the feature is worth building. A +/-N-strike window at 2 rights is 2N+2 calls
 per contract per snapshot against a 4,000/day ledger cap shared with everything else.
 
-    python scripts/probe_mcx_options.py                      # GOLD, 2 strikes either side (10 calls)
+    python scripts/probe_mcx_options.py                      # SILVER, 2 strikes either side (10 calls)
     python scripts/probe_mcx_options.py --family SILVER --strikes 1
     python scripts/probe_mcx_options.py --dry-run            # show the plan and the call cost, ask nothing
 
@@ -147,10 +147,17 @@ def main(argv: list[str] | None = None) -> int:
     out.update({"served": served, "refused": refused, "broker_code": broker_code,
                 "sample_fields": shapes[:3]})
     all_fields = [f for sh in shapes for f in sh.get("_all", sh["fields"])]
-    has_price = any("ltp" in f.lower() or "last" in f.lower() or "close" in f.lower() for f in all_fields)
+    # F7-06: including "close" made this unfalsifiable — Breeze quote rows carry previous_close, so ANY served
+    # strike would have set it true, on the very field that decides whether a chain is assemblable. A tradable
+    # price means a traded/quoted one; previous_close is explicitly NOT that, and is reported separately.
+    def _has(*needles: str) -> bool:
+        return any(any(n in f.lower() for n in needles) for f in all_fields)
+    has_price = _has("ltp", "last_traded", "best_bid", "best_offer", "bid", "offer")
+    has_prev_close_only = (not has_price) and _has("previous_close", "close")
     has_oi = any("open_interest" in f.lower() or f.lower() in ("oi", "openinterest") for f in all_fields)
     for sh in shapes:
         sh.pop("_all", None)                                        # the report prints the display list only
+    out["has_prev_close_only"] = has_prev_close_only
     out["verdict"] = ("MCX options ARE served per strike: a chain is assemblable at "
                       f"{planned} calls per snapshot (price={has_price}, open_interest={has_oi}); "
                       "IV must be computed locally (Black-76 on the futures price, as the NSE path does)"

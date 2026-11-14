@@ -51,7 +51,9 @@ router = APIRouter()
 IST = specs.IST
 _TIMEOUT = httpx.Timeout(15.0)
 _cache = TTLCache("mcx", max_items=64, default_ttl=600)
-QUOTE_TTL_S = 15          # UI polls every 30 s; concurrent viewers share one broker call
+QUOTE_TTL_S = 35          # > the UI's 30 s poll (F7-01): at 15 s every poll missed, so the claim that
+                          # concurrent viewers share one broker call was false — and since F6 metered
+                          # this path, each miss is a real ledger call (~1,740 an MCX session)
 BREEZE_BROKEN_TTL_S = 600
 
 

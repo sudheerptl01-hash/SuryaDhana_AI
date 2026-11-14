@@ -373,3 +373,15 @@ def test_a_service_outside_the_freeze_list_is_never_refused(tree):
     for svc in ("ui-api", "frontend"):
         r = sh(tree, FREEZE + f'date() {{ echo "0800"; }}; CALLED_BY_WATCHDOG=0; refuse_in_freeze stop {svc}; echo RC=$?')
         assert "RC=0" in r.stdout and "Refusing" not in r.stdout, svc
+
+
+def test_the_bare_restart_and_stop_forms_face_the_freeze_window_too(tree):
+    """F7-03: the guard covered `restart <svc>` but not bare `restart`, which restarts data-service AND
+    master-controller — and bare `stop` would have left both down and PAUSED through the 08:00 login."""
+    src = (tree / "start-local.sh").read_text()
+    stop_branch = src.split("    stop)")[1].split(";;")[0]
+    restart_branch = src.split("    restart)")[1].split(";;")[0]
+    for name, branch in (("stop", stop_branch), ("restart", restart_branch)):
+        else_part = branch.split("else", 1)[1]
+        assert "refuse_in_freeze" in else_part, f"the bare `{name}` form is unguarded"
+        assert "data-service" in else_part and "master-controller" in else_part, f"bare `{name}` misses a service"

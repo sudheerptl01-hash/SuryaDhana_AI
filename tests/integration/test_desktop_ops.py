@@ -139,8 +139,10 @@ def test_rotation_still_renames_a_log_nobody_has_open(tree, tmp_path):
 ])
 def test_prerequisite_checks_see_the_start_set(tree, cmd, start_set, want):
     # SAFETY: stop_services and check_prerequisites are replaced; check_prerequisites exits, so nothing ever starts
+    # FREEZE_OVERRIDE: this case exercises the prerequisite wiring, not the restart freeze window (F7-03 added
+    # that guard to the bare forms), and a test must not pass or fail by the hour it runs at.
     body = ("stop_services() { echo STOPPED; }; check_prerequisites() { echo \"PRE[$1]\"; exit 0; }; "
-            f"START_SET='{start_set}' main {cmd}")
+            f"FREEZE_OVERRIDE=1 START_SET='{start_set}' main {cmd}")
     r = sh(tree, source(body))
     assert r.returncode == 0, r.stderr
     assert f"PRE[{want}]" in r.stdout

@@ -72,7 +72,10 @@ const orphans: string[] = []
 for (const file of walk(COMPONENTS)) {
   const base = file.split('/').pop()!
   const src = text.get(file)!
-  const exported = [...src.matchAll(/export\s+(?:default\s+)?function\s+([A-Z]\w+)/g)].map(m => m[1])
+  // F7-09: `export const Foo = () => ...` and `export class Foo` are components too — the first version
+  // matched only `export function`, so 4 of 153 files were skipped silently (all 4 happened to be
+  // referenced, so nothing hid, but the blindness was real).
+  const exported = [...src.matchAll(/export\s+(?:default\s+)?(?:function|const|class)\s+([A-Z]\w+)/g)].map(m => m[1])
   if (exported.length === 0) continue                        // no component export: a helper module, not a surface
   // referenced by any OTHER file, by import path or by JSX usage of one of its exports
   const stem = base.replace(/\.tsx$/, '')

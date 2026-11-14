@@ -27,6 +27,8 @@ called by no component); this view keeps `status` / `data_service` keys so an ol
 """
 from __future__ import annotations
 
+import re
+
 import os
 import sys
 from collections.abc import Iterable
@@ -306,6 +308,17 @@ def _catchup_at(jobs: list[dict[str, Any]], job_id: str | None = None) -> str | 
     return str(j["next_run_ist"]) if job_id in SELF_CATCHUP_JOBS and j.get("next_run_ist") else None
 
 
+def _restates_lag(extra: str, words: str) -> bool:
+    """True when `extra` only repeats a lag the sentence already states (F7-04). data-service phrases it
+    "N session(s) behind the expected one"; this function has already said "N sessions behind" — the same fact in
+    different words, which a substring test cannot see, so the only red row on the DATA page stated its lag
+    twice. Compare the NUMBER plus the word "behind" instead of the text."""
+    m = re.search(r"(\d+)\s+session", extra)
+    if not m or "behind" not in extra:
+        return False
+    return bool(re.search(rf"\b{m.group(1)}\s+sessions?\b", words)) and "behind" in words
+
+
 def _sentence(as_of: date | None, expected_by: str | None, lag: int | None, state: str, extra: str | None = None) -> str:
     """The honest line: "stored 30 Oct · expected by 21:00 · 3 sessions behind" (+ B1's own reason when it adds one)."""
     if as_of is None:
@@ -316,7 +329,7 @@ def _sentence(as_of: date | None, expected_by: str | None, lag: int | None, stat
             words += f" · expected by {expected_by}"
         if lag:
             words += f" · {lag} session{'s' if lag != 1 else ''} behind"
-    if extra and extra not in words:
+    if extra and extra not in words and not _restates_lag(extra, words):
         words += f" · {extra}"
     return words
 
