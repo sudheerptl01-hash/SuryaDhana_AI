@@ -115,3 +115,8 @@ graphify-out/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# TypeScript incremental build cache — a build artifact: it changes on every `tsc` run, so tracking it
+# made every tree permanently dirty and, once the release id learned to say -dirty, made every build claim
+# it did not match HEAD.
+ui/tsconfig.tsbuildinfo
