@@ -206,7 +206,13 @@ def results_filings_by_day(start: date, end: date, paced: Any = None) -> Optiona
             if r.get("symbol"):
                 by_symbol.setdefault(str(r["symbol"]).upper(), []).append(r)
         d += timedelta(days=1)
-    return {sym: sorted(set(ann)) for sym, rows in by_symbol.items() if (ann := results_announcements(rows))}
+    # R17-A: `sorted(set(ann))` re-sorted the very tuples whose comparison the callee was fixed for — the
+    # same TypeError, in the caller the fix's own comment named as the blast radius ("results_filings_by_day
+    # builds every symbol inside one comprehension"). `results_announcements` already returns them sorted, so
+    # the only work left is dedupe, and dict.fromkeys does that while preserving that order and comparing
+    # nothing. A sort that was never needed is a sort that cannot raise.
+    return {sym: list(dict.fromkeys(ann)) for sym, rows in by_symbol.items()
+            if (ann := results_announcements(rows))}
 
 
 def fetch_releases(symbol: str, client: Optional[httpx.Client] = None, sleep_s: float = 0.6,

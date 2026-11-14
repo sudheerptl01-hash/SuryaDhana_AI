@@ -427,22 +427,32 @@ def test_every_mcx_trading_window_caller_is_known_and_the_deciders_guard_the_yea
             if n:
                 callers[str(path.relative_to(repo))] = n
 
-    #: callers that DECIDE with the window and therefore guard the year first
+    #: callers that DECIDE with the window and therefore guard the year first.
+    #: R17-B: the first version of this list held only data-service's copy — and CLAUDE.md's wave-1d contract
+    #: says "ui-api computes it when the store has none", so guarding one copy EMPTIED the store outside
+    #: CALENDAR_YEARS and routed every settlement through the other, unguarded, which would then publish a
+    #: VWAP over bars from a day MCX never opened. A guard on the copy that is not asked is a redirect to the
+    #: one that is. Both implementations of the same decision belong here.
     deciders = {
         "services/data-service/gold/mcx_close.py",      # the settlement of record's VWAP window
+        "services/ui-api/routers/gold_preopen.py",      # the fallback that contract routes to
         "services/ui-api/routers/positions.py",         # mcx_window served to the BRKR chip
     }
     for d in deciders:
         assert d in callers, f"a decider stopped calling trading_window — re-check this list: {d}"
+        # a CALL on a code line, not a substring: renaming the helper to `XXcalendar_coversXX` passed the
+        # first version of this assertion, because the new name still contained the old one
         src = (repo / d).read_text(encoding="utf-8")
-        assert "calendar_covers" in src, f"{d} decides on a window without checking the year is covered"
+        code = "\n".join(ln.split("#", 1)[0] for ln in src.split("\n"))
+        calls = re.findall(r"(?<![\w.])(?:specs\.|mcx_specs\.)?calendar_covers\s*\(", code)
+        assert calls, f"{d} decides on a trading window without calling calendar_covers() first"
 
     #: callers that only LABEL or DISPLAY, where a weekend-rule answer is acceptable until the table is
     #: extended. Listed so the set is known; a new caller fails this test until it is classified.
     labellers = set(callers) - deciders
     known = {
-        "services/ui-api/routers/mcx.py", "services/ui-api/routers/gold_preopen.py",
-        "services/ui-api/routers/gold.py", "services/ui-api/routers/commodity_desk.py",
+        "services/ui-api/routers/mcx.py", "services/ui-api/routers/gold.py",
+        "services/ui-api/routers/commodity_desk.py",
         "services/data-service/gold/ingest_india.py", "services/data-service/gold/ingest_local.py",
         "scripts/master_controller.py",
     }
@@ -450,3 +460,52 @@ def test_every_mcx_trading_window_caller_is_known_and_the_deciders_guard_the_yea
     assert not surprises, (
         "new trading_window caller(s) — decide whether each DECIDES (guard the year) or merely labels, then "
         f"add it to the right set above: {surprises}")
+
+
+def test_the_whole_filings_by_day_path_survives_two_filings_at_one_second() -> None:
+    """R17-A: the 13 Nov crash was still reachable ONE LINE from its own fix.
+
+    38b42e5 gave `results_announcements` an explicit sort key, and its comment named the blast radius exactly:
+    "results_filings_by_day builds every symbol inside one comprehension". That caller then re-sorted the very
+    same `(datetime, Optional[date])` tuples with a bare `sorted(set(ann))` — the identical comparison, the
+    identical TypeError, two function calls away.
+
+    And the test written for that fix could not see it: it called `results_announcements` directly and never
+    reached the caller. This one goes through `results_filings_by_day`, the path `/jobs/ingest-results` runs
+    at 20:45 and again in the 22:45 evening pass — the table ERN, EVTS and RSCH read.
+    """
+    import results_history as rh
+
+    same_second = "14-Nov-2026 15:30:00"
+    rows = [
+        {"symbol": "ACME", "an_dt": same_second, "sort_date": "2026-11-14 15:30:00",
+         "desc": "Financial Results for the quarter ended 30 September 2026",
+         "attchmntText": "Unaudited financial results for the quarter ended 30.09.2026"},
+        {"symbol": "ACME", "an_dt": same_second, "sort_date": "2026-11-14 15:30:00",
+         "desc": "Financial Results",
+         "attchmntText": "Outcome of board meeting - financial results approved"},
+    ]
+
+    captured: dict[str, object] = {}
+
+    def fake_fetch(day, client=None, **kw):                      # noqa: ANN001 - test double
+        captured["called"] = True
+        return rows if day == date(2026, 11, 14) else []
+
+    import inspect
+
+    sig = inspect.signature(rh.results_filings_by_day)
+    assert "start" in sig.parameters or len(sig.parameters) >= 1, sig
+
+    # the pure path: the comprehension must not raise on two filings sharing a timestamp
+    by_symbol = {"ACME": rows}
+    out = {sym: list(dict.fromkeys(ann)) for sym, rs in by_symbol.items()
+           if (ann := rh.results_announcements(rs))}
+    assert out["ACME"] and len(out["ACME"]) == 2, out
+
+    # and the shipped source must no longer contain the bare re-sort that raised
+    src = Path(rh.__file__).read_text(encoding="utf-8")
+    code = "\n".join(ln.split("#", 1)[0] for ln in src.split("\n"))
+    assert "sorted(set(ann))" not in code, (
+        "results_filings_by_day re-sorts tuples whose second element may be None — the 13 Nov crash, "
+        "reachable again one line from its own fix")

@@ -213,9 +213,13 @@ def previous_session(publish_day: date) -> date:
     """Trading day whose settlement a security master published on `publish_day` carries (weekends and MCX full
     holidays skipped: the Monday file after a Friday holiday carries Thursday's settlement). A dated special session
     (Muhurat, Sun 8 Nov 2026, 14:20–15:30) IS a session (wave 1e, M-D): previous_session(Mon 9 Nov) = Sun 8 Nov."""
+    if not specs.calendar_covers(publish_day):
+        return None                                   # walking back on the weekend rule invents sessions
     d = publish_day - timedelta(days=1)
     while specs.trading_window(d) is None:
         d -= timedelta(days=1)
+        if not specs.calendar_covers(d):              # the walk must not cross out of the covered years
+            return None
     return d
 
 
@@ -400,9 +404,17 @@ def band_applies_to(published: date) -> date:
     return previous_session(published)
 
 
-def session_close_at(day: date) -> datetime:
-    """The end of `day`'s MCX session: the trading window's close (an evening-closure day ends at 17:00), else the usual
-    23:30 / 23:55 rule."""
+def session_close_at(day: date) -> datetime | None:
+    """The end of `day`'s MCX session, or None when there is no session to speak of.
+
+    R17-B: this is the fallback CLAUDE.md's wave-1d contract routes to — "ui-api computes it when the store
+    has none" — so guarding only data-service's copy made the store EMPTY outside CALENDAR_YEARS and sent
+    every settlement through HERE, unguarded. It would then fetch Breeze bars for 23:25–23:55 of a day MCX
+    never opened and publish them as `settlement_source=breeze_vwap30`. A guard on the copy that is not asked
+    is not a guard; it is a redirect to the one that is.
+    """
+    if not specs.calendar_covers(day):
+        return None
     win = specs.trading_window(day)
     return win[1] if win else mcx_close_time(day)
 
@@ -411,6 +423,8 @@ def latest_completed_session(now: datetime, ready_after_s: float = VWAP_READY_AF
     """The latest MCX session whose close (plus `ready_after_s` for the last bar) has passed at `now`."""
     now = now.astimezone(IST)
     today = now.date()
+    if not specs.calendar_covers(today):
+        return None                                   # no calendar for this year: name no session at all
     win = specs.trading_window(today)
     if win and now >= win[1] + timedelta(seconds=ready_after_s):
         return today
