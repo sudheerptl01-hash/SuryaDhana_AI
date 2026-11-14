@@ -59,14 +59,20 @@ export function DataHealthView() {
     // FRESH — which is what nse_results did on 14 Nov after dying twice the evening before, on the one page
     // whose whole job is data trust. A dash, never a 0, when the store cannot speak for the period.
     { key: 'fails', label: 'Crashes', align: 'right', sort: r => r.job_failures ?? -1,
-      title: 'runs of this dataset\u2019s job that ended in an error or were re-queued after a crash, within the window the job store still holds',
+      title: 'runs that ended in an error or were re-queued after a crash, within the window the job store holds. Hover a count to see whether it is this dataset\u2019s own job or its whole producer group.',
       // R15-E: `0` and `—` were both T.dim, and `0 || '·'` rendered the clean case as a middot — so "this
       // job ran and did not crash" looked exactly like "this store has never seen this job". Those are the
       // two meanings this column exists to separate, so they must not share a glyph OR a colour.
       render: r => r.job_failures == null
         ? <span style={{ color: T.dim }} title="this job has not entered the durable queue, so there is nothing to count">—</span>
         : r.job_failures > 0
-          ? <span style={{ color: T.amber }}>{r.job_failures}</span>
+          // the scope travels with the number: group aliasing made this column honest about COVERAGE and
+          // vaguer about MEANING, so a count inherited from a sibling job must say so rather than read as
+          // "this dataset's own job crashed"
+          ? <span style={{ color: T.amber }}
+              title={r.job_failures_scope && r.job_failures_scope !== 'job'
+                ? `${r.job_failures} crash(es) in the ${r.job_failures_scope.replace('group:', '')} job group, which writes this dataset — not necessarily this dataset's own job`
+                : `${r.job_failures} crash(es) of this dataset\u2019s own job`}>{r.job_failures}</span>
           // T.text, not T.muted: #8691a5 against dim's #788296 is one step of grey and invisible at this
           // size, so the glyph was carrying the whole distinction on its own. A real measurement reads in
           // the normal text colour; only the absence of one is dimmed.

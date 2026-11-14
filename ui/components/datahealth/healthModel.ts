@@ -16,6 +16,9 @@ export interface HealthRow {
    *  when a later run papers over an earlier failure, which is how nse_results read FRESH on 14 Nov while its
    *  job had crashed twice the evening before. */
   job_failures?: number | null
+  /** 'job' when the count is this dataset's own job, 'group:<name>' when a sibling job of the same
+   *  producer group crashed — the number is honest either way, but it means different things. */
+  job_failures_scope?: string | null
   note: string; dictionary_anchor: string | null; badge?: string; max_age_sessions?: number | null
 }
 export interface DataHealth {

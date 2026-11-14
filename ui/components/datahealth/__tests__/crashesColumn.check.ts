@@ -60,5 +60,14 @@ check('the zero says what window it speaks for', col.includes('counted window'))
 check('the subtitle dates the counting', code.includes('crash counting began'))
 check('…from the payload, never from the clock', !/crash counting began[\s\S]{0,80}new Date/.test(code))
 
+// ── the count must say WHAT it counted ────────────────────────────────────────────────────────────────
+// Group aliasing made this column honest about coverage (0 of 69 rows reported the one crash in the store;
+// 11 do now) and vaguer about meaning: a crash of `fo_iv:iv_repair` shows on `nse_fo_volt`, which that job
+// does not itself write. That is the right answer to "is the pipeline producing this healthy" and the wrong
+// answer to "did this dataset's own job crash", so the row has to say which question it answered.
+check('a crash count carries its scope', col.includes('job_failures_scope'))
+check('a group-inherited count says it is the group', /job group, which writes this dataset/.test(col))
+check('an own-job count says that instead', /own job/.test(col))
+
 console.log(`crashesColumn.check: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)

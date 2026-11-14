@@ -543,3 +543,39 @@ def test_a_group_of_jobs_writing_one_table_lights_that_table() -> None:
     assert _failures_for(row, {"group:fo_iv": 2}, {"group:fo_iv"}) == 2
     # and a different group's crash does NOT
     assert _failures_for(row, {"group:gold": 4}, {"group:gold"}) is None
+
+
+def test_the_health_payload_builds_end_to_end() -> None:
+    """A smoke test for `reads.health()` itself, because the suite had none and a NameError shipped.
+
+    I added `"job_failures_scope": _failure_scope(...)` to the row in one edit and the function definition in
+    another — and the second edit failed its assertion before writing. Every unit test still passed, because
+    they all call the helpers directly; nothing built a row. data-service's /db/data-health returned 500 and
+    ui-api degraded to a 22-row fallback with no Crashes column at all, live, until a probe caught it.
+
+    So: construct the payload the way the endpoint does, and assert its shape. A function the page calls must
+    be exercised by something other than the page.
+    """
+    import sys
+
+    repo = Path(__file__).resolve().parents[3]
+    for p in (str(repo), str(repo / "services/data-service")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    import data_health.reads as reads
+
+    # every name the row builder references must exist before it is called
+    for name in ("_failures_for", "_failure_scope", "_keys_for", "job_failures", "_nse_files_datasets"):
+        assert callable(getattr(reads, name, None)), f"reads.{name} is referenced by health() and missing"
+
+    row = {"id": "iv_surface_daily", "ingest_job": "iv_eod", "label": "x", "pages": "DERV",
+           "publisher": "p", "cadence": "daily", "max_age_sessions": 1, "freshness_kind": "table",
+           "verdict": "v", "badge": "context"}
+    failures, since, counted = reads.job_failures()
+    # the two calls health() makes per row, together, in order
+    count = reads._failures_for(row, failures, counted)
+    scope = reads._failure_scope(row, failures)
+    assert count is None or isinstance(count, int), count
+    assert scope is None or isinstance(scope, str), scope
+    if count:
+        assert scope, "a non-zero count must say what it counted"

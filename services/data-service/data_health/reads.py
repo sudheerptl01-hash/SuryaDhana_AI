@@ -178,6 +178,7 @@ def health(store: Any, archive_root: Path, *, now: datetime | None = None, holid
                # never enter the durable queue, and giving those a 0 is the false confidence this column was
                # built to remove.
                "job_failures": _failures_for(row, failures, counted_kinds),
+               "job_failures_scope": _failure_scope(row, failures),
                **st}
         out_rows.append(rec)
     return {"as_of": db.iso_utc(now or db.utcnow()), "now_ist": now_ist.isoformat(), "last_session": calendar.last_completed_session(now_ist, holidays, extra_sessions).isoformat(),
@@ -244,6 +245,21 @@ def _keys_for(row: dict[str, Any]) -> list[str]:
         if grp:
             out.append(f"group:{grp}")
     return list(dict.fromkeys(out))
+
+
+def _failure_scope(row: dict[str, Any], failures: dict[str, int]) -> str | None:
+    """Whether a row's crash count is its OWN job's or its GROUP's — "job" or "group:<name>".
+
+    The group aliasing (R18-A) made this column honest about COVERAGE and vaguer about MEANING: a crash of
+    `fo_iv:iv_repair` now shows on `nse_fo_volt`, which that job does not itself write. That is the right
+    answer to "is the pipeline producing this healthy" and the wrong answer to "did this dataset's own job
+    crash", so the row states which question it answered instead of leaving the reader to assume.
+    """
+    keys = _keys_for(row)
+    if any(k in failures and not k.startswith("group:") for k in keys):
+        return "job"
+    grp = next((k for k in keys if k in failures and k.startswith("group:")), None)
+    return grp
 
 
 def _failures_for(row: dict[str, Any], failures: dict[str, int], counted: set) -> int | None:
