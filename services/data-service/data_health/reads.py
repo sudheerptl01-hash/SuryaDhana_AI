@@ -156,7 +156,7 @@ def health(store: Any, archive_root: Path, *, now: datetime | None = None, holid
     last_fetch = ingest_log.last_fetch_by_dataset(store)
     from data_health import watermarks                 # local import: watermarks imports reads (cycle-safe at call time)
     job_checks = watermarks.last_checks(store)
-    failures, failures_since = job_failures()
+    failures, failures_since, counted_kinds = job_failures()
     out_rows: list[dict[str, Any]] = []
     summary = {"fresh": 0, "amber": 0, "red": 0, "gap": 0, "unknown": 0}
     for row in cat:
@@ -173,7 +173,11 @@ def health(store: Any, archive_root: Path, *, now: datetime | None = None, holid
                # F11-06: the row's state is "is the DATA fresh"; this is "did the JOB that produces it crash".
                # They differ exactly when a later run papers over an earlier failure — which is what happened
                # to nse_results on 13 Nov, read as FRESH while its job had died twice.
-               "job_failures": failures.get(str(row.get("ingest_job") or ""), 0),
+               # F12: a NUMBER only where this store can actually speak for the dataset, otherwise None (the
+               # page renders a dash). Most catalogued datasets are produced by master-controller jobs that
+               # never enter the durable queue, and giving those a 0 is the false confidence this column was
+               # built to remove.
+               "job_failures": _failures_for(row, failures, counted_kinds),
                **st}
         out_rows.append(rec)
     return {"as_of": db.iso_utc(now or db.utcnow()), "now_ist": now_ist.isoformat(), "last_session": calendar.last_completed_session(now_ist, holidays, extra_sessions).isoformat(),
@@ -183,7 +187,41 @@ def health(store: Any, archive_root: Path, *, now: datetime | None = None, holid
             "note": "no composite score; endpoint rows are completed by ui-api"}
 
 
-def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | None]:
+#: catalog `ingest_job` (a master-controller job id) -> the data-service submit kind it POSTs. F12: the two
+#: namespaces are different, and the column was keyed on the wrong one. Read off the controller's own
+#: dispatcher (scripts/master_controller.py, the `elif job_id == ...: add(...)` chain).
+_JOB_ID_TO_KIND = {
+    "results_capture_daily": "nse_results",
+    "eod_data_pipeline": "daily_pipeline",
+    "nse_positions_catchup": "nse_positions",
+    "nse_filings_weekly": "nse_filings",
+}
+
+
+def _keys_for(row: dict[str, Any]) -> list[str]:
+    """Every name this dataset's job could appear under in the job store, most specific first."""
+    job = str(row.get("ingest_job") or "")
+    ident = str(row.get("id") or "")
+    out = [k for k in (job, _JOB_ID_TO_KIND.get(job, ""), ident) if k]
+    return list(dict.fromkeys(out))
+
+
+def _failures_for(row: dict[str, Any], failures: dict[str, int], counted: set) -> int | None:
+    """The crash count for this dataset, or None when the job store holds no record of its job at all.
+
+    None is the honest answer for a dataset whose job never enters the durable queue — which is most of them,
+    because the master-controller runs its own schedule and only some steps submit to data-service. A 0 there
+    would say "this job has not crashed" when what is true is "this store has never seen this job".
+    """
+    for key in _keys_for(row):
+        if key in failures:
+            return failures[key]
+        if key in counted:
+            return 0                                    # the store knows this job and it has not crashed
+    return None
+
+
+def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | None, set]:
     """``({job_id: failures}, oldest_row_iso)`` from the durable job store.
 
     A failure is `status = 'error'` OR a row requeued after a crash — `resume_on_start` rewrites a job killed
@@ -193,13 +231,22 @@ def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | Non
     """
     import sqlite3
 
-    path = db_path or (Path(__file__).resolve().parents[3] / "data" / "job_queue.sqlite")
+    if db_path is None:
+        # F12: the same path the queue itself uses — it was hardcoded here, so under either documented
+        # override (JOB_QUEUE_DB, or a DuckDB outside the repo) this read silently found nothing and every
+        # row printed a confident zero.
+        try:
+            from job_queue import default_db_path
+            db_path = Path(default_db_path())
+        except Exception:                                      # pragma: no cover — import shape changed
+            db_path = Path(__file__).resolve().parents[3] / "data" / "job_queue.sqlite"
+    path = db_path
     if not path.exists():
-        return {}, None
+        return {}, None, set()
     try:
         con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5.0)
     except sqlite3.Error:                                      # pragma: no cover — a locked or missing store
-        return {}, None
+        return {}, None, set()
     try:
         counts: dict[str, int] = {}
         for kind, n in con.execute(
@@ -211,12 +258,45 @@ def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | Non
             if ":" in k:
                 tail = k.split(":", 1)[1]
                 counts[tail] = counts.get(tail, 0) + int(n)
+        # every job kind the store has seen, so a dataset it knows can report 0 while one it has never
+        # seen reports nothing at all
+        counted: set = set()
+        for (kind,) in con.execute("SELECT DISTINCT kind FROM jobs"):
+            k = str(kind)
+            counted.add(k)
+            if ":" in k:
+                counted.add(k.split(":", 1)[1])
+        # F12: the window is when FAILURE RETENTION began, not the oldest row held. Before KEEP_ERRORS went
+        # live (the 14 Nov 12:15 data-service restart) `_trim` pruned failures together with successes, so the
+        # store cannot speak for anything earlier — the proof is that the 13 Nov nse_results TypeError this
+        # column was built for is no longer in it, while 84 same-day successes survive. Claiming the older
+        # date flatters the column in exactly the direction that matters.
+        floor = _retention_floor(path)
         oldest = con.execute("SELECT MIN(submitted_at) FROM jobs").fetchone()[0]
-        return counts, (str(oldest) if oldest else None)
+        since = max(str(oldest), floor) if oldest and floor else (floor or (str(oldest) if oldest else None))
+        return counts, since, counted
     except sqlite3.Error:                                      # pragma: no cover
-        return {}, None
+        return {}, None, set()
     finally:
         con.close()
+
+
+#: when failure retention began — the first data-service start carrying KEEP_ERRORS. Recorded beside the store
+#: on first read so the window survives restarts and is never earlier than the truth.
+_RETENTION_MARK = "job_failure_retention_since"
+
+
+def _retention_floor(store_path: Path) -> str | None:
+    """The ISO timestamp from which this store has been keeping failures, created on first read."""
+    mark = store_path.with_name(".job_failure_retention")
+    try:
+        if mark.exists():
+            return mark.read_text(encoding="utf-8").strip() or None
+        now = db.utcnow().isoformat()
+        mark.write_text(now, encoding="utf-8")
+        return now
+    except OSError:                                            # pragma: no cover — read-only volume
+        return None
 
 
 def catalog(store: Any) -> dict[str, Any]:

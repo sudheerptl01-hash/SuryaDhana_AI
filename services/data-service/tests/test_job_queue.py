@@ -301,13 +301,31 @@ def test_job_failures_counts_crashes_and_states_the_window_it_can_speak_for(tmp_
     con.commit()
     con.close()
 
-    counts, since = job_failures(db)
+    counts, since, counted = job_failures(db)
     assert counts.get("nse_results") == 1, f"a crash hidden by a later success: {counts}"
     assert counts.get("fo_iv:iv_repair") == 1, "a crash-requeued row is a crash"
-    assert counts.get("iv_repair") == 1, "the bare job id must resolve too — catalog rows key on it"
+    assert counts.get("iv_repair") == 1, "the bare job id resolves too (kinds are '<group>:<id>')"
     assert "ingest_bhavcopy" not in counts, "a healthy job must not be given a crash"
-    assert since == "2026-11-13T15:15:00+00:00", f"the window must be the oldest row held: {since}"
+    assert {"nse_results", "ingest_bhavcopy"} <= counted, "the store must report every kind it has seen"
+
+    # F12: the lookup the PAGE performs, which is the one that was wrong — a catalog row carries a
+    # master-controller job id (`results_capture_daily`), not the data-service submit kind (`nse_results`),
+    # and the first version asserted only the kind. 55 of 69 rows could never have shown a crash.
+    from data_health.reads import _failures_for, _keys_for
+
+    row_results = {"id": "nse_results", "ingest_job": "results_capture_daily"}
+    assert "nse_results" in _keys_for(row_results), "the controller id must resolve to the submit kind"
+    assert _failures_for(row_results, counts, counted) == 1, "the page's own lookup missed the crash"
+
+    # a dataset the store HAS seen and that has not crashed reads 0…
+    assert _failures_for({"id": "x", "ingest_job": "ingest_bhavcopy"}, counts, counted) == 0
+    # …and one it has never seen reads None, not 0: "never seen" is not "never crashed"
+    assert _failures_for({"id": "nowhere", "ingest_job": "nothing"}, counts, counted) is None
+    assert _failures_for({"id": "endpoint_row", "ingest_job": ""}, counts, counted) is None
+
+    assert since, "a window must always be reported"
 
     # and a store that does not exist says so rather than claiming zero crashes
-    empty, no_since = job_failures(tmp_path / "missing.sqlite")
-    assert empty == {} and no_since is None
+    empty, no_since, no_kinds = job_failures(tmp_path / "missing.sqlite")
+    assert empty == {} and no_since is None and no_kinds == set()
+    assert _failures_for(row_results, empty, no_kinds) is None, "no store must mean a dash, never a zero"

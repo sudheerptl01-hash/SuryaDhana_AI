@@ -69,7 +69,7 @@ export function DataHealthView() {
     <div style={{ display: 'grid', gap: 12 }} data-sys-view="data">
       <Panel title="Data health · every dataset" accent={T.cyan} pad={0} badge={d?.badge ?? 'context'}
         source={sourceOf(d?.as_of ?? null, { source: 'ui-api /api/data/health', maxAgeDays: 1, hint: err })}
-        subtitle={d ? `${d.summary.green} fresh · ${d.summary.amber} amber · ${d.summary.red} red · ${d.summary.gaps} gaps · last session ${d.last_session ?? '—'} · catalog: ${d.catalog_source}${d.failures_since ? ` · crashes since ${d.failures_since.slice(0, 10)}` : ''}` : undefined}
+        subtitle={d ? `${d.summary.green} fresh · ${d.summary.amber} amber · ${d.summary.red} red · ${d.summary.gaps} gaps · last session ${d.last_session ?? '—'} · catalog: ${d.catalog_source}${d.failures_since ? ` · crash counting began ${d.failures_since.slice(0, 10)} ${d.failures_since.slice(11, 16)}` : ''}` : undefined}
         right={<span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }} data-health-pages>
           <Chip color={T.muted} active={!page} onClick={() => setPage(null)}>ALL</Chip>
           {pages.map(p => <Chip key={p} color={T.cyan} active={page === p} onClick={() => setPage(q => (q === p ? null : p))} title={`datasets ${p} reads`}>{p}</Chip>)}

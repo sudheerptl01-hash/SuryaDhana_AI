@@ -366,10 +366,11 @@ class DurableJobManager:
         successful rows remained. A failure is the row worth keeping — it is the only durable record of a
         crash outside a log line.
 
-        It is NOT yet read by the DATA page: the first version of this docstring claimed it was, and nothing
-        imports this module outside data-service's own main and tests (F11-06). Retention comes first because
-        a reader cannot be built on rows that have already been deleted — but until that column exists, a
-        crashed job still shows FRESH on the DATA page, and that gap is real.
+It IS read by the DATA page now: `data_health/reads.job_failures` counts these rows for the
+        Crashes column (F11-06 built the retention, 1192815 the reader, F12 corrected the namespace it looks
+        them up under). The first version of this docstring claimed a reader that did not exist; the second
+        said one never would. Both were written in the same week as the code they describe, which is why this
+        one names the function instead of the intention.
 
         A row REQUEUED after a crash is kept on the same footing as an error: `resume_on_start` rewrites a
         job killed mid-run — by a restart, which is what every deploy does — back to 'queued', so the status
