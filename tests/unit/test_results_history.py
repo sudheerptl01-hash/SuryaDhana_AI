@@ -1,6 +1,6 @@
 """Results reactions (services/data-service/results_history.py): release parsing and reaction-session timing."""
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -364,3 +364,33 @@ def test_evts_reads_the_filing_time_and_falls_back_to_the_feed():
     con2, _ = _reacting_db(with_filed=False)
     r2 = rh.recent_reactions(con2, days=30)[0]
     assert r2["timing"] == "after close" and r2["reaction_date"] == days[28].strftime("%Y-%m-%d") and r2["time_source"] == "feed"
+
+
+def test_two_filings_at_the_same_second_do_not_crash_the_whole_job() -> None:
+    """A live crash, 13 Nov 2026 15:15 and 17:15 IST: `nse_results` died with
+
+        TypeError: '<' not supported between instances of 'NoneType' and 'datetime.date'
+
+    `results_announcements` returned `sorted(out)` over `(filed_at, Optional[date])` tuples, so when one
+    company filed twice in the SAME second — NSE does produce this — Python fell through to comparing the
+    second element and hit a date against None. It killed the entire job rather than the one symbol, because
+    `results_filings_by_day` builds every symbol inside a single comprehension, so one bad pair took the
+    results data for every company with it. EVTS and the results-reaction panels read that table.
+    """
+    from results_history import results_announcements
+
+    same_second = "14-Nov-2026 15:30:00"
+    rows = [
+        {"an_dt": same_second, "desc": "Financial Results for the quarter ended 30 September 2026",
+         "attchmntText": "Unaudited financial results for the quarter ended 30.09.2026"},
+        {"an_dt": same_second, "desc": "Financial Results",
+         "attchmntText": "Outcome of board meeting - financial results approved"},
+    ]
+    out = results_announcements(rows)                      # must not raise
+    assert len(out) == 2, out
+    assert out[0][0] == out[1][0], "the fixture's whole point is one shared timestamp"
+    assert {p for _, p in out} == {None, date(2026, 9, 30)}, out
+    # and the order must not depend on the order NSE happened to return the rows in
+    assert results_announcements(rows) == results_announcements(list(reversed(rows)))
+    # the undated one sorts first, deterministically
+    assert out[0][1] is None and out[1][1] is not None, out

@@ -121,7 +121,13 @@ def results_announcements(rows: list[dict]) -> list[tuple[datetime, Optional[dat
         ts = _ts(r.get("an_dt")) or _iso_ts(r.get("sort_date"))
         if ts:
             out.append((ts, period_from_text(f"{subject} {text}")))
-    return sorted(out)
+    # Sort on an explicit key, never on the tuples themselves: the second element is Optional[date], so two
+    # filings sharing one `filed_at` — which NSE produces, the same company filing twice in the same second —
+    # made Python fall through to comparing a date against None and raise
+    # "TypeError: '<' not supported between instances of 'NoneType' and 'datetime.date'".
+    # That killed the whole `nse_results` job (seen 13 Nov 15:15 and 17:15), not just the one symbol, because
+    # results_filings_by_day builds every symbol inside one comprehension.
+    return sorted(out, key=lambda t: (t[0], t[1] is not None, t[1] or date.min))
 
 
 def reconcile_with_announcements(releases: pd.DataFrame, ann: list[tuple[datetime, Optional[date]]], symbol: str) -> pd.DataFrame:
