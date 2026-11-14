@@ -253,12 +253,15 @@ def _failures_for(row: dict[str, Any], failures: dict[str, int], counted: set) -
     # them in one pass per key meant the first key the store merely knew about short-circuited to 0 and hid a
     # crash recorded under a later alias.
     keys = _keys_for(row)
-    for key in keys:
-        if key in failures:
-            return failures[key]
-    for key in keys:
-        if key in counted:
-            return 0                                    # the store knows this job and it has not crashed
+    # SUM across the matching keys, not the first hit. `nse_bhavcopy` is produced by two independent jobs —
+    # the 18:30 pipeline (kind `daily_pipeline`) and the 22:45 revision pass (kind `nse_files`) — so "first
+    # match wins" reported 2 crashes on a night there were 7. Never a false clean, but an undercount on the
+    # one dataset with two producers is still a number that is not the number.
+    hits = [failures[k] for k in keys if k in failures]
+    if hits:
+        return sum(hits)
+    if any(k in counted for k in keys):
+        return 0                                        # the store knows this job and it has not crashed
     return None
 
 

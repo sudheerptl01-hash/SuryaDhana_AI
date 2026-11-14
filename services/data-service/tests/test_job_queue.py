@@ -473,3 +473,35 @@ def test_the_floor_comparison_survives_a_naive_mark_file(tmp_path) -> None:
     assert _later_iso(aware, naive) == naive, "a naive mark must not raise"
     assert _later_iso(naive, aware) == aware
     assert _later_iso("nonsense", aware) == aware
+
+
+def test_a_dataset_with_two_producer_jobs_sums_their_crashes() -> None:
+    """`nse_bhavcopy` is written by TWO independent jobs — the 18:30 pipeline (kind `daily_pipeline`) and the
+    22:45 revision pass (kind `nse_files`) — and "first matching key wins" reported 2 crashes on a night there
+    were 7. Never a false clean, but an undercount on the one dataset with two producers is still a number
+    that is not the number, on the page whose job is to be the number.
+
+    The import must also be whole: `_nse_files_datasets` swallows ImportError, and a probe run without
+    `shared` on the path returned an empty tuple and a quietly wrong answer — so this asserts the derivation
+    is non-empty before trusting anything it says.
+    """
+    import sys
+
+    repo = Path(__file__).resolve().parents[3]
+    for p in (str(repo), str(repo / "services/data-service")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    from data_health.reads import _failures_for, _keys_for, _nse_files_datasets
+
+    assert len(_nse_files_datasets()) >= 8, (
+        "the nse_files derivation came back empty — an ImportError is being swallowed and every answer "
+        "below it would be quietly wrong")
+
+    row = {"id": "nse_bhavcopy", "ingest_job": "eod_data_pipeline"}
+    keys = _keys_for(row)
+    assert {"daily_pipeline", "nse_files"} <= set(keys), keys
+
+    assert _failures_for(row, {"daily_pipeline": 2, "nse_files": 5}, {"daily_pipeline", "nse_files"}) == 7
+    assert _failures_for(row, {"nse_files": 3}, {"nse_files"}) == 3
+    assert _failures_for(row, {}, {"daily_pipeline"}) == 0          # known, clean
+    assert _failures_for(row, {}, set()) is None                    # never seen

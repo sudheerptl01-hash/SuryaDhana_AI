@@ -67,7 +67,10 @@ export function DataHealthView() {
         ? <span style={{ color: T.dim }} title="this job has not entered the durable queue, so there is nothing to count">—</span>
         : r.job_failures > 0
           ? <span style={{ color: T.amber }}>{r.job_failures}</span>
-          : <span style={{ color: T.muted }} title="this job ran and did not crash in the counted window">0</span> },
+          // T.text, not T.muted: #8691a5 against dim's #788296 is one step of grey and invisible at this
+          // size, so the glyph was carrying the whole distinction on its own. A real measurement reads in
+          // the normal text colour; only the absence of one is dimmed.
+          : <span style={{ color: T.text }} title="this job ran and did not crash in the counted window">0</span> },
     { key: 'note', label: 'What it means', render: r => <span style={{ color: T.text, whiteSpace: 'normal', display: 'inline-block', minWidth: 260 }}>{rowSentence(r)}</span> },
   ], [])
   const n = staleCount(d)

@@ -326,6 +326,24 @@ def test_every_caller_name_in_the_code_has_a_quota() -> None:
         f"day and the chain fails mid-session: {missing}")
 
 
+def _constant_values() -> dict[str, str]:
+    """`{CONSTANT_NAME: "its string value"}` for every `*_CALLER*` constant in the scanned roots."""
+    import re as _re
+
+    from test_breeze_ledger_coverage import SCANNED_ROOTS
+
+    out: dict[str, str] = {}
+    pat = _re.compile(r'^([A-Z_]*CALLER[A-Z_]*)\s*=\s*["\']([\w.\-]+)["\']', _re.M)
+    for root in SCANNED_ROOTS:
+        for path in sorted(root.rglob("*.py")):
+            if "/tests/" in str(path):
+                continue
+            code = "\n".join(ln.split("#", 1)[0] for ln in path.read_text(encoding="utf-8").split("\n"))
+            for m in pat.finditer(code):
+                out.setdefault(m.group(1), m.group(2))
+    return out
+
+
 def _declared_callers() -> dict[str, str]:
     """Every Breeze caller label the CODE declares, as {label: file}.
 
@@ -397,10 +415,28 @@ def test_every_generate_session_site_shares_one_caller_label() -> None:
                 labels[m.group(1).strip()] = str(path)
 
     assert labels, "no generate_session guard site found — the patterns stopped matching"
-    resolved = {("ui-api.login" if "LOGIN" in lbl.upper() else lbl.strip('"\'')) for lbl in labels}
+
+    # Resolve each label to its VALUE. The first version guessed from the constant's NAME ("LOGIN" in it),
+    # which would have called any future `BREEZE_LOGIN_PROBE_CALLER = "ui-api.probe"` a login — a gate that
+    # infers from a name cannot see a name that lies. _declared_callers() already maps every constant to the
+    # string it holds, so the value is available and nothing has to be guessed.
+    declared = _declared_callers()
+    resolved: set[str] = set()
+    for lbl in labels:
+        lit = lbl.strip().strip('"\'')
+        if lit in declared:                            # already a literal caller label
+            resolved.add(lit)
+            continue
+        const = lit.rsplit(".", 1)[-1]                 # e.g. pos.BREEZE_LOGIN_CALLER -> BREEZE_LOGIN_CALLER
+        value = _constant_values().get(const)
+        assert value, f"could not resolve the caller constant {lbl} to a value — {labels}"
+        resolved.add(value)
+
     assert len(resolved) == 1, (
         f"generate_session is guarded under more than one caller label, so no single quota governs the login: "
-        f"{labels}")
+        f"{labels} -> {resolved}")
+    assert resolved == {"ui-api.login"}, (
+        f"the login is metered under {resolved}, not ui-api.login — its quota governs nothing")
 
 
 def test_no_quota_sits_at_its_observed_peak() -> None:

@@ -34,8 +34,23 @@ check('null renders an em dash', col.includes('—'))
 check('a clean run renders a literal 0, not a middot', />\{?\s*0\s*\}?</.test(col) || col.includes('>0<'), col.slice(0, 400))
 check('the old `|| ·` collapse is gone', !col.includes("|| '·'"))
 check('a crash count is amber', col.includes('T.amber'))
-check('clean-zero and never-seen do NOT share a colour',
-  !(col.match(/T\.dim/g) ?? []).length || (col.includes('T.muted') && col.includes('T.dim')))
+// Presence of two token names proved nothing — swapping which branch used which would still pass. Assert
+// the MAPPING: the dash is dimmed, the counts are not, and no two branches share a token.
+// the token nearest BEFORE the marker — `color: T.x` precedes the title text it is identified by, so a
+// forward search finds the next branch's token instead of this one's
+const tokenNear = (marker: string) => {
+  const i = col.indexOf(marker)
+  if (i < 0) return null
+  const before = col.slice(0, i)
+  const m = [...before.matchAll(/T\.(\w+)/g)].pop()
+  return m ? m[1] : null
+}
+const dashTok = tokenNear('nothing to count')          // the never-seen hover
+const zeroTok = tokenNear('counted window')            // the ran-and-clean hover
+check('the never-seen dash is the dimmed one', dashTok === 'dim', dashTok)
+check('a real measurement is NOT dimmed', zeroTok !== null && zeroTok !== 'dim' && zeroTok !== 'muted', zeroTok)
+check('the three branches use three distinct tokens',
+  new Set([dashTok, zeroTok, 'amber']).size === 3, [dashTok, zeroTok])
 
 // and each of the two quiet states explains itself, because a dash with no hover is a shrug
 check('the dash says why there is nothing to count', /—<\/span>/.test(col) && col.includes('title='))
