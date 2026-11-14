@@ -582,11 +582,9 @@ start_services() {
 }
 
 stop_services() {
-  # F9-06: this used to loop $ALL_SERVICES unconditionally while start_services honoured $START_SET, so
-  # `START_SET='ui-api' ./start-local.sh stop` stopped AND paused all seven services without saying so — and
-  # `restart` inherited it, stopping everything and bringing back only the set, leaving the rest paused. The
-  # asymmetry was the footgun behind F8-01: the guard was asked about one set and a different set went down.
-  # Both halves now read the same variable, so what the window is asked about is what actually stops.
+  # THE RULE: whatever this function is about to stop is exactly what the freeze-window guard was asked
+  # about, and exactly what the summary below names. Breaking that link is how a ui-api-only stop once took
+  # data-service and master-controller down through the 08:00 ICICI login.
   # F10-07: an explicit list wins, then $START_SET, then everything. `restart` passes the set it is going to
   # bring back UP, because stopping and PAUSING services it will not restart leaves them down with the watchdog
   # told to ignore them — bare `restart` used to stop and pause all seven and start only the three core ones.
@@ -600,6 +598,9 @@ stop_services() {
     print_info "stopping only: $targets"
   fi
   for name in $(reverse_list "$targets"); do
+    # F12: validate each name. The per-service form calls require_service; the set form did not, so a typo in
+    # START_SET ("ui_api") silently stopped nothing and still reported success.
+    require_service "$name"
     mark_paused "$name"
     stop_one "$name"
   done
@@ -1133,11 +1134,8 @@ main() {
     stop)
       if [ -n "$svc" ]; then require_service "$svc"; refuse_in_freeze stop "$svc"; mark_paused "$svc"; stop_one "$svc"
       else
-        # F7-03 / F8-01 / F9-06: the bare form stops BOTH frozen services and was once refused by nothing —
-        # it would have left data-service and master-controller down AND paused through the 08:00 ICICI login.
-        # The guard asks about exactly the set stop_services will stop: $ALL_SERVICES normally, or $START_SET
-        # when it is set, which stop_services now honours too. Those two reading the same variable is the
-        # point — F8-01 happened because the guard was asked about one set while a different set went down.
+        # the guarded set must be the stopped set: ${START_SET:-$ALL_SERVICES} in both places
+        # (scripts/tests/test_ops_shell.py compares the two expressions rather than naming a constant)
         refuse_in_freeze_set stop "${START_SET:-$ALL_SERVICES}"
         stop_services
       fi
@@ -1147,9 +1145,8 @@ main() {
         require_service "$svc"; refuse_in_freeze restart "$svc"
         stop_one "$svc"; clear_paused "$svc"; clear_hang_history "$svc"; start_redis; start_one "$svc"
       else
-        # F7-03 / F8-01 / F9-06: `restart` calls stop_services() first, so the window is asked about what
-        # goes DOWN ($START_SET when set, else $ALL_SERVICES) — not the narrower set that comes back up
-        # (bare `restart` deliberately restarts only the 3 core services).
+        # `restart` stops exactly what it will start again, so the guarded set, the stopped set and the
+        # started set are all ${START_SET:-$CORE_SERVICES}
         # the window is asked about exactly what goes down, which for `restart` is what comes back up
         refuse_in_freeze_set restart "${START_SET:-$CORE_SERVICES}"
         stop_services "${START_SET:-$CORE_SERVICES}"

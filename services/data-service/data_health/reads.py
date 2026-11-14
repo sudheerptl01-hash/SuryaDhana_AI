@@ -236,8 +236,10 @@ def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | Non
         # override (JOB_QUEUE_DB, or a DuckDB outside the repo) this read silently found nothing and every
         # row printed a confident zero.
         try:
+            from shared.config import get_settings
+
             from job_queue import default_db_path
-            db_path = Path(default_db_path())
+            db_path = default_db_path(Path(get_settings().duckdb_path).parent)
         except Exception:                                      # pragma: no cover — import shape changed
             db_path = Path(__file__).resolve().parents[3] / "data" / "job_queue.sqlite"
     path = db_path

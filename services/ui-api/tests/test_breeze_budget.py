@@ -251,7 +251,9 @@ def test_generate_session_goes_through_the_ledger(pos_ledger, monkeypatch: pytes
     client, err, kind = pos._build_breeze_client("k", "s", "tok")
     assert err is None and kind is None and isinstance(client, _FakeBreezeConnect) and _FakeBreezeConnect.sessions == ["to"]
     st = pos.budget_counters()
-    assert st["by_method"] == {"generate_session": 1} and st["by_caller"] == {pos.BREEZE_BUDGET_CALLER: 1}
+    # F12: the login has its own caller label now, so a holdings runaway cannot exhaust the share the one
+    # call the terminal cannot do without depends on.
+    assert st["by_method"] == {"generate_session": 1} and st["by_caller"] == {pos.BREEZE_LOGIN_CALLER: 1}
 
 
 def test_generate_session_refused_at_the_cap_before_the_sdk_runs(pos_ledger, monkeypatch: pytest.MonkeyPatch) -> None:

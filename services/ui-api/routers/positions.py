@@ -179,7 +179,7 @@ def _build_breeze_client(api_key: str, api_secret: str, session_token: str):
             breeze = BreezeConnect(api_key=api_key)
             # generate_session is itself an ICICI API call (customer details): it goes through the budget ledger like
             # every other Breeze call (PLAN §0.11); past the cap it is refused BEFORE the SDK runs.
-            with _ledger().guard(BREEZE_BUDGET_CALLER, "generate_session"):
+            with _ledger().guard(BREEZE_LOGIN_CALLER, "generate_session"):
                 breeze.generate_session(api_secret=api_secret, session_token=session_token)
         except BudgetExceeded as exc:
             return None, f"Breeze budget exhausted ({exc}); the broker book is retried after the cap resets", "budget"
@@ -247,6 +247,11 @@ def _extract_cash_balance(funds_resp: dict[str, Any]) -> float:
 
 
 BREEZE_BUDGET_CALLER = "ui-api.positions"
+#: F12: the login has its own label and its own quota. It shared `ui-api.positions` with holdings, funds and
+#: positions — so a runaway on any of those could exhaust that caller's share and the ledger would then refuse
+#: the one call the terminal cannot do without. The login is cheap (tens a day) and must never be the thing
+#: that gets squeezed out.
+BREEZE_LOGIN_CALLER = "ui-api.login"
 
 
 def _breeze_call(fn, *args, retries: int = 1, caller: str = BREEZE_BUDGET_CALLER, **kwargs):

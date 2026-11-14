@@ -9,6 +9,7 @@ import { BasketRisk } from '@/components/BasketRisk'
 import { openExternal } from '@/lib/platform'
 import { ICICI_UNREACHABLE, iciciIssue, pickErrorKind } from '@/components/portfolio/iciciState'
 import { IciciTotpPanel } from '@/components/gold/IciciTotpPanel'
+import { BudgetPanel } from '@/components/brkr/BudgetPanel'
 import type { TotpStatus } from '@/components/gold/totpModel'
 import {
   Btn, Chip, DataTable, Empty, ErrorBox, Grid, Input, KV, Label, Loading, Meter, Notice, PageHeader, Panel, Stat, T,
@@ -362,6 +363,13 @@ export function PortfolioSummary() {
             weights={Object.fromEntries(positions.map((p: any) => [String(p.symbol).toUpperCase(), Number(p.current_value ?? p.invested ?? 0)]))} />
         )}
         <IciciTotpPanel connected onSessionLive={refresh} onStatus={setTotp} />
+        {/* F12: the BRKR chip's hover promised "the BRKR page shows which caller spent the quota" and this
+            page showed nothing of the kind — by_caller, remaining_day and refused_today had no reader
+            anywhere in ui/. Credential-free counters only. */}
+        <Panel title="Broker budget" subtitle="Breeze calls today, by caller — the quota the chip refers to"
+          source={sourceOf(new Date().toISOString(), { source: 'ui-api budget ledger', maxAgeDays: 1 })}>
+          <BudgetPanel />
+        </Panel>
         {rules}
       </div>
     </div>

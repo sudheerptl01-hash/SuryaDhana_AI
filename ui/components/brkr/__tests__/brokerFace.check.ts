@@ -167,8 +167,17 @@ const HOL = { ...COUNTS, trading_day: false }
 check('F11-03 midday on a HOLIDAY is not red', brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0))?.tone !== 'bad',
   brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0)))
 check('F11-03 …it is the grey idle rung', brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0))?.tone === 'idle')
-check('F11-03 22:00 on a holiday (inside the MCX window) is not red either',
-  brokerFace(DEAD, HOL, at(2026, 11, 24, 22, 0))?.tone === 'idle')
+// F12 corrected this one: the holiday master the payload carries is NSE's, and MCX is NOT shut whenever NSE
+// is. shared/mcx_specs.trading_window(2026-11-24) returns 17:00–23:55 — Guru Nanak Jayanti is an MCX EVENING
+// session — so a dead broker session at 22:00 that day is real and must stay red. The first version of this
+// case asserted the opposite and would have locked in a silence over live commodity hours.
+check('F12 22:00 on an NSE holiday is still RED — MCX trades that evening (17:00–23:55)',
+  brokerFace(DEAD, HOL, at(2026, 11, 24, 22, 0))?.tone === 'bad',
+  brokerFace(DEAD, HOL, at(2026, 11, 24, 22, 0)))
+check('F12 …while 12:00 that day, inside the NSE window only, stays grey',
+  brokerFace(DEAD, HOL, at(2026, 11, 24, 12, 0))?.tone === 'idle')
+check('F12 a WEEKEND evening is still grey (MCX is shut Sat/Sun)',
+  brokerFace(DEAD, { ...COUNTS, trading_day: false }, at(2026, 11, 14, 22, 0))?.tone === 'idle')
 check('F11-03 the same clock on a TRADING day is still red',
   brokerFace(DEAD, { ...COUNTS, trading_day: true }, at(2026, 11, 24, 12, 0))?.tone === 'bad')
 check('F11-03 an unknown calendar still goes red midday on a weekday (no worse than before)',

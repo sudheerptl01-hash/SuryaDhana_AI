@@ -390,7 +390,8 @@ class AlertDispatcher:
                 chunks.append(line[:limit])
                 line = line[limit:]
             if len(cur) + len(line) + 1 > limit:
-                chunks.append(cur)
+                if cur:                                 # never emit an empty part (a long line can leave one)
+                    chunks.append(cur)
                 cur = line
             else:
                 cur = f"{cur}\n{line}" if cur else line

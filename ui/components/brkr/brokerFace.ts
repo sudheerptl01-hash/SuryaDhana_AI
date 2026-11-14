@@ -93,7 +93,13 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
   // branch of a ladder is not applied to the ladder.
   const weekday = ist.day >= 1 && ist.day <= 5
   const tradingDay = budget?.trading_day == null ? weekday : budget.trading_day === true
-  const expected = tradingDay && sessionExpected(ist)
+  // F12: the holiday master this payload carries is NSE's, and MCX is not shut whenever NSE is — it trades
+  // an evening session on several NSE holidays. So the calendar gates the NSE window (09:15–15:30) and the
+  // MCX tail (to 23:30) keeps the weekday test. Applying an equity calendar to a commodity session would
+  // silence a real DOWN on an evening the owner's gold screens are live.
+  const nseOpen = tradingDay && sessionExpected(ist, true)
+  const mcxTail = weekday && ist.hm > 1530 && ist.hm <= 2330
+  const expected = nseOpen || mcxTail
   const connected = live?.breeze_session === true
   const errors = Number(budget?.errors_today ?? 0)
   const refused = Number(budget?.refused_today ?? 0)

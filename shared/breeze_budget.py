@@ -67,7 +67,11 @@ DEFAULT_CALLER_QUOTAS: dict[str, int] = {
     # had none. The same scope-not-logic mistake as the gate's roots, one commit later. Every caller that
     # exists in the code now has one, and a test enforces that (test_breeze_budget.py).
           # holdings / funds / positions, plus the metered generate_session
-    "ui-api.positions": 600,          # holdings / funds / positions, plus the metered generate_session
+    # F12: 600 sat under the 1,038 this caller has actually spent, so the quota would have refused it before
+    # cap_day ever bit. 1,200 is above the observed peak with headroom and still far under cap_day 4,000 —
+    # a caller quota caps a share, it is not a second ceiling.
+    "ui-api.positions": 1200,         # holdings / funds / positions
+    "ui-api.login": 120,              # generate_session only — kept separate so holdings cannot starve it
     "ui-api.probe": 150,              # the connection probe
     "ui-api.margin": 200,             # OSTR's SPAN calls
     "ui-api.gold_settlement": 100,
