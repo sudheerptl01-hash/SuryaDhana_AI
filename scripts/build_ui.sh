@@ -211,10 +211,28 @@ GIT_SHA=""; GIT_DIRTY=0; RELEASE_ID=""; NEXT_VERSION=""; SOURCE_SHA=""; BUILD_MS
 make_id() {
   GIT_SHA="$(git -C "$ROOT" rev-parse --short=7 HEAD 2> /dev/null || echo 0000000)"
   [ ${#GIT_SHA} = 7 ] || GIT_SHA="$(printf '%s' "$GIT_SHA" | cut -c1-7)"
-  # the whole ui/ tree, not a hand-written five-directory list: the build stages every top-level entry, so an
-  # uncommitted tailwind.config.ts or next.config.js shipped under an id claiming a clean HEAD (F14). git
-  # ignores what .gitignore ignores, so node_modules and dist cost nothing here.
-  if [ -n "$(git -C "$ROOT" status --porcelain -- ui 2> /dev/null | head -1)" ]; then GIT_DIRTY=1; fi
+  # Everything the build STAGES, derived from release.mjs's own STAGE_EXCLUDE_TOP rather than listed here.
+  # A hand-written list went stale twice: five directories while the build shipped every top-level entry
+  # (F14), then the whole tree including paths the build provably never ships (F15). What matters is exactly
+  # "could an uncommitted file have changed the bundle?", and only release.mjs knows which files those are.
+  local _ex _pathspec
+  # ONE node call, and it must succeed: an empty list would silently widen the check back to the whole tree,
+  # which is the failure mode the first version of this had (a two-stage pipe produced nothing and nobody
+  # noticed because the result still "worked").
+  _ex="$(node --input-type=module -e "import {STAGE_EXCLUDE_TOP} from '$RELEASE_JS'; process.stdout.write([...STAGE_EXCLUDE_TOP].join('\n'))" 2> /dev/null)"
+  [ -n "$_ex" ] || die "could not read STAGE_EXCLUDE_TOP from $RELEASE_JS — refusing to guess what the build ships"
+  # What determines the bundle = the files that get STAGED, plus the code that stages them. STAGE_EXCLUDE_TOP
+  # answers the first half; it is not the whole answer, because `ui/scripts` holds release.mjs — the stager
+  # itself (compression, carry-forward, the source_sha256) — and `scripts/build_ui.sh` drives it. An
+  # uncommitted edit to either changes what ships while reading clean, which is exactly what happened to the
+  # build of 089207a: it stamped git_dirty false while the script that produced it was in no commit.
+  _pathspec=(ui scripts/build_ui.sh)
+  while IFS= read -r _top; do
+    [ -n "$_top" ] || continue
+    [ "$_top" = "scripts" ] && continue        # the stager: excluded from STAGING, never from this question
+    _pathspec+=(":(exclude)ui/$_top")
+  done <<< "$_ex"
+  if [ -n "$(git -C "$ROOT" status --porcelain -- "${_pathspec[@]}" 2> /dev/null | head -1)" ]; then GIT_DIRTY=1; fi
   # the id says `-dirty` when the UI tree did not match HEAD, because the id is what gets quoted in a report
   # or a bug — a manifest field nobody reads cannot correct an id that claims the wrong commit
   _suffix=""; [ "$GIT_DIRTY" = 1 ] && _suffix="-dirty"

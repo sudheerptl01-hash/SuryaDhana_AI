@@ -315,6 +315,13 @@ test('the dirty check excludes exactly what the build does not ship', () => {
   // and it must refuse rather than silently widen: an empty list would quietly re-include everything, which
   // is exactly how the first version of this failed (a two-stage pipe produced nothing and still "worked")
   assert.match(code, /\[ -n "\$_ex" \] \|\| die/, 'an unreadable exclusion list must stop the build, not widen it')
+  // R16-B: the pathspec must cover the TOOLING too. 089207a stamped git_dirty false while
+  // scripts/build_ui.sh — the script that produced that very bundle — was in no commit, because the
+  // pathspec was `ui` and the script lives in scripts/. A build id that cannot see the builder is not a
+  // statement about the build.
+  assert.match(code, /_pathspec=\(ui scripts\/build_ui\.sh\)/, 'the dirty check cannot see its own builder')
+  assert.match(code, /"\$_top" = "scripts" \] && continue/,
+    'ui/scripts holds the stager (release.mjs) — excluded from staging, never from the dirty question')
   // the set itself must still cover the obvious non-bundle inputs
   for (const top of ['node_modules', 'dist', 'scripts', 'package-lock.json', 'tsconfig.tsbuildinfo']) {
     assert.ok(STAGE_EXCLUDE_TOP.has(top), `${top} must not count toward a dirty bundle`)
