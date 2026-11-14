@@ -181,9 +181,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Warm the Market Monitor cache (≈ 5 s cold) off the event loop so the first BRIEF / MKT visit is instant.
     def _warm_monitor() -> None:
         try:
-            market_monitor_snapshot(_store)
+            # BOTH arguments by keyword. `market_monitor_snapshot` is a route handler whose first parameter is
+            # `as_of`, so the old `market_monitor_snapshot(_store)` passed the store as a date string and left
+            # `store` holding its unresolved `Depends(get_store)` default — every start logged
+            # "'Depends' object has no attribute 'get_bhavcopy_meta'" and warmed nothing. The forgiving catch
+            # below (true: a cold cache is only slower) is exactly what kept a feature that never once worked
+            # from ever being noticed, so the failure is now an ERROR with the type named.
+            market_monitor_snapshot(as_of=None, store=_store)
         except Exception as exc:  # noqa: BLE001 — a cold cache is only slower, never broken
-            logger.warning("Market monitor warm-up failed", error=str(exc))
+            logger.error("Market monitor warm-up failed", error=str(exc), error_type=type(exc).__name__)
     if not _store._read_only:
         threading.Thread(target=_warm_monitor, name="monitor-warmup", daemon=True).start()
         threading.Thread(target=lambda: _refresh_option_history(), name="option-history", daemon=True).start()
@@ -605,7 +611,10 @@ def start_daily_pipeline(req: RefreshUniverseRequest | None = None) -> dict:
         # Fatal = the job ends in error (CRITICAL alert); non-fatal failures are reported in the
         # result and the controller raises a WARNING for them.
         def _monitor() -> dict:
-            snap = market_monitor_snapshot(get_store())          # new bhavcopy → rebuild the cache now
+            # `store=` by keyword: the handler's first parameter is `as_of`, so passing the store
+            # positionally put it there and left `store` as its unresolved Depends default — this
+            # rebuild raised AttributeError on every new bhavcopy, reported as a non-fatal step.
+            snap = market_monitor_snapshot(as_of=None, store=get_store())   # new bhavcopy → rebuild now
             return {"as_of": snap.get("as_of")}
 
         steps = [

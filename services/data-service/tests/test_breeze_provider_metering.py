@@ -89,3 +89,51 @@ def test_a_refusal_asks_the_ledger_once_and_never_reaches_the_sdk(monkeypatch) -
         _provider(Sdk()).get_live_quote("INFY")
     assert asked["n"] == 1, f"the refusal was retried {asked['n']}x — exactly what the predicate must prevent"
     assert called["n"] == 0, "the SDK was called despite the refusal"
+
+
+# ── the start-up warm-ups must actually call what they think they call ──────────────────────────────────────
+# Found 14 Nov in the data-service log, not by a critic: every start logged
+#   "Market monitor warm-up failed: 'Depends' object has no attribute 'get_bhavcopy_meta'"
+# because `_warm_monitor` called the ROUTE HANDLER positionally — `market_monitor_snapshot(_store)` — so the
+# store landed in `as_of` and `store` kept its unresolved `Depends(get_store)` default. The warm-up existed to
+# spare the first BRIEF/MKT visit a ~5 s cold cache and had never once worked; its own forgiving `except` said
+# "a cold cache is only slower, never broken", which is true and is precisely why nobody looked.
+
+def test_startup_warmups_pass_fastapi_dependencies_by_keyword() -> None:
+    """Any call to a route handler from non-request code must name `store=`, or it silently gets a `Depends`."""
+    import ast
+
+    src = (DS / "main.py").read_text(encoding="utf-8")
+    tree = ast.parse(src)
+
+    # every route handler that takes a `store: ... = Depends(...)` parameter
+    handlers: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for arg, default in zip(node.args.args[-len(node.args.defaults):] if node.args.defaults else [],
+                                    node.args.defaults, strict=True):
+                if (isinstance(default, ast.Call) and getattr(default.func, "id", "") == "Depends"
+                        and arg.arg == "store"):
+                    handlers.add(node.name)
+    assert "market_monitor_snapshot" in handlers, "the handler this test is about changed shape"
+
+    # …whose `store` parameter is left to its Depends default is the bug. A positional call is fine when it
+    # reaches that far: `financials_latest(symbols, store)` and `index_contribution(index, store)` are correct,
+    # and a gate that flagged them too would be noise the next author learns to skip.
+    positions = {}
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in handlers:
+            positions[node.name] = [a.arg for a in node.args.args].index("store")
+
+    offenders: list[str] = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in handlers):
+            continue
+        if any(k.arg == "store" for k in node.keywords):
+            continue                                       # named explicitly: correct
+        if len(node.args) > positions[node.func.id]:
+            continue                                       # positional, and it reaches `store`: correct
+        offenders.append(f"{node.func.id}() at main.py:{node.lineno} leaves `store` as its Depends default")
+    assert not offenders, (
+        "a route handler with a Depends-injected `store` is being called positionally, so it will receive the "
+        f"unresolved Depends object instead of the store: {offenders}")
