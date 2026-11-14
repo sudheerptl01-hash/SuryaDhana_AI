@@ -106,8 +106,12 @@ api-gateway :8000 · feature :8002 · ml :8003 · rl :8004 · risk :8005 · exec
   `tooltips.json`; `validate_learn.py --write` rebuilds and checks: ≤ 200 chars a line, no direction words, every tooltip
   key a real column or payload field; a copy bundled under `ui/` must match). Hardening: Redis bound to 127.0.0.1 with an
   optional password (`REDIS_PASSWORD` or the Keychain item `suryadhana-redis`), secrets are `SecretStr` in
-  `shared/config.py`, `scripts/db_backup.py --offsite` (sha256-verified copy to `OFFSITE_BACKUP_DIR`; the 02:15 job does
-  not pass it yet). GOLD's labelling rules apply: no `signal` badge exists in F&O or index attribution; nothing here feeds
+  `shared/config.py`, `scripts/db_backup.py --offsite` (sha256-verified copy to `OFFSITE_BACKUP_DIR`, rotating 7 daily +
+  4 Sundays; the 02:15 job DOES pass `--offsite` whenever the variable is set, and `offsite_dir()` re-reads `.env` at run
+  time, so setting it needs no restart — nothing else to wire. A failed off-site copy exits 1 after the local backup is
+  complete, so SYS shows the error and Telegram says why, and a missing variable is reported as `skipped: unset`, never
+  as success. Gate: `scripts/tests/test_ops_review_20261105.py` M32, which includes the unset control). GOLD's labelling
+  rules apply: no `signal` badge exists in F&O or index attribution; nothing here feeds
   the Decision Desk, the S1 shadow, a directional alert or a ticket price. NSE's `Last-Modified` header is GMT (add 5:30).
 - **Terminal v2, wave 2 + the 5 Nov review fixes (6 Nov 2026, commit `0b27dcc`, DEPLOYED 6 Nov 15:36)**: build record
   `reports/terminal_v2/build/wave2_and_fixes.md` (two rounds, each builder adversarially re-checked). **Paper F&O book**
