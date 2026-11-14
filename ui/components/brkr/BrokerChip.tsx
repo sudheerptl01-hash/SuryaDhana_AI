@@ -30,7 +30,12 @@ async function readJson<Tt>(url: string): Promise<Tt | null> {
     const r = await fetch(url, { cache: 'no-store' })
     return r.ok ? ((await r.json()) as Tt) : null
   } catch {
-    return null                           // a failed read is silence, never a false alarm
+    // null, not a throw. True silence only when BOTH reads fail — brokerFace returns null when it has
+    // neither payload. A failed /api/live/status alone still leaves `connected` false, so the model can paint
+    // PRE or DOWN off a missing payload rather than a known-dead session. That is the safer direction (an
+    // unreachable ui-api is itself a reason not to trust the quotes) but it is not silence, and the comment
+    // that used to sit here claimed it was.
+    return null
   }
 }
 

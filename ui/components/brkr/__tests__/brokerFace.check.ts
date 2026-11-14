@@ -131,5 +131,33 @@ check('F9-01 Sunday 08:30 stays grey', brokerFace(DEAD, COUNTS, at(2026, 11, 15,
 check('F9-01 a healthy session before the open renders nothing',
   brokerFace({ breeze_session: true }, { errors_today: 0 }, at(2026, 11, 16, 8, 30)) === null)
 
+// ── F10-02: a refusal is not an error, and the chip was blind to a whole day of them ────────────────────
+// `errors_today` counts calls WHERE ok = 0; refusals live in their own table and never reach it. So if the
+// budget refused every call of the day — the exact failure this metering was added to make possible — the
+// header stayed silent. One refusal means something asked for data and got none; that is always worth saying.
+const MID = at(2026, 11, 16, 11, 0)                                   // Monday, market open
+check('F10-02 one refusal speaks up even with a healthy session',
+  brokerFace({ breeze_session: true }, { refused_today: 1 }, MID)?.tone === 'warn',
+  brokerFace({ breeze_session: true }, { refused_today: 1 }, MID))
+check('F10-02 the label names the refusals',
+  brokerFace({ breeze_session: true }, { refused_today: 7 }, MID)?.label === 'BRKR 7 REFUSED',
+  brokerFace({ breeze_session: true }, { refused_today: 7 }, MID))
+check('F10-02 refusals outrank the error count (they are the sharper fact)',
+  brokerFace({ breeze_session: true }, { refused_today: 2, errors_today: 50 }, MID)?.label === 'BRKR 2 REFUSED')
+check('F10-02 no refusals and few errors is still silence',
+  brokerFace({ breeze_session: true }, { refused_today: 0, errors_today: 3 }, MID) === null)
+
+// ── F10-05: the pre-open alarm must follow the exchange calendar, not the weekday ───────────────────────
+const PRE_T = at(2026, 11, 24, 8, 30)                                 // Tue 24 Nov 2026 — Guru Nanak Jayanti
+check('F10-05 a midweek HOLIDAY does not raise the pre-open alarm',
+  brokerFace(DEAD, { ...COUNTS, trading_day: false }, PRE_T)?.tone === 'idle',
+  brokerFace(DEAD, { ...COUNTS, trading_day: false }, PRE_T))
+check('F10-05 a real trading day still raises it',
+  brokerFace(DEAD, { ...COUNTS, trading_day: true }, at(2026, 11, 16, 8, 30))?.label === 'BRKR PRE')
+check('F10-05 an unknown calendar falls back to the weekday test (no worse than before)',
+  brokerFace(DEAD, COUNTS, at(2026, 11, 16, 8, 30))?.label === 'BRKR PRE')
+check('F10-05 …and stays quiet on a weekend even when the calendar is unknown',
+  brokerFace(DEAD, COUNTS, at(2026, 11, 14, 8, 30))?.tone === 'idle')
+
 console.log(`brokerChip.check: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)

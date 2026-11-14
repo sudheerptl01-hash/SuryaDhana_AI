@@ -1094,6 +1094,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `ceiling_minute` | number |
 | `day_ist` | string |
 | `errors_today` | number |
+| `holidays_known` | bool |
 | `last_call` | object |
 | `last_call.at` | string |
 | `last_call.caller` | string |
@@ -1105,6 +1106,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `quotas.{*}` | number |
 | `refused_today` | number |
 | `remaining_day` | number |
+| `trading_day` | bool |
 | `used_day` | number |
 | `used_minute` | number |
 

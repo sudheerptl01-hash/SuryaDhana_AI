@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from shared.breeze_budget import ledger
 from shared.logging import get_logger
 from shared.models import Order, OrderStatus, OrderType, OrderSide
 
@@ -97,10 +98,13 @@ class ICICIOrderClient:
         if self._stub:
             return {"status": "complete", "filled_qty": 0, "avg_price": 0.0}
 
-        response = self._breeze.get_order_detail(
-            exchange_code="NSE",
-            order_id=broker_order_id,
-        )
+        # F10-01: metered. This service is dormant, but it is the ORDER path — the last place a Breeze call
+        # should be able to spend quota the shared ledger cannot see.
+        with ledger().guard("execution.order_status", "get_order_detail"):
+            response = self._breeze.get_order_detail(
+                exchange_code="NSE",
+                order_id=broker_order_id,
+            )
         if response.get("Status") != 200:
             return {"status": "error"}
         return response.get("Success", {})
@@ -108,13 +112,14 @@ class ICICIOrderClient:
     def get_portfolio(self) -> list[dict]:
         if self._stub:
             return []
-        response = self._breeze.get_portfolio_holdings(
-            exchange_code="NSE",
-            from_date="",
-            to_date="",
-            stock_code="",
-            portfolio_type="",
-        )
+        with ledger().guard("execution.portfolio", "get_portfolio_holdings"):   # F10-01
+            response = self._breeze.get_portfolio_holdings(
+                exchange_code="NSE",
+                from_date="",
+                to_date="",
+                stock_code="",
+                portfolio_type="",
+            )
         if response.get("Status") != 200:
             return []
         return response.get("Success", [])

@@ -16,7 +16,12 @@
 export type BudgetSnap = {
   errors_today?: number | null
   by_method?: Record<string, number> | null
+  /** F10-02: refusals live in their own table, so `errors_today` (calls WHERE ok = 0) does NOT include them —
+   *  a day in which the budget refused every call left this chip silent, which is the exact blindness it
+   *  exists to prevent. A refusal is never noise: it means something asked for data and got none. */
   refused_today?: number | null
+  /** The IST calendar day, from the server that owns the holiday master; absent/null = unknown. */
+  trading_day?: boolean | null
 }
 
 export type LiveSnap = {
@@ -50,8 +55,10 @@ export function istClock(now: Date): IstClock {
   const get = (t: string) => p.find(x => x.type === t)?.value ?? ''
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   // An unexpected ICU rendering would make indexOf return -1, which is neither 0 nor 6 — so a Saturday would
-  // have read as a weekday and the market window would have applied. Fall back to the host's own weekday,
-  // which is wrong by at most a day rather than wrong in a way that invents a trading session.
+  // have read as a weekday and the market window would have applied. Fall back to the UTC weekday: wrong by at
+  // most one day (IST is UTC+5:30, so they differ only between 18:30 and 24:00 UTC) rather than wrong in a way
+  // that invents a trading session. Not the host's local weekday — reading the host's clock is the very thing
+  // this function exists to avoid.
   const idx = days.indexOf(get('weekday'))
   const day = idx >= 0 ? idx : now.getUTCDay()
   const hour = Number(get('hour'))
@@ -82,6 +89,7 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
   const expected = sessionExpected(ist)
   const connected = live?.breeze_session === true
   const errors = Number(budget?.errors_today ?? 0)
+  const refused = Number(budget?.refused_today ?? 0)
   const logins = Number(budget?.by_method?.generate_session ?? 0)
 
   if (!live && !budget) return null                               // nothing fetched yet: say nothing, never guess
@@ -107,7 +115,14 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
   // open — the login job may legitimately still be running at 08:05 — it is merely OVERDUE, which is a
   // different thing and earns amber rather than red. Trading days only, so the nightly-silence contract and
   // F8-05's 02:00-Saturday case both still hold.
-  if (!connected && ist.day >= 1 && ist.day <= 5 && ist.hm >= 815 && ist.hm < 915) {
+  // F10-05: `day >= 1 && day <= 5` is WEEKDAYS, and the first version of this branch called that comment
+  // "trading days only". On an exchange holiday that falls midweek — Guru Nanak Jayanti, Tue 24 Nov 2026, a
+  // date this repo already records — it would have cried about a login that was never scheduled. The server
+  // owns the holiday master and now reports `trading_day` on the payload this chip already reads; unknown
+  // (null/absent, e.g. the calendar was unreachable) falls back to the weekday test, i.e. no worse than before.
+  const weekday = ist.day >= 1 && ist.day <= 5
+  const tradingDay = budget?.trading_day == null ? weekday : budget.trading_day === true
+  if (!connected && tradingDay && ist.hm >= 815 && ist.hm < 915) {
     return {
       label: 'BRKR PRE',
       tone: 'warn',
@@ -123,7 +138,19 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
   if (!connected && !expected) {
     return { label: 'BRKR IDLE', tone: 'idle', title: 'No broker session outside market hours — the token expires at midnight IST by design.' }
   }
-  // a session that exists but was expensive to get: the 08:00 job is struggling and only this says so
+  // a session that exists but was expensive to get: the 08:00 job is struggling and only this says so —
+  // or the budget ledger is REFUSING calls, which says the terminal asked for data and was told no. One
+  // refusal is worth saying; twenty errors are the threshold for "this is more than a blip".
+  if (refused > 0) {
+    return {
+      label: `BRKR ${refused} REFUSED`,
+      tone: 'warn',
+      title: `The Breeze budget refused ${refused} call${refused === 1 ? '' : 's'} today, so quotes, the option `
+        + 'chain or margin asked for data and got none — the panels that depend on them fall back to stored or '
+        + `delayed values. ${errors} other broker call${errors === 1 ? '' : 's'} failed today. SYS › BRKR shows `
+        + 'which caller spent the day\u2019s quota.',
+    }
+  }
   if (errors >= 20) {
     return {
       label: `BRKR ${errors} ERR`,

@@ -397,12 +397,19 @@ def test_the_bare_restart_and_stop_forms_face_the_freeze_window_too(tree):
         # the fix and testing the neighbourhood.
         guard = [l for l in code.split("\n") if "refuse_in_freeze" in l]
         assert len(guard) == 1, f"bare `{name}`: expected one guard line, found {guard}"
-        # F9-06: stop_services now honours START_SET, so the guard asks about exactly what will stop —
-        # ${START_SET:-$ALL_SERVICES}. Both halves must read the same variable; a guard scoped to a set that
-        # is not the one going down is the F8-01 hole, in either direction.
-        assert "ALL_SERVICES" in guard[0], (f"bare `{name}` must default to $ALL_SERVICES: {guard[0].strip()}")
-        assert "START_SET" in guard[0], (f"bare `{name}` must honour $START_SET now that stop_services does, "
-                                        f"or it refuses stops that touch nothing frozen: {guard[0].strip()}")
+        # F9-06 / F10-07: the window must be asked about EXACTLY the services stop_services is about to stop.
+        # `stop` stops ${START_SET:-$ALL_SERVICES}; `restart` passes the set it will bring back up, so it
+        # stops ${START_SET:-$CORE_SERVICES}. Naming a constant here is what made this assertion wrong the
+        # moment those shapes diverged — comparing the two expressions stays true however they change.
+        guarded = re.search(r'refuse_in_freeze_set\s+\w+\s+"([^"]+)"', guard[0])
+        assert guarded, f"bare `{name}`: could not read the guarded set from {guard[0].strip()}"
+        stop_call = [l for l in code.split("\n") if re.search(r"\bstop_services\b", l)]
+        assert len(stop_call) == 1, f"bare `{name}`: expected one stop_services call, found {stop_call}"
+        arg = re.search(r'stop_services\s+"([^"]+)"', stop_call[0])
+        stopped = arg.group(1) if arg else "${START_SET:-$ALL_SERVICES}"   # its own default when called bare
+        assert guarded.group(1) == stopped, (
+            f"bare `{name}` guards {guarded.group(1)} but stops {stopped} — the F8-01 hole, in either "
+            f"direction: the window must be asked about exactly what goes down")
 
 
 def test_stop_and_start_agree_on_what_start_set_means(tree):
@@ -410,9 +417,13 @@ def test_stop_and_start_agree_on_what_start_set_means(tree):
     silently stopped and PAUSED all seven services — the footgun behind F8-01. Both halves must read the same
     variable, and the guard must ask about that same set. (This test previously pinned the OPPOSITE premise and
     failed the moment the asymmetry was removed, which is what a premise test is for.)"""
+    # F10-03: through _code_lines, NOT the raw body. The first version of this test read the raw function
+    # text, and the six-line comment explaining the fix contains both "START_SET" and "ALL_SERVICES" — so
+    # deleting the code and keeping the comment would have passed. That is the SAME defect F8-02 fixed in this
+    # same file, repeated in the test written to replace it, which is why the helper now gets used everywhere.
     src = (tree / "start-local.sh").read_text()
-    stop_body = src.split("stop_services() {")[1].split("\n}")[0]
+    stop_body = _code_lines(src.split("stop_services() {")[1].split("\n}")[0])
     assert "START_SET" in stop_body, "stop_services must honour START_SET like start_services does"
     assert "ALL_SERVICES" in stop_body, "…and must still default to every service when START_SET is unset"
-    start_body = src.split("start_services() {")[1].split("\n}")[0]
+    start_body = _code_lines(src.split("start_services() {")[1].split("\n}")[0])
     assert "START_SET" in start_body, "start_services must still honour START_SET"

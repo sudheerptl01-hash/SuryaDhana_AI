@@ -103,8 +103,21 @@ def test_caps_clamp_to_the_documented_ceiling(tmp_path: Path) -> None:
     assert led.cap_minute == bb.DOC_LIMIT_PER_MINUTE == 100 and led.cap_day == bb.DOC_LIMIT_PER_DAY == 5000
     led2 = bb.BreezeBudget(tmp_path / "d.sqlite", cap_minute=0, cap_day=-1)       # nonsense → defaults
     assert led2.cap_minute == bb.DEFAULT_CAP_PER_MINUTE and led2.cap_day == bb.DEFAULT_CAP_PER_DAY
-    # O-T6 pilot default; `iv_intraday: 800` (the fo_iv pilot's caller, PLAN 1.1) once the PM applies F-BACKEND's patch request
-    assert {k: v for k, v in bb.DEFAULT_CALLER_QUOTAS.items() if k != "iv_intraday"} == {"chain_poller": 700}
+    # The O-T6 pilot values must not drift…
+    assert bb.DEFAULT_CALLER_QUOTAS["chain_poller"] == 700
+    assert bb.DEFAULT_CALLER_QUOTAS["iv_intraday"] == 800          # the fo_iv pilot's caller, PLAN 1.1
+    # …and F10-02: every caller that spends quota must HAVE a quota. The live-quote poller went unmetered and
+    # therefore unbounded until 14 Nov, and it is the biggest spender in the stack (~1,580/day for the NIFTY
+    # poller alone, plus one call per starred symbol every 15 s with no websocket shortcut). An unbounded
+    # fallback can empty a 4,000/day cap before lunch and the first symptom is the chain failing mid-session.
+    for caller in ("data-service.live_quote", "data-service.intraday", "data-service.history",
+                   "execution.ltp", "execution.order_status", "execution.portfolio", "live_execution.ltp"):
+        assert bb.DEFAULT_CALLER_QUOTAS.get(caller, 0) > 0, f"{caller} spends quota with no quota of its own"
+    # They deliberately SUM ABOVE cap_day: a quota caps one caller's share so no single path can empty the day,
+    # while cap_day stays the real ceiling. Scaling them to sum to the cap would reserve quota for callers that
+    # are idle most days (the execution ones are dormant) and starve the live ones.
+    assert sum(bb.DEFAULT_CALLER_QUOTAS.values()) > bb.DEFAULT_CAP_PER_DAY
+    assert max(bb.DEFAULT_CALLER_QUOTAS.values()) < bb.DEFAULT_CAP_PER_DAY, "no single caller may own the day"
     assert bb.DEFAULT_CALLER_QUOTAS.get("iv_intraday", 800) == 800
 
 
@@ -156,7 +169,7 @@ def test_positions_breeze_call_goes_through_the_ledger(tmp_path: Path, monkeypat
     assert pos._breeze_call(get_funds) == {"Success": {}}
     with pytest.raises(bb.BudgetExceeded):
         pos._breeze_call(get_funds)
-    st = pos.breeze_budget_status()
+    st = pos.budget_counters()
     assert st["by_caller"] == {pos.BREEZE_BUDGET_CALLER: 1} and st["by_method"] == {"get_funds": 1} and st["refused_today"] == 1
     bb.reset_ledger()
 
@@ -192,7 +205,7 @@ def test_trade_history_route_records_one_get_order_list_ledger_entry(pos_ledger,
     body = pos.get_trade_history(limit=10)
     assert body["connected"] is True and body["total_trades"] == 1 and body["trades"][0]["symbol"] == "INFY"
     assert len(fake.calls) == 1 and fake.calls[0]["exchange_code"] == "NSE"
-    st = pos.breeze_budget_status()
+    st = pos.budget_counters()
     assert st["by_method"] == {"get_order_list": 1} and st["by_caller"] == {pos.BREEZE_BUDGET_CALLER: 1}
     assert st["used_day"] == 1 and st["refused_today"] == 0
 
@@ -237,7 +250,7 @@ def test_generate_session_goes_through_the_ledger(pos_ledger, monkeypatch: pytes
     _fake_breeze_module(monkeypatch)
     client, err, kind = pos._build_breeze_client("k", "s", "tok")
     assert err is None and kind is None and isinstance(client, _FakeBreezeConnect) and _FakeBreezeConnect.sessions == ["to"]
-    st = pos.breeze_budget_status()
+    st = pos.budget_counters()
     assert st["by_method"] == {"generate_session": 1} and st["by_caller"] == {pos.BREEZE_BUDGET_CALLER: 1}
 
 

@@ -587,7 +587,10 @@ stop_services() {
   # `restart` inherited it, stopping everything and bringing back only the set, leaving the rest paused. The
   # asymmetry was the footgun behind F8-01: the guard was asked about one set and a different set went down.
   # Both halves now read the same variable, so what the window is asked about is what actually stops.
-  local targets="${START_SET:-$ALL_SERVICES}"
+  # F10-07: an explicit list wins, then $START_SET, then everything. `restart` passes the set it is going to
+  # bring back UP, because stopping and PAUSING services it will not restart leaves them down with the watchdog
+  # told to ignore them — bare `restart` used to stop and pause all seven and start only the three core ones.
+  local targets="${1:-${START_SET:-$ALL_SERVICES}}"
   print_header "Stopping Local Services"
   [ -n "${START_SET:-}" ] && print_info "START_SET is set: stopping only $targets"
   for name in $(reverse_list "$targets"); do
@@ -1141,8 +1144,9 @@ main() {
         # F7-03 / F8-01 / F9-06: `restart` calls stop_services() first, so the window is asked about what
         # goes DOWN ($START_SET when set, else $ALL_SERVICES) — not the narrower set that comes back up
         # (bare `restart` deliberately restarts only the 3 core services).
-        refuse_in_freeze_set restart "${START_SET:-$ALL_SERVICES}"
-        stop_services
+        # the window is asked about exactly what goes down, which for `restart` is what comes back up
+        refuse_in_freeze_set restart "${START_SET:-$CORE_SERVICES}"
+        stop_services "${START_SET:-$CORE_SERVICES}"
         check_prerequisites "${START_SET:-$CORE_SERVICES}"
         install_deps "${START_SET:-$CORE_SERVICES}"
         start_services

@@ -268,12 +268,57 @@ def _breeze_call(fn, *args, retries: int = 1, caller: str = BREEZE_BUDGET_CALLER
             _t.sleep(1.0)
 
 
-@router.get("/breeze-budget")
-def breeze_budget_status() -> dict[str, Any]:
-    """The Breeze budget ledger's counters (SYS / BRKR): calls today vs the owner's cap and ICICI's ceiling, by caller
-    and by SDK method, refusals, the last call. No secrets, no URLs."""
+def budget_counters() -> dict[str, Any]:
+    """The ledger's counters alone — no I/O, so the metering tests can read them without an event loop.
+
+    Split out when the route became async for the holiday calendar: the tests that assert "this call was
+    metered" care about the ledger, not about HTTP, and making them await an unrelated network fetch would
+    have coupled a metering assertion to a calendar being reachable.
+    """
     from shared.breeze_budget import ledger as _ledger
-    return {**_ledger().status(), "badge": "arithmetic", "note": "100/min · 5,000/day documented ceiling; the cap is the budget (O-T6)"}
+    return {**_ledger().status(), "badge": "arithmetic",
+            "note": "100/min · 5,000/day documented ceiling; the cap is the budget (O-T6)"}
+
+
+#: the NSE holiday set, fetched once a day — it changes once a year and this endpoint is polled every 60 s
+_HOLIDAYS_CACHE: dict[str, Any] = {"day": None, "days": frozenset()}
+
+
+async def _nse_holidays() -> frozenset:
+    """Today's NSE holiday set from data-service, cached for the IST day. Empty on any failure, which degrades
+    to a weekdays-only calendar — the same fallback data-service itself uses."""
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone(timedelta(hours=5, minutes=30))).date().isoformat()
+    if _HOLIDAYS_CACHE["day"] == today:
+        return _HOLIDAYS_CACHE["days"]
+    days: frozenset = frozenset()
+    try:
+        from shared.http_client import get_json
+        data_svc = os.environ.get("DATA_SERVICE_URL", "http://localhost:8001")   # same default as routers/markets.py
+        payload = await get_json(f"{data_svc}/db/market-holidays", route="read") or {}
+        days = frozenset(str(h.get("date")) for h in (payload.get("holidays") or []) if h.get("date"))
+    except Exception:  # noqa: BLE001 — a missing calendar must never break the budget panel
+        days = frozenset()
+    _HOLIDAYS_CACHE.update(day=today, days=days)
+    return days
+
+
+@router.get("/breeze-budget")
+async def breeze_budget_status() -> dict[str, Any]:
+    """The Breeze budget ledger's counters (SYS / BRKR): calls today vs the owner's cap and ICICI's ceiling, by caller
+    and by SDK method, refusals, the last call. No secrets, no URLs.
+
+    `trading_day` is here because the BRKR chip needs it and this is the payload it already reads: its pre-open
+    alarm must not fire on a holiday (F10-05 — the first version said "trading days only" in a comment and
+    checked the weekday, which would have cried on Guru Nanak Jayanti). Unknown is reported as None, and the
+    chip treats that as "assume a weekday", i.e. no worse than before.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+    holidays = await _nse_holidays()
+    trading_day = ist.weekday() < 5 and ist.date().isoformat() not in holidays
+    return {**budget_counters(), "trading_day": trading_day, "holidays_known": bool(holidays)}
 
 
 # ── Holdings, today's positions and funds (Breeze field names per the SDK docs) ──

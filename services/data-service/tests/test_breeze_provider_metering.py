@@ -39,8 +39,12 @@ def _provider(sdk: object) -> object:
 
 def test_every_sdk_call_in_the_provider_is_inside_a_ledger_guard() -> None:
     """The source-level check, so a new call site cannot quietly skip the guard."""
+    # Counted on CODE lines only: a bare `src.count(...)` could be restored by a comment carrying the
+    # literal, which is the F8-02 defect in miniature. The ui-api gate catches the real mutation either way;
+    # this is the local, fast check and it should not be the weaker one.
     src = Path(prov.__file__).read_text(encoding="utf-8")
-    assert src.count("ledger().guard(") == 3, "a Breeze call site was added or lost its guard"
+    code = "\n".join(ln.split("#", 1)[0] for ln in src.split("\n"))
+    assert code.count("ledger().guard(") == 3, "a Breeze call site was added or lost its guard"
     for method in ("get_quotes", "get_historical_data_v2"):
         assert f'self._breeze.{method}(' in src
     # the guard must come BEFORE the call, not after it

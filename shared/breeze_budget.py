@@ -46,7 +46,25 @@ DOC_LIMIT_PER_MINUTE = 100          # ICICI Breeze documented ceiling (R-IV §2 
 DOC_LIMIT_PER_DAY = 5000
 DEFAULT_CAP_PER_MINUTE = 60         # the owner's budget, below the ceiling (O-T6 pending; PLAN 1.1: "≤ 30/min" for the poller)
 DEFAULT_CAP_PER_DAY = 4000
-DEFAULT_CALLER_QUOTAS: dict[str, int] = {"chain_poller": 700, "iv_intraday": 800}   # O-T6 pilot: ≈ 700/day for the chain poller;
+DEFAULT_CALLER_QUOTAS: dict[str, int] = {
+    "chain_poller": 700, "iv_intraday": 800,
+    # F10-02: until 14 Nov 2026 the live-quote poller was not metered at all, so it had no quota either — and
+    # it is the biggest spender in the stack: data-service's NIFTY poller calls get_live_quote whenever the
+    # websocket tick is older than 5 s (its own comment prices that at ~1,580/day), and the watchlist poller
+    # does the same per STARRED SYMBOL every 15 s with no websocket shortcut, which is unbounded in the number
+    # of symbols. Against a 4,000/day cap already promising 1,500 to the chain and IV pilots, an unbounded
+    # fallback can empty the day and the first symptom is the chain and margin failing mid-session.
+    # 1,500 is deliberately above normal use so it bites only a runaway, and a refusal is now visible on the
+    # BRKR chip rather than silent. Tune with BREEZE_BUDGET_QUOTAS once Monday gives a real number.
+    "data-service.live_quote": 1500,
+    "data-service.intraday": 300,
+    "data-service.history": 600,          # a backfill walks this in chunks; it must not own the whole day
+    "execution.ltp": 200, "execution.order_status": 200, "execution.portfolio": 100,
+    "live_execution.ltp": 200,
+    # These deliberately SUM ABOVE cap_day: a quota caps one caller's share so no single path can empty the
+    # day, while cap_day remains the real ceiling. Scaling them down to sum to the cap would reserve quota for
+    # callers that are idle on most days (the execution ones are dormant entirely) and starve the live ones.
+}   # O-T6 pilot: ≈ 700/day for the chain poller;
 #   iv_intraday = the fo_iv 15-minute pilot's caller name (PLAN 1.1 ≤ 800/day; the pilot also enforces it itself)
 MINUTE_WINDOW_S = 60.0
 KEEP_DAYS = 3                       # rows older than this are pruned (the ledger stays a few hundred KB)

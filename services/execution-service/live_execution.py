@@ -438,14 +438,20 @@ class ExecutionEngine:
         """Fetch last traded price. Returns 0 on any error."""
         try:
             breeze = self._get_breeze()
-            resp = breeze.get_quotes(
-                stock_code=symbol.replace(".NS", ""),
-                exchange_code="NSE",
-                expiry_date="",
-                product_type="cash",
-                right="",
-                strike_price="",
-            )
+            # F10-01: metered. NOTE: this file is a DUPLICATE of scripts/live_execution.py — F10 found it by
+            # pointing the ledger gate at a root the gate did not scan, and the copy was byte-for-byte the
+            # metered original minus the metering. Two copies of an execution engine will drift; the gate now
+            # covers both so the drift cannot be silent, but the duplication itself is on the backlog.
+            from shared.breeze_budget import ledger
+            with ledger().guard("execution.ltp", "get_quotes"):
+                resp = breeze.get_quotes(
+                    stock_code=symbol.replace(".NS", ""),
+                    exchange_code="NSE",
+                    expiry_date="",
+                    product_type="cash",
+                    right="",
+                    strike_price="",
+                )
             if resp.get("Status") == 200:
                 success = resp.get("Success") or []
                 if success:

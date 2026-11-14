@@ -30,7 +30,15 @@ REPO = UI_API.parents[1]
 #: calls remaining while that volume was invisible to it, so the first symptom of exhaustion on a trading day
 #: would have been the option chain and margin failing mid-session with the panel still showing plenty left.
 #: A gate that guards one directory out of seven is a gate that tells you the wrong thing confidently.
-SCANNED_ROOTS = (UI_API, REPO / "services/data-service", REPO / "scripts", REPO / "shared", REPO / "alpha_lab")
+#: F10-01: the fifth hardening of this gate widened one root to five and STILL missed
+#: services/execution-service — which held a byte-for-byte copy of the very provider file the same commit had
+#: just metered, minus the metering. So the roots are no longer hand-listed: every services/* directory is
+#: discovered, and `test_the_gate_scans_a_non_trivial_number_of_files` fails if a new one appears unscanned.
+#: Listing roots by hand is how this gate was blind five times; the list itself was the defect.
+SCANNED_ROOTS = (
+    *sorted(p for p in (REPO / "services").iterdir() if p.is_dir() and not p.name.startswith(".")),
+    REPO / "scripts", REPO / "shared", REPO / "alpha_lab",
+)
 
 #: Set by the self-test below (and by an adversarial probe) to point the detector at a planted tree instead of
 #: the repo. A module-level override rather than reassigning UI_API: F8's probe had to monkeypatch UI_API, which
@@ -81,8 +89,17 @@ def _code_lines(src: str) -> list[str]:
     except (tk.TokenError, IndentationError, SyntaxError):       # pragma: no cover — raw is the safe direction
         return lines
     out = list(lines)
+    # F10-06: CPython 3.12+ tokenises an f-string as FSTRING_START / FSTRING_MIDDLE / FSTRING_END rather than
+    # STRING, so `f"... ledger().guard( ..."` in the window was never blanked and SILENCED this gate for a real
+    # bare call. Confirmed on this stack's interpreter (3.13). The FSTRING_* members do not exist before 3.12,
+    # hence getattr rather than a direct reference.
+    blankable = {tk.COMMENT, tk.STRING}
+    for name in ("FSTRING_START", "FSTRING_MIDDLE", "FSTRING_END"):
+        member = getattr(tk, name, None)
+        if member is not None:
+            blankable.add(member)
     for t in toks:
-        if t.type not in (tk.COMMENT, tk.STRING):
+        if t.type not in blankable:
             continue
         (r1, c1), (r2, c2) = t.start, t.end
         for r in range(r1, r2 + 1):
@@ -129,11 +146,26 @@ def _bare_sdk_calls() -> list[str]:
             cl = code[n] if n < len(code) else ""
             if start >= len(cl) or cl[start] != line[start]:
                 continue
-            window = "\n".join(code[max(0, n - _WINDOW):n + 1])
             # `.guard(` on ANY receiver, not just `ledger().guard(`: data-service injects the ledger
             # (`budget.guard(CALLER, METHOD)` in fo_iv/intraday.py), which is better design than reaching for
             # the global — and the first widened run reported both of those correctly-metered calls as bare.
-            if "_breeze_call(" in window or ".guard(" in window:
+            #
+            # F10-04: the window alone was not enough. A `with ...guard(...)` block vouches only for calls
+            # INSIDE it, but an 8-line upward window also covered the lines after the block ended — so a bare
+            # call on the very next line, at the OUTER indent, was silently excused by its neighbour's guard.
+            # A guard only counts when the call is indented deeper than it.
+            vouched = False
+            for k in range(n, max(-1, n - _WINDOW) - 1, -1):
+                src_line = code[k]
+                if "_breeze_call(" in src_line:
+                    vouched = True
+                    break
+                if ".guard(" in src_line:
+                    guard_indent = len(src_line) - len(src_line.lstrip())
+                    call_indent = len(line) - len(line.lstrip())
+                    vouched = call_indent > guard_indent
+                    break
+            if vouched:
                 continue
             bare.append(f"{_rel(path)}:{n + 1} {next(g for g in m.groups() if g)}")
     return bare
@@ -222,7 +254,12 @@ def test_the_gate_scans_a_non_trivial_number_of_files() -> None:
     services/ui-api while the live-quote provider in data-service held three unmetered calls."""
     for root in SCANNED_ROOTS:
         assert root.is_dir(), f"scanned root missing: {root}"
-        assert any(root.rglob("*.py")), f"scanned root has no python: {root}"
+    # Not "every root has python": services/master-controller is a real directory with none (the controller
+    # lives in scripts/), and an auto-discovered empty root is harmless — it simply contributes no files. What
+    # must hold is that every services/* tree IS in the list, which is the check that would have caught F10-01.
+    discovered = {p for p in (REPO / "services").iterdir() if p.is_dir() and not p.name.startswith(".")}
+    missing = discovered - set(SCANNED_ROOTS)
+    assert not missing, f"a services/* tree is not scanned — the F10-01 hole: {sorted(str(m) for m in missing)}"
     scanned = [p for p in {q for r in SCANNED_ROOTS for q in r.rglob("*.py")} if "/tests/" not in str(p)]
     assert len(scanned) > 200, f"only {len(scanned)} modules scanned across {len(SCANNED_ROOTS)} roots"
     # the two files this gate exists for, one per service
