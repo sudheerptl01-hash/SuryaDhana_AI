@@ -81,6 +81,7 @@ them; the brief has to point the critic at the recent diff.
 | F6 | 8.34 | two tools that lied about their own subject; **four Breeze SDK call sites bypassed the ledger** (`get_quotes` had recorded ZERO calls) |
 | F7 | 8.39 | seven defects in code written that morning, incl. a gate that could pass while blind and a TTL fix applied to one file but not its twin |
 | F8 | 8.4 | five more: a freeze guard **defeated by the function it guards**; a gate asserting strings that existed only in a comment; the ledger gate blind wherever a comment names the metering helper; the new BRKR chip making the nightly noise its own docstring forbids; and reading the market clock in the browser's timezone |
+| F9 | 8.4 (held) | the gate hardened in F6/F7/F8 was scanning **one seventh of the repo** — three unmetered Breeze calls on the busiest live path in data-service, invisible to the budget panel; and F8-04's accepted fix had silently deleted the only pre-open broker alarm |
 
 Rules that came out of it, for whoever runs round N+1:
 1. **Point the critic at `git log --oneline -8` and the diff**, not only at the deployed pages.
@@ -91,3 +92,11 @@ Rules that came out of it, for whoever runs round N+1:
 4. **A fix applied in one file must be grepped for its twin** (`QUOTE_TTL_S` survived F6 in a second router).
 5. **Anything deciding an Indian market window converts through `Asia/Kolkata` explicitly.** A bare `Date`'s
    weekday and hour are the viewer's, and fixtures built the same wrong way hide it.
+6. **Ask what a gate does NOT look at.** Three rounds hardened the ledger gate's logic while never questioning
+   its scope; the defect it was built for was living one directory over the whole time. Same for an allowlist:
+   enforce the *reason* for each entry, not the entry.
+7. **A fix that narrows when something fires must be asked what it stopped firing for.** F8-04 was right that a
+   closed Saturday should be quiet, and in being right it took the pre-open hour with it — the one hour where
+   the alarm could still change the outcome.
+8. **Verify navigation, not just presence.** A check that loaded `?page=` six times never left the default page
+   and still "passed", because the thing it looked for lives in the header. The key is `?tab=`.
