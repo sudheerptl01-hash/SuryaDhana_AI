@@ -22,6 +22,9 @@ export type BudgetSnap = {
   refused_today?: number | null
   /** The IST calendar day, from the server that owns the holiday master; absent/null = unknown. */
   trading_day?: boolean | null
+  /** MCX's OWN window today in HHMM, or null when MCX is shut. The two exchanges do not share a calendar:
+   *  MCX trades 17:00–23:55 on 24 Nov 2026 (an NSE holiday) and is shut on 25 Dec. Absent = unknown. */
+  mcx_window?: { open_hm: number; close_hm: number } | null
 }
 
 export type LiveSnap = {
@@ -93,13 +96,21 @@ export function brokerFace(live: LiveSnap | null, budget: BudgetSnap | null, ist
   // branch of a ladder is not applied to the ladder.
   const weekday = ist.day >= 1 && ist.day <= 5
   const tradingDay = budget?.trading_day == null ? weekday : budget.trading_day === true
-  // F12: the holiday master this payload carries is NSE's, and MCX is not shut whenever NSE is — it trades
-  // an evening session on several NSE holidays. So the calendar gates the NSE window (09:15–15:30) and the
-  // MCX tail (to 23:30) keeps the weekday test. Applying an equity calendar to a commodity session would
-  // silence a real DOWN on an evening the owner's gold screens are live.
+  // The two exchanges do not share a calendar, so they are asked separately. NSE's window is gated by the
+  // holiday master; MCX's comes from MCX's own (served as `mcx_window`, modelled in shared/mcx_specs).
+  //
+  // F13-06: the MCX half was `weekday && hm <= 2330`, a hardcode with two holes in opposite directions. It
+  // went SILENT over 23:30–23:55 — MCX runs to 23:55 and that final half hour is the window whose Breeze
+  // bars the settlement of record is computed from, so the chip went quiet exactly when a dead session would
+  // cost the settlement — and it cried BRKR DOWN all evening on a full MCX closure like Fri 25 Dec, which is
+  // F10-05 reinstated on the branch F11-03 had just fixed. The weekday test survives only as the fallback
+  // for when the server did not say.
   const nseOpen = tradingDay && sessionExpected(ist, true)
-  const mcxTail = weekday && ist.hm > 1530 && ist.hm <= 2330
-  const expected = nseOpen || mcxTail
+  const mcx = budget?.mcx_window
+  const mcxOpen = mcx === null ? false
+    : mcx === undefined ? (weekday && ist.hm > 1530 && ist.hm <= 2330)   // unknown: the old heuristic
+    : ist.hm >= mcx.open_hm && ist.hm <= mcx.close_hm
+  const expected = nseOpen || mcxOpen
   const connected = live?.breeze_session === true
   const errors = Number(budget?.errors_today ?? 0)
   const refused = Number(budget?.refused_today ?? 0)

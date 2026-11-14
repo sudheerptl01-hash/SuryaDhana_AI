@@ -323,7 +323,22 @@ async def breeze_budget_status() -> dict[str, Any]:
     ist = datetime.now(timezone(timedelta(hours=5, minutes=30)))
     holidays = await _nse_holidays()
     trading_day = ist.weekday() < 5 and ist.date().isoformat() not in holidays
-    return {**budget_counters(), "trading_day": trading_day, "holidays_known": bool(holidays)}
+    # F13-06: the chip also needs MCX's own window, because the two exchanges do not share a calendar — MCX
+    # trades an evening session on some NSE holidays (24 Nov 2026: 17:00–23:55) and is fully shut on days NSE
+    # is also shut (25 Dec 2026). The chip previously hardcoded "weekday and before 23:30", which went SILENT
+    # over 23:30–23:55 — the window whose Breeze bars the MCX settlement of record is computed from — and
+    # cried BRKR DOWN all evening on a full MCX closure. shared/mcx_specs models this; the UI cannot, so it
+    # is served.
+    mcx = None
+    try:
+        from shared import mcx_specs
+        win = mcx_specs.trading_window(ist.date())
+        if win:
+            mcx = {"open_hm": win[0].hour * 100 + win[0].minute, "close_hm": win[1].hour * 100 + win[1].minute}
+    except Exception:  # noqa: BLE001 — a missing calendar must never break the budget panel
+        mcx = None
+    return {**budget_counters(), "trading_day": trading_day, "holidays_known": bool(holidays),
+            "mcx_window": mcx}
 
 
 # ── Holdings, today's positions and funds (Breeze field names per the SDK docs) ──

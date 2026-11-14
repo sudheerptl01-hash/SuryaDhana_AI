@@ -329,3 +329,64 @@ def test_job_failures_counts_crashes_and_states_the_window_it_can_speak_for(tmp_
     empty, no_since, no_kinds = job_failures(tmp_path / "missing.sqlite")
     assert empty == {} and no_since is None and no_kinds == set()
     assert _failures_for(row_results, empty, no_kinds) is None, "no store must mean a dash, never a zero"
+
+
+def test_the_kind_map_covers_the_generic_submit_kinds(tmp_path) -> None:
+    """F13-01: the map held only the four pairs one review happened to name.
+
+    data-service submits several datasets under GENERIC kinds — "bhavcopy", "refresh", "build", "indices" —
+    so the rows behind them stayed dark however often their job crashed. `nse_bhavcopy` is the worst of them:
+    it is the table every equity panel on the terminal reads. The inverse was provable on the live store,
+    which held kind "refresh" while the `ohlcv` row printed a dash.
+
+    Also pinned: every key resolves against the failures BEFORE any falls back to "known but clean". Checking
+    both per key let the first merely-known alias short-circuit to 0 and hide a crash recorded under a later
+    one.
+    """
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from data_health.reads import _DATASET_TO_KIND, _failures_for, _keys_for
+
+    # the generic kinds, read off main.py's own _submit() sites
+    main_src = (Path(__file__).resolve().parents[1] / "main.py").read_text(encoding="utf-8")
+    for dataset, kind in _DATASET_TO_KIND.items():
+        if ":" in kind:
+            continue                                   # submitted by a sub-package, not main.py
+        assert f'_submit("{kind}"' in main_src, f"{dataset} maps to a kind main.py does not submit: {kind}"
+        assert kind in _keys_for({"id": dataset, "ingest_job": "whatever"}), dataset
+
+    # nse_bhavcopy specifically — the dataset every equity panel reads
+    keys = _keys_for({"id": "nse_bhavcopy", "ingest_job": "eod_data_pipeline"})
+    assert "bhavcopy" in keys, f"the bhavcopy kind is unreachable from its row: {keys}"
+
+    # a crash under a LATER alias must win over an earlier alias the store merely knows
+    failures = {"bhavcopy": 3}
+    counted = {"eod_data_pipeline", "bhavcopy"}
+    assert _failures_for({"id": "nse_bhavcopy", "ingest_job": "eod_data_pipeline"}, failures, counted) == 3, (
+        "an earlier known-but-clean alias short-circuited past a real crash")
+
+
+def test_the_retention_floor_is_ist_and_compared_as_an_instant(tmp_path, monkeypatch) -> None:
+    """F13-02: the floor was naive UTC rendered raw on a page whose every other time is IST.
+
+    It read "crash counting began 2026-11-14 07:17" when counting began at 12:47 IST — a 5.5 h over-claim
+    covering the whole morning, including the 08:45 gold snapshot. That is the same defect F12 found in the
+    PREVIOUS floor, re-expressed inside the fix written to answer it. And `max()` over two ISO strings with
+    different offsets compares text, not moments.
+    """
+    import sys
+    from datetime import datetime
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from data_health.reads import _later_iso, _retention_floor
+
+    floor = _retention_floor(tmp_path / "q.sqlite")
+    assert floor and ("+05:30" in floor), f"the floor must be offset-aware IST: {floor}"
+    assert datetime.fromisoformat(floor).utcoffset().total_seconds() == 5.5 * 3600
+
+    # compared as instants: a UTC row 10 minutes LATER must win over an IST floor, despite sorting lower
+    utc_later = "2026-11-14T08:00:00+00:00"            # 13:30 IST
+    ist_floor = "2026-11-14T13:20:00+05:30"
+    assert _later_iso(utc_later, ist_floor) == utc_later, "string comparison picked the wrong moment"
+    assert _later_iso(None, ist_floor) == ist_floor and _later_iso(utc_later, None) == utc_later

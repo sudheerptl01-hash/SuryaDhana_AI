@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -197,12 +197,24 @@ _JOB_ID_TO_KIND = {
     "nse_filings_weekly": "nse_filings",
 }
 
+#: dataset id -> the submit kind that PRODUCES it, for the generic kinds. F13-01: the map above held only the
+#: four pairs one review happened to name, so the datasets behind data-service's generic kinds stayed dark —
+#: `nse_bhavcopy` is produced by kind "bhavcopy" (main.py:672), which is the table every equity panel on the
+#: terminal reads, and its row could not light the column no matter how often the job crashed.
+_DATASET_TO_KIND = {
+    "nse_bhavcopy": "bhavcopy",
+    "ohlcv": "refresh",
+    "ml_features": "build",
+    "nse_indices": "indices",
+    "iv_expiry_replay": "fo_iv:expiry_replay",
+}
+
 
 def _keys_for(row: dict[str, Any]) -> list[str]:
     """Every name this dataset's job could appear under in the job store, most specific first."""
     job = str(row.get("ingest_job") or "")
     ident = str(row.get("id") or "")
-    out = [k for k in (job, _JOB_ID_TO_KIND.get(job, ""), ident) if k]
+    out = [k for k in (job, _JOB_ID_TO_KIND.get(job, ""), ident, _DATASET_TO_KIND.get(ident, "")) if k]
     return list(dict.fromkeys(out))
 
 
@@ -213,9 +225,14 @@ def _failures_for(row: dict[str, Any], failures: dict[str, int], counted: set) -
     because the master-controller runs its own schedule and only some steps submit to data-service. A 0 there
     would say "this job has not crashed" when what is true is "this store has never seen this job".
     """
-    for key in _keys_for(row):
+    # F13-01: resolve EVERY key against the failures first, then fall back to "known but clean". Checking
+    # them in one pass per key meant the first key the store merely knew about short-circuited to 0 and hid a
+    # crash recorded under a later alias.
+    keys = _keys_for(row)
+    for key in keys:
         if key in failures:
             return failures[key]
+    for key in keys:
         if key in counted:
             return 0                                    # the store knows this job and it has not crashed
     return None
@@ -275,12 +292,26 @@ def job_failures(db_path: Path | None = None) -> tuple[dict[str, int], str | Non
         # date flatters the column in exactly the direction that matters.
         floor = _retention_floor(path)
         oldest = con.execute("SELECT MIN(submitted_at) FROM jobs").fetchone()[0]
-        since = max(str(oldest), floor) if oldest and floor else (floor or (str(oldest) if oldest else None))
+        # compared as INSTANTS, not strings: the rows are offset-aware UTC and the floor is offset-aware IST,
+        # so a lexical max would pick whichever text sorted higher rather than whichever moment came later
+        since = _later_iso(str(oldest) if oldest else None, floor)
         return counts, since, counted
     except sqlite3.Error:                                      # pragma: no cover
         return {}, None, set()
     finally:
         con.close()
+
+
+def _later_iso(a: str | None, b: str | None) -> str | None:
+    """The later of two ISO timestamps, compared as moments even when their offsets differ."""
+    if not a:
+        return b
+    if not b:
+        return a
+    try:
+        return a if datetime.fromisoformat(a) >= datetime.fromisoformat(b) else b
+    except ValueError:                                         # pragma: no cover — unparseable mark
+        return b
 
 
 #: when failure retention began — the first data-service start carrying KEEP_ERRORS. Recorded beside the store
@@ -294,7 +325,11 @@ def _retention_floor(store_path: Path) -> str | None:
     try:
         if mark.exists():
             return mark.read_text(encoding="utf-8").strip() or None
-        now = db.utcnow().isoformat()
+        # F13-02: IST, offset-suffixed. `db.utcnow()` is NAIVE, and the page rendered it raw beside times that
+        # are all IST — so "crash counting began 2026-11-14 07:17" read as 07:17 in the morning when counting
+        # actually began at 12:47 IST. A 5.5 h over-claim, covering the whole morning including the 08:45
+        # snapshot: the same defect F12 found in the previous floor, re-expressed in the fix written for it.
+        now = datetime.now(timezone(timedelta(hours=5, minutes=30))).isoformat(timespec="seconds")
         mark.write_text(now, encoding="utf-8")
         return now
     except OSError:                                            # pragma: no cover — read-only volume

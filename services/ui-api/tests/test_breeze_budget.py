@@ -317,3 +317,43 @@ def test_every_caller_name_in_the_code_has_a_quota() -> None:
     assert not missing, (
         "these callers can spend Breeze quota with no quota of their own — one unbounded path can empty the "
         f"day and the chain fails mid-session: {missing}")
+
+
+def test_no_quota_sits_at_its_observed_peak() -> None:
+    """A quota must have real headroom over what that caller has actually spent in a day.
+
+    F13-07: `ui-api.login` was first set to 120 against the 115 login attempts made that very day — 96% of its
+    own bound, and the identical arithmetic the same commit had just fixed for `ui-api.positions` (600 against
+    a 578 peak). The day attempts pile up is a failing-TOTP day, and a refused `generate_session` means no
+    broker session for the REST OF THE DAY even if the owner answers the OTP. The one call the terminal cannot
+    do without must get the most headroom, not the least.
+
+    Measured from the live ledger when it exists, so the bound is checked against reality rather than against
+    the number someone assumed. Quotas are per DAY, so the comparison is a per-day peak, never an all-time sum
+    (F13-08: an earlier commit message quoted 1,038 all-time where the peak that matters was 578).
+    """
+    import sqlite3
+
+    from shared.breeze_budget import DEFAULT_CALLER_QUOTAS
+
+    ledger_db = Path(__file__).resolve().parents[3] / "data" / "breeze_budget.sqlite"
+    if not ledger_db.exists():                                  # pragma: no cover — a fresh machine
+        pytest.skip("no live ledger to measure against")
+    con = sqlite3.connect(f"file:{ledger_db}?mode=ro", uri=True, timeout=5.0)
+    try:
+        peaks: dict[str, int] = {}
+        for caller, _day, n in con.execute("SELECT caller, day, COUNT(*) FROM calls GROUP BY caller, day"):
+            peaks[str(caller)] = max(peaks.get(str(caller), 0), int(n))
+    finally:
+        con.close()
+
+    tight = {c: (n, DEFAULT_CALLER_QUOTAS[c]) for c, n in peaks.items()
+             if c in DEFAULT_CALLER_QUOTAS and n > DEFAULT_CALLER_QUOTAS[c] * 0.8}
+    assert not tight, (
+        "quota(s) within 20% of a peak this caller has already reached — the day it is exceeded is the day "
+        f"the terminal needs the call most: {tight}")
+
+    # and the login specifically, because its refusal is the one that cannot be worked around
+    login_peak = peaks.get("ui-api.login", 0) or peaks.get("ui-api.positions", 0)
+    assert DEFAULT_CALLER_QUOTAS["ui-api.login"] >= max(200, login_peak * 2), (
+        "the login quota must clear its worst observed day with room to spare")

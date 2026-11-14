@@ -203,5 +203,32 @@ check('F11-05 no tooltip points at a SYS sub-view that does not exist',
   !JSON.stringify([brokerFace(DEAD, REFUSED, at(2026, 11, 16, 12, 0)),
                    brokerFace({ breeze_session: true }, REFUSED, at(2026, 11, 16, 12, 0))]).includes('SYS \u203a BRKR'))
 
+// ── F13-06: the MCX window comes from MCX's own calendar, in both directions ───────────────────────────
+// The hardcode `weekday && hm <= 2330` had two holes. It went SILENT over 23:30–23:55, which is the window
+// whose Breeze 1-minute bars the MCX settlement of record is computed from (gold_mcx_close, 23:58) — so a
+// dead session went unflagged exactly when it would cost the settlement. And it painted BRKR DOWN all
+// evening on a full MCX closure, which is F10-05 reinstated on the branch F11-03 had just fixed.
+// shared/mcx_specs.trading_window: Mon 16 Nov = 09:00–23:55, Tue 24 Nov = 17:00–23:55, Fri 25 Dec = SHUT.
+const MON_WIN = { ...COUNTS, trading_day: true, mcx_window: { open_hm: 900, close_hm: 2355 } }
+const HOL_WIN = { ...COUNTS, trading_day: false, mcx_window: { open_hm: 1700, close_hm: 2355 } }
+const SHUT = { ...COUNTS, trading_day: false, mcx_window: null }
+
+check('F13-06 23:40 Monday is RED — MCX runs to 23:55 and the settlement needs those bars',
+  brokerFace(DEAD, MON_WIN, at(2026, 11, 16, 23, 40))?.tone === 'bad',
+  brokerFace(DEAD, MON_WIN, at(2026, 11, 16, 23, 40)))
+check('F13-06 23:56 Monday, after the close, is grey',
+  brokerFace(DEAD, MON_WIN, at(2026, 11, 16, 23, 56))?.tone === 'idle')
+check('F13-06 a fully SHUT MCX day is grey all evening, not red',
+  brokerFace(DEAD, SHUT, at(2026, 12, 25, 18, 0))?.tone === 'idle',
+  brokerFace(DEAD, SHUT, at(2026, 12, 25, 18, 0)))
+check('F13-06 …and still grey at 22:00 that day', brokerFace(DEAD, SHUT, at(2026, 12, 25, 22, 0))?.tone === 'idle')
+check('F13-06 an NSE holiday with an MCX evening is red inside that evening',
+  brokerFace(DEAD, HOL_WIN, at(2026, 11, 24, 22, 0))?.tone === 'bad')
+check('F13-06 …and grey BEFORE that evening session opens (16:00 < 17:00)',
+  brokerFace(DEAD, HOL_WIN, at(2026, 11, 24, 16, 0))?.tone === 'idle',
+  brokerFace(DEAD, HOL_WIN, at(2026, 11, 24, 16, 0)))
+check('F13-06 an unknown window falls back to the old weekday heuristic',
+  brokerFace(DEAD, { ...COUNTS, trading_day: true }, at(2026, 11, 16, 22, 0))?.tone === 'bad')
+
 console.log(`brokerChip.check: ${passed} passed, ${failed} failed`)
 if (failed > 0) process.exit(1)

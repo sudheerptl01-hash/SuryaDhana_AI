@@ -1102,6 +1102,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `last_call.caller` | string |
 | `last_call.method` | string |
 | `last_call.ok` | number |
+| `mcx_window` | null |
 | `note` | string |
 | `path` | string |
 | `quotas` | object |
