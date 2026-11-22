@@ -281,7 +281,9 @@ class LiveQuotes:
             return None
 
     def _nse_row(self, sym: str) -> Optional[dict]:
-        return self._nse_idx.get(sym) if lt_mod.is_index(sym) else self._nse_eq.get(sym)
+        if lt_mod.is_index(sym):                           # NSE keys indices by its own spelling (22 Nov: Breeze's missed)
+            return self._nse_idx.get(sym) or self._nse_idx.get(lt_mod.nse_spelling(sym))
+        return self._nse_eq.get(sym)
 
     def _eod_rows(self, syms: list[str], now: float) -> dict[str, dict]:
         with self._lock:
@@ -289,7 +291,9 @@ class LiveQuotes:
                        or now - self._eod[s][0] > (EOD_TTL_S if self._eod[s][1] is not None else EOD_MISS_TTL_S)]
         if missing:
             try:
-                got = self._eod_fn(missing) or {}
+                spell = {s: lt_mod.nse_spelling(s) for s in missing}      # the EOD tables use NSE's index names
+                raw = self._eod_fn(list(dict.fromkeys([*missing, *spell.values()]))) or {}
+                got = {s: raw.get(s) or raw.get(spell[s]) for s in missing}
             except Exception as exc:  # noqa: BLE001 — DuckDB busy / table missing: try again next call
                 logger.warning("live-quotes: EOD read failed", error=str(exc)[:160])
                 got = None

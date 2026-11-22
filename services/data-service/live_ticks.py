@@ -98,6 +98,15 @@ INDEX_WS_ALIASES: dict[str, str] = {
     "NIFTY INDIA CONSUMPTION": "NIFTY CONSUMPTION", "NIFTY INDIA FPI 150": "NIFTY FPI 150",
     "NIFTY PRIVATE BANK": "NIFTY PVT BANK",      # the master's token appeared after 4 Nov (22 Nov research; ticks unproven)
 }
+# Breeze spelling → NSE's, derived from the table above: NSE's allIndices copy and the EOD tables key indices by NSE's
+# name, so a pane asking with Breeze's ('NIFTY FIN SERVICE', OMON / OSTR) got no fallback at all (22 Nov)
+NSE_SPELLINGS: dict[str, str] = {breeze: nse for nse, breeze in INDEX_WS_ALIASES.items()}
+
+
+def nse_spelling(sym: str) -> str:
+    return NSE_SPELLINGS.get(sym, sym)
+
+
 # L-CAPACITY: these index tokens exist in the master but never ticked (35 of 40 stream).
 SILENT_INDEX_TOKENS = frozenset({"CNX 100", "CNX DEFTY", "CNX NIFTY JUNIOR", "NIFTY CPSE", "S&P CNX NIFTYY", "DJIA",
                                  "FTSE100", "S&P500"})

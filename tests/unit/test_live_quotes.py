@@ -686,3 +686,21 @@ def test_eod_sql_on_a_temp_duckdb(monkeypatch, tmp_path):
                                 "low": 1299.0, "volume": 9000000, "value_cr": 1180.0, "table": "nse_bhavcopy"}   # EQ over BE
     assert rows["NIFTY 50"]["close"] == 23960.6 and rows["NIFTY 50"]["prev_close"] == 23810.85
     assert rows["NIFTY 50"]["table"] == "market_index_daily" and "NOPE" not in rows
+
+
+def test_a_breeze_index_spelling_gets_nse_and_eod_fallbacks_under_nse_spelling():
+    """22 Nov: OMON / OSTR ask 'NIFTY FIN SERVICE' (Breeze's spelling); allIndices and the EOD tables key NSE's
+    'NIFTY FINANCIAL SERVICES', so the row read unavailable whenever Breeze was not ticking."""
+    clock = Clock(at(16, 0))                                            # after the close: the EOD path
+    eod = {"NIFTY FINANCIAL SERVICES": {"date": "2026-11-05", "close": 28871.2, "prev_close": 28800.0, "open": None,
+                                         "high": None, "low": None, "volume": None, "value_cr": None,
+                                         "table": "market_index_daily"}}
+    e = engine(clock, ticks=None, eod=eod)
+    q = e.quotes(["NIFTY FIN SERVICE"])["quotes"]["NIFTY FIN SERVICE"]
+    assert (q["source"], q["state"], q["price"]) == ("eod", "closed", 28871.2)
+    clock2 = Clock(at(10, 15))
+    e2 = engine(clock2, ticks=None)
+    e2._nse_idx["NIFTY FINANCIAL SERVICES"] = {"price": 28900.0, "kind": "all_indices", "stamp_epoch": at(10, 13),
+                                               "fetched_at": at(10, 14, 30), "prev_close": 28800.0}
+    q2 = e2.quotes(["NIFTY FIN SERVICE"])["quotes"]["NIFTY FIN SERVICE"]
+    assert q2["source"] == "nse_api" and q2["price"] == 28900.0
