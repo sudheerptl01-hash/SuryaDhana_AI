@@ -229,15 +229,30 @@ def coerce_row(raw: Any) -> dict[str, Any]:
 
 def restate(row: dict[str, Any], extra_s: float, *, upstream_failed: bool) -> dict[str, Any]:
     """The row as served ``extra_s`` after data-service gave it: ``age_s`` grows by the cache time; when the refresh
-    failed (served past REFRESH_S) the state is re-derived from the total age and ``reason`` says so."""
+    failed (served past REFRESH_S) the state is re-derived from the total age and ``reason`` says so. A quiet or
+    NSE-confirmed LIVE row carries ``vouched_age_s`` (the socket's heartbeat age when data-service composed it): its
+    price was vouched for that long ago, so a LIVE row is re-derived from that, not from ``age_s`` (the time since its last
+    tick, minutes for a quiet name: one failed refresh turned every such row STALE)."""
     out = dict(row)
     if out.get("age_s") is not None:
         out["age_s"] = round(out["age_s"] + extra_s, 1)
+    vouched = _num(out.get("vouched_age_s"))
+    if vouched is not None and vouched >= 0:
+        out["vouched_age_s"] = vouched = round(vouched + extra_s, 1)
+    confirmed = _num(out.get("confirmed_age_s"))
+    if confirmed is not None and confirmed >= 0:
+        out["confirmed_age_s"] = round(confirmed + extra_s, 1)      # NSE's confirming copy ages with the cache too
     if upstream_failed and out.get("state") != "unavailable":
         age = out["age_s"] if out.get("age_s") is not None else extra_s
         st = out.get("state")
         if st == "live":
-            st = "delayed" if age <= DELAYED_MAX_S else "stale"
+            if vouched is not None and vouched >= 0:
+                st = "delayed" if vouched <= DELAYED_MAX_S else "stale"
+                if out.get("age_s") is not None and out["age_s"] > vouched:
+                    # 22 Nov review D7: the price was verified `vouched` s ago; "DELAYED · 22m" from the trade age misread it
+                    out["trade_age_s"], out["age_s"] = out["age_s"], vouched
+            else:
+                st = "delayed" if age <= DELAYED_MAX_S else "stale"
         elif st == "delayed" and age > DELAYED_MAX_S:
             st = "stale"
         out["state"] = st

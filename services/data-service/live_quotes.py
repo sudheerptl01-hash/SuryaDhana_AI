@@ -23,13 +23,16 @@ NSE fallback poller: one daemon thread (`live-quotes-nse`), demand-driven (symbo
 fresh tick covers), only 09:00–15:40 IST on trading days, through the shared cookie-primed NseLive client (its cache and
 its 403/429 600 s breaker are shared with every other NSE route). Cadences are L-CAPACITY's floors, never faster:
 allIndices ≥ 15 s, each heatmap-symbols list ≥ 60 s (only the lists that cover a needed symbol, broad lists first), the
-NextApi quote ≥ 120 s per symbol and ≥ 4 s apart overall, on demand for at most 20 recently asked names outside every
-heatmap list; ≥ 1.2 s between any two network calls.
+NextApi quote ≥ 60 s per symbol (≥ 120 s unless a quiet name needs its confirming copy), one call per 6 s and ≤ 20 per
+120 s overall, earliest deadline first over every recently asked name outside the heatmap lists (22 Nov: no 20-name cut);
+≥ 1.2 s between any two network calls.
 """
 from __future__ import annotations
 
+import math
 import os
 import threading
+from collections import deque
 import time
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Optional
@@ -53,9 +56,10 @@ def _env_floor(name: str, default: float, floor: float) -> float:
 
 
 def tick_vouched(tick_ts: Optional[float], subscribed_since: Optional[float]) -> bool:
-    """True when the socket vouches for the time since this tick: the tick arrived on the CURRENT subscription (raw
-    epochs, so a tick landing a few ms after the stamp is not flipped by rounding). Unknown subscription start → True
-    (the rule before 6 Nov)."""
+    """True when the socket vouches for the time since this tick: the tick arrived after the socket started carrying the
+    name without a break (LiveTicks.vouched_since: the current subscription, or the first tick after a transport gap; raw
+    epochs, so a tick landing a few ms after the stamp is not flipped by rounding; math.inf while a gap is open). Unknown
+    start → True (the rule before 6 Nov)."""
     return subscribed_since is None or (tick_ts is not None and tick_ts >= subscribed_since)
 
 
@@ -82,15 +86,26 @@ NEXTAPI_GAP_S = _env_floor("LIVE_NSE_QUOTE_GAP_S", 4.0, 4.0)
 NSE_GAP_S = 1.2                     # between any two NSE network calls from this poller
 NEXTAPI_MAX_SYMBOLS = 20
 NEXTAPI_MIN_LAG_S = 50.0            # L-CAPACITY: NextApi values were 48.6-65.2 s behind Breeze while lastUpdateTime claimed 8-9 s
+NEXTAPI_MIN_SPACING_S = 60.0        # L-CAPACITY's per-symbol floor: only a quiet name's first copy after its tick may come this soon
+# one NextApi call per 6 s, evenly: today's steady-state ceiling (20 names × one call per 120 s) without its 4 s bursts
+NEXTAPI_SPACING_S = max(NEXTAPI_GAP_S, NEXTAPI_TTL_S / NEXTAPI_MAX_SYMBOLS)
+# ── NSE confirmation of a quiet name past QUIET_LIVE_S (owner-approved 22 Nov; reviews wf_2d40b24a-03b, wf_45861533-2e5) ──
+NEXTAPI_CONFIRM_LAG_S = 66.0        # a NextApi copy's values are known to cover only up to fetch − 66 s (worst measured lag 65.2 s)
+HEATMAP_FETCH_LAG_S = 10.0          # 22 Nov review D2: a heatmap row's data is at least 10 s older than our fetch (measured 10-68 s)
+B_GAP_MARGIN_S = 30.0               # 22 Nov review D2: across a transport gap NSE's copy must be ≥ 30 s past the gap's end
+HEATMAP_STAMP_SLACK_S = 5.0         # a heatmap row covers up to its stamp − 5 s (stamp matched Breeze volume: 49 s median, 51 s p90)
+UNSTAMPED_DATA_AGE_S = 160.0        # a row with no usable stamp: 49 s lag + one 110 s batch; it orders copies, it never confirms
+QUIET_CONFIRM_MAX_S = 240.0         # a confirming copy older than this (by its conservative data time) confirms nothing; a fixed
+                                    # cap, never grown by the LIVE_NSE_QUOTE_TTL_S override
+QUIET_PREFETCH_S = 100.0             # a vouched quiet name outside every heatmap list joins the NextApi queue from this tick age, so a
+                                    # copy taken after the tick (fetch ≥ tick + 66 s) is stored before the tick reaches QUIET_LIVE_S
 MINUTE_STAMP_SPAN_S = 59.0          # allIndices: a minute label; its values were 2-60 s old while the label read 1-2 min
-# The socket vouches for a quiet name only from the moment its CURRENT subscription started: Breeze sends no snapshot on
-# subscribe, and a lapse (SYMBOL_TTL_S without demand), a cap eviction or a reconnect keeps the old tick in the cache, so a
-# tick older than the subscription is never quiet-LIVE and never 'covered' for the NSE poller (tick_vouched). 6 Nov
-# acceptance: EQS read 24 rows STALE · BREEZE · 22m: subscriptions lapsed (asked 09:03, re-asked 09:29, captured before the
-# first new tick) whose cached 09:08 auction ticks the old text called 'the feed is not healthy'. Keeping a quiet name LIVE
-# past QUIET_LIVE_S through NSE's copy was built and reviewed twice (wf_2d40b24a-03b, wf_45861533-2e5) and NOT shipped: it
-# needs transport-gap detection, a 66 s NextApi floor, stamped copies only and honest-time storage, and still lets a
-# silently dead token read LIVE ~3.5 min after a missed trade (an owner decision, reports/live_nse/COVERAGE.md).
+# The socket vouches for a quiet name only from LiveTicks.vouched_since: its CURRENT subscription (Breeze sends no snapshot on
+# subscribe; a lapse, a cap eviction or a teardown keeps the old tick in the cache) or the first tick after a transport gap
+# (socket.io 'disconnect', or a > 2 s silence of the whole socket in session), whichever is later. Past QUIET_LIVE_S a quiet
+# name stays LIVE only while NSE's own copy, known (conservatively) to be taken after the tick, shows the same price and the
+# same non-zero traded volume (_confirmation). What stays open is a token the server silently stops streaming after its last
+# tick: a trade it misses reads LIVE until NSE's next copy shows it (measured worst in the spec's residual section).
 LIST_RELEARN_S = 3600.0
 SECTOR_INDEX_PATH = "heatmap-index?type=Sectoral%20Indices"
 
@@ -189,6 +204,9 @@ class LiveQuotes:
         self._list_order: list[str] = []
         self._sym_list: dict[str, str] = {}
         self._quote_fetched: dict[str, float] = {}
+        self._quote_waiting: dict[str, float] = {}            # NextApi candidates never fetched: since when (FIFO)
+        self._nextapi_calls: deque[float] = deque(maxlen=NEXTAPI_MAX_SYMBOLS)
+        self._quote_queue: dict[str, Any] = {"names": (), "at": None}
         self._holidays: set[str] = set()
         self._holidays_at = -HOLIDAYS_TTL_S
         self._pins: tuple[float, list[str]] = (-PIN_TTL_S, [])
@@ -231,11 +249,16 @@ class LiveQuotes:
         eod = self._eod_rows(syms, now)
         out: dict[str, dict] = {}
         since_fn = getattr(lt, "subscribed_since", None) if lt is not None else None
+        vouch_fn = getattr(lt, "vouched_since", None) if lt is not None else None
+        hb = lt.heartbeat_age() if (lt is not None and healthy) else None
+        gap = self._transport(lt)
         for s in syms:
             subscribed = bool(lt is not None and lt.is_subscribed(s))
             since = since_fn(s) if (subscribed and callable(since_fn)) else None
+            vouch = vouch_fn(s) if (subscribed and callable(vouch_fn)) else None
             out[s] = self._compose(s, now, state, session, snap.get(s), self._nse_row(s), eod.get(s), healthy, subscribed,
-                                   subscribed_since=since)
+                                   subscribed_since=since, vouched_since=vouch, confirmable=callable(vouch_fn),
+                                   heartbeat_age=hb, transport=gap)
         if syms:
             self._ensure_poller()
         return {"as_of": _iso(now), "market": {"state": state, "session_date": session.isoformat()}, "quotes": out,
@@ -246,6 +269,14 @@ class LiveQuotes:
     def _ticks(self) -> Any:
         try:
             return self._ticks_getter()
+        except Exception:  # noqa: BLE001
+            return None
+
+    @staticmethod
+    def _transport(lt: Any) -> Optional[dict]:
+        fn = getattr(lt, "transport", None) if lt is not None else None
+        try:
+            return fn() if callable(fn) else None
         except Exception:  # noqa: BLE001
             return None
 
@@ -314,7 +345,7 @@ class LiveQuotes:
                 "day_low": n.get("day_low"), "volume": n.get("volume"), "value_cr": _r(n.get("value_cr")),
                 "bid": n.get("bid"), "ask": n.get("ask"), "ltt": _iso(stamp), "age_s": round(max(0.0, age), 1),
                 "age_basis": basis, "date": self._now_ist(data_t).date().isoformat(), "_t": data_t,
-                "nse_stamp": n.get("stamp"), "nse_feed": kind}
+                "_conf_t": n.get("data_t"), "nse_stamp": n.get("stamp"), "nse_feed": kind}
 
     def _from_eod(self, e: dict, now: float) -> dict:
         d = e.get("date")
@@ -329,28 +360,46 @@ class LiveQuotes:
                 "_t": close_at, "eod_table": e.get("table")}
 
     def _compose(self, sym: str, now: float, state: str, session: date, tick: Optional[dict], nse: Optional[dict],
-                 eod: Optional[dict], healthy: bool, subscribed: bool, subscribed_since: Optional[float] = None) -> dict:
+                 eod: Optional[dict], healthy: bool, subscribed: bool, subscribed_since: Optional[float] = None,
+                 vouched_since: Optional[float] = None, confirmable: bool = False, heartbeat_age: Optional[float] = None,
+                 transport: Optional[dict] = None) -> dict:
         today = self._now_ist(now).date().isoformat()
         b = self._from_tick(sym, tick, now) if tick and tick.get("price") is not None else None
         n = self._from_nse(nse, now) if nse and nse.get("price") is not None else None
         e = self._from_eod(eod, now) if eod and eod.get("close") is not None else None
         base = {"kind": "index" if lt_mod.is_index(sym) else "equity", "subscribed": subscribed}
-        # seconds the CURRENT subscription has run (None: unknown, e.g. an engine without the accessor → the old rule)
-        sub_age = max(0.0, now - subscribed_since) if subscribed and subscribed_since is not None else None
+        # from when the socket carried the name without a break (an engine without vouched_since: the subscription stamp)
+        vouch = vouched_since if confirmable else subscribed_since
         if state in ("open", "pre-open"):
             intraday = [c for c in (b, n) if c is not None and c["date"] == today]
-            pre = " (pre-open: prices before 09:15 may be the indicative auction price, not trades)" if state == "pre-open" else ""
+            pre = " (pre-open: may be the auction's indicative price, not a trade)" if state == "pre-open" else ""
             b_today = b is not None and any(c is b for c in intraday)
-            # a tick older than the subscription says nothing about the time since: the socket was not carrying the name
-            vouched = b is not None and tick_vouched(b["_t"], subscribed_since if subscribed else None)
+            # a tick older than the vouched start says nothing about the time since: the socket was not carrying the name
+            vouched = b is not None and tick_vouched(b["_t"], vouch if subscribed else None)
             if b is not None and b_today and (b["age_s"] <= FRESH_S or
                                               (healthy and subscribed and vouched and b["age_s"] <= QUIET_LIVE_S)):
-                why = None if b["age_s"] <= FRESH_S else f"quiet: no new trade or quote for {b['age_s']:.0f} s on a healthy feed"
-                return self._finish(b, LIVE, (why or "") + pre or None, base)
+                quiet = b["age_s"] > FRESH_S
+                why = f"quiet: no new trade or quote for {b['age_s']:.0f} s on a healthy feed" if quiet else None
+                q = self._finish(b, LIVE, (why or "") + pre or None, base)
+                if quiet:
+                    q["vouched_age_s"] = heartbeat_age
+                return q
+            conf = self._confirmation(b, n, state=state, healthy=healthy, subscribed=subscribed,
+                                      vouch_from=vouched_since if confirmable else None, now=now,
+                                      subscribed_since=subscribed_since) if b_today else None
+            if conf is not None:
+                why = (f"quiet: no tick for {b['age_s']:.0f} s on a healthy feed; NSE's copy ({conf:.0f} s old) shows the same "
+                       "price and volume")
+                q = self._finish(b, LIVE, why, base)
+                q.update(confirmed_by="nse_quote" if n["nse_feed"] == "equity_quote" else "nse_heatmap",
+                         confirmed_age_s=round(conf, 1), vouched_age_s=heartbeat_age)
+                return q
             if intraday:
                 best = min(intraday, key=lambda c: c["age_s"])
                 st = DELAYED if best["age_s"] <= DELAYED_MAX_S else STALE
-                why = self._fallback_lead(b, b_today, n, healthy, subscribed, vouched, sub_age) + \
+                why = self._fallback_lead(b, b_today, n, healthy, subscribed, vouched, now=now, state=state,
+                                          subscribed_since=subscribed_since, vouch_from=vouch, transport=transport,
+                                          confirmable=confirmable, queue=self._queue_note(sym)) + \
                     f"{'NSE website copy' if best['source'] == SOURCE_NSE else 'last tick'} {best['age_s']:.0f} s old"
                 return self._finish(best, st, why + pre, base)
             if e is not None:
@@ -373,24 +422,84 @@ class LiveQuotes:
                                 base)
         return self._unavailable(base, "no stored close")
 
-    @staticmethod
-    def _fallback_lead(b: Optional[dict], b_today: bool, n: Optional[dict], healthy: bool, subscribed: bool,
-                       vouched: bool, sub_age: Optional[float]) -> str:
-        """Why a row is not LIVE, in short words that match the cause (6 Nov: lapsed subscriptions read 'the feed is not
-        healthy' on a healthy feed, and names with a tick read 'no live tick'). ui-api caps a reason at 200 characters."""
+    def _session_open_t(self, t: float) -> float:
+        d = self._now_ist(t).date()
+        return datetime(d.year, d.month, d.day, OPEN_HM[0], OPEN_HM[1], tzinfo=IST).timestamp()
+
+    def _confirmation(self, b: Optional[dict], n: Optional[dict], *, state: str, healthy: bool, subscribed: bool,
+                      vouch_from: Optional[float], now: float, subscribed_since: Optional[float] = None) -> Optional[float]:
+        """Seconds since NSE's confirming data (conservative), or None: NSE's own copy, known to be taken after the tick and
+        after the socket's vouched start, shows the same price and the same non-zero traded volume, in the open session, on
+        a healthy subscribed socket. Same cumulative volume = no trade between the tick and NSE's data time; the socket
+        vouches for the time after it."""
+        if state != "open" or not healthy or not subscribed or b is None or n is None or vouch_from is None:
+            return None
+        if n.get("nse_feed") not in ("heatmap", "equity_quote") or n.get("age_basis") == "fetch" or b.get("note"):
+            return None                                   # indices, unstamped rows, a tick from an earlier session
+        tick_t, conf_t = b["_t"], n.get("_conf_t")
+        if conf_t is None or n.get("date") != b.get("date") or tick_t < self._session_open_t(tick_t):
+            return None                                   # a pre-open tick's ttq is not cumulative traded volume
+        # A re-subscription (a lapse, a cap eviction, a re-login) is proven only by a tick that arrived after it: Breeze sends
+        # no snapshot and no ack, so a re-joined token may be dead (22 Nov review D1: 180 s of wrong LIVE otherwise).
+        if subscribed_since is not None and tick_t < subscribed_since:
+            return None
+        if not (conf_t >= vouch_from and conf_t > tick_t):
+            return None
+        # Variant B (owner, 22 Nov) for TRANSPORT gaps only: the tick may predate the gap if NSE's copy is clear of it by
+        # B_GAP_MARGIN_S (review D2: the NextApi / heatmap timing constants rest on few reads; 30 s absorbs their error).
+        if tick_t < vouch_from and conf_t < vouch_from + B_GAP_MARGIN_S:
+            return None
+        bv, nv = b.get("volume"), n.get("volume")
+        if bv is None or nv is None or float(bv) <= 0 or float(nv) != float(bv) or _r(n.get("price")) != _r(b.get("price")):
+            return None
+        age = max(0.0, now - conf_t)
+        return age if age <= QUIET_CONFIRM_MAX_S else None
+
+    def _queue_note(self, sym: str) -> str:
+        q = self._quote_queue
+        if sym not in q.get("names", ()) or sym in self._sym_list:
+            return ""
+        return f"NSE quote queue: {len(q['names'])} names; "
+
+    def _fallback_lead(self, b: Optional[dict], b_today: bool, n: Optional[dict], healthy: bool, subscribed: bool,
+                       vouched: bool, *, now: float, state: str, subscribed_since: Optional[float] = None,
+                       vouch_from: Optional[float] = None, transport: Optional[dict] = None, confirmable: bool = False,
+                       queue: str = "") -> str:
+        """Why a row is not LIVE, in short words that match the cause. ui-api caps a reason at 200 characters."""
         if b is None or not b_today:
             return "no live tick this session; "
         if not healthy:
+            if transport and transport.get("gap_open") and transport.get("gap_at"):
+                return f"the feed dropped {max(0.0, now - transport['gap_at']):.0f} s ago; "
             return "the feed is not healthy; "
         if not subscribed:
             return "not subscribed on the feed; "
         if not vouched:
-            since = f" {sub_age:.0f} s ago" if sub_age is not None else ""
-            return f"re-subscribed{since}, waiting for the first tick; "
-        if n is not None and n.get("date") == b.get("date") and n["age_s"] < b["age_s"] and \
-                n.get("volume") is not None and b.get("volume") is not None and float(n["volume"]) > float(b["volume"]):
-            return f"no tick for {b['age_s']:.0f} s; NSE's volume is higher; "
-        return f"no tick for {b['age_s']:.0f} s; "
+            if subscribed_since is not None and b["_t"] < subscribed_since:
+                return f"re-subscribed {max(0.0, now - subscribed_since):.0f} s ago, waiting for the first tick; "
+            if vouch_from is not None and math.isfinite(vouch_from):
+                return f"reconnected {max(0.0, now - vouch_from):.0f} s ago, waiting for the first tick; "
+            return "waiting for the first tick after a gap; "
+        lead = f"no tick for {b['age_s']:.0f} s; "
+        same_day = n is not None and n.get("date") == b.get("date")
+        nv, bv = (n.get("volume"), b.get("volume")) if n is not None else (None, None)
+        if same_day and nv is not None and bv is not None and float(nv) > float(bv) and n["age_s"] < b["age_s"]:
+            return lead + "NSE's volume is higher; "
+        if not confirmable or state != "open":
+            return lead                                   # no confirmation here (pre-open, or an engine without vouched_since)
+        if not same_day:
+            return lead + (queue or "no NSE copy yet; ")
+        if b["_t"] < self._session_open_t(b["_t"]):
+            return lead + "the last tick is from the pre-open; "
+        if bv is None or nv is None or float(bv) <= 0:
+            return lead + "no traded volume to compare; "
+        if n.get("age_basis") == "fetch" or n.get("_conf_t") is None:
+            return lead + "NSE's copy has no time stamp; "
+        if n["_conf_t"] <= b["_t"]:
+            return lead + (queue or "NSE's copy predates the last tick; ")
+        if now - n["_conf_t"] > QUIET_CONFIRM_MAX_S:
+            return lead + (queue or "NSE's copy is too old to confirm; ")
+        return lead + "NSE's copy differs; "
 
     @staticmethod
     def _finish(c: dict, state: str, reason: Optional[str], base: dict) -> dict:
@@ -512,30 +621,44 @@ class LiveQuotes:
             self._holidays_at = now - HOLIDAYS_TTL_S + 1800.0
             logger.debug("live-quotes: holiday list unavailable", error=str(exc)[:120])
 
-    def _covered_by_ticks(self, demand: list[str]) -> set[str]:
+    def _tick_view(self, demand: list[str]) -> tuple[set[str], dict[str, float]]:
+        """(names the socket covers, {quiet name: its tick time}) under the composer's rule. A vouched quiet name outside every
+        heatmap list stops being covered at QUIET_PREFETCH_S, so its NextApi copy is taken after the tick (≥ tick + 66 s) and
+        stored before the tick reaches QUIET_LIVE_S (review wf_2d40b24a-03b: it dropped to STALE at every 120 s crossing)."""
         lt = self._ticks()
         if lt is None:
-            return set()
+            return set(), {}
         try:
             snap = lt.snapshot(demand)
             healthy = bool(lt.feed_healthy())
         except Exception:  # noqa: BLE001
-            return set()
-        since_fn = getattr(lt, "subscribed_since", None)
-        out = set()
+            return set(), {}
+        vouch_fn = getattr(lt, "vouched_since", None) or getattr(lt, "subscribed_since", None)
+        out: set[str] = set()
+        quiet: dict[str, float] = {}
         for s, t in snap.items():
             age = t.get("ts_age_s")
             if age is None:
                 continue
             if age <= FRESH_S:
                 out.add(s)
-            elif healthy and age <= QUIET_LIVE_S and lt.is_subscribed(s):
-                # the composer's rule: a tick older than the current subscription is not covered, so NSE's copy is
-                # fetched at once for a re-subscribed name (6 Nov review: it waited until the old tick passed 120 s)
-                since = since_fn(s) if callable(since_fn) else None
-                if tick_vouched(t.get("ts"), since):
+            elif healthy and lt.is_subscribed(s):
+                since = vouch_fn(s) if callable(vouch_fn) else None
+                if not tick_vouched(t.get("ts"), since):
+                    continue                              # not vouched: NSE's copy at once, for the display
+                quiet[s] = float(t["ts"])
+                if lt_mod.is_index(s):
+                    bound = QUIET_LIVE_S
+                elif s in self._sym_list:              # a heatmap name: covered to 120 s; past it, it may borrow one NextApi
+                    bound = QUIET_LIVE_S               # call (_poll_quote) — never earlier (22 Nov review D3: call rate)
+                else:
+                    bound = QUIET_PREFETCH_S
+                if age <= bound:
                     out.add(s)
-        return out
+        return out, quiet
+
+    def _covered_by_ticks(self, demand: list[str]) -> set[str]:
+        return self._tick_view(demand)[0]
 
     def poll_nse_once(self) -> dict:
         """One poller cycle (the thread calls it every 2 s; tests call it directly). Returns what it did."""
@@ -555,7 +678,7 @@ class LiveQuotes:
         if client is None:
             return {"skipped": "no NSE client"}
         self._nse["polls"] += 1
-        covered = self._covered_by_ticks(list(demand))
+        covered, quiet = self._tick_view(list(demand))
         need = [s for s in demand if s not in covered]
         need_idx = [s for s in need if lt_mod.is_index(s)]
         need_eq = [s for s in need if not lt_mod.is_index(s)]
@@ -565,7 +688,7 @@ class LiveQuotes:
                 self._poll_indices(client)
             if need_eq:
                 did["lists"] = self._poll_heatmaps(client, need_eq, now)
-                did["quote"] = self._poll_quote(client, need_eq, demand, now)
+                did["quote"] = self._poll_quote(client, need_eq, demand, now, quiet)
             self._note_ok()
         except Exception as exc:  # noqa: BLE001 — one failure ends the cycle: never hammer NSE after an error
             self._note_error(str(exc))
@@ -581,12 +704,38 @@ class LiveQuotes:
                 r["fetched_at"] = fetched
                 self._nse_idx[name] = r
 
+    @staticmethod
+    def _data_t(r: dict, fetched: float) -> float:
+        """The latest time a copy's values are KNOWN to cover: a heatmap row's stamp less 5 s; a NextApi quote's fetch less
+        66 s (its lastUpdateTime claims ~8 s, the values were up to 65.2 s behind); a row with no usable stamp, its fetch
+        less 160 s (it orders copies, it never confirms)."""
+        stamp = r.get("stamp_epoch")
+        if r.get("kind") == "equity_quote":
+            t = fetched - NEXTAPI_CONFIRM_LAG_S
+            return min(t, stamp) if stamp else t
+        if stamp:
+            return min(stamp - HEATMAP_STAMP_SLACK_S, fetched - HEATMAP_FETCH_LAG_S)
+        return fetched - UNSTAMPED_DATA_AGE_S
+
+    def _newer(self, new: dict, old: dict) -> bool:
+        """Copy order: the later session; within the open session the higher cumulative traded volume (it only grows, so a
+        lower one is older data whatever its stamp claims); then the later honest data time."""
+        nt, ot = new["data_t"], old.get("data_t", old.get("fetched_at") or 0.0)
+        nd, od = self._now_ist(nt).date(), self._now_ist(ot).date()
+        if nd != od:
+            return nd > od
+        nv, ov = new.get("volume"), old.get("volume")
+        if nv is not None and ov is not None and float(nv) != float(ov) and min(nt, ot) >= self._session_open_t(nt):
+            return float(nv) > float(ov)
+        return nt >= ot
+
     def _store_eq(self, rows: dict[str, dict], fetched: float) -> None:
         with self._lock:
             for sym, r in rows.items():
                 r["fetched_at"] = fetched
+                r["data_t"] = self._data_t(r, fetched)
                 old = self._nse_eq.get(sym)
-                if old is None or (r.get("stamp_epoch") or fetched) >= (old.get("stamp_epoch") or old.get("fetched_at") or 0):
+                if old is None or self._newer(r, old):
                     self._nse_eq[sym] = r
 
     def _poll_heatmaps(self, client: Any, need_eq: list[str], now: float) -> list[str]:
@@ -604,9 +753,11 @@ class LiveQuotes:
             raw = self._net_get(client, p, HEATMAP_TTL_S)
             rows = parse_heatmap_rows(raw if isinstance(raw, list) else (raw or {}).get("data", []))
             self._store_eq(rows, client.cached_at(p) or self._clock())
+            done.append(p)
+            if not rows and self._list_members.get(p):
+                continue                                  # an empty answer keeps the members (and retries at the TTL)
             self._list_members[p] = set(rows)
             self._list_seen[p] = now
-            done.append(p)
         with self._lock:
             sym_list: dict[str, str] = {}
             for p in paths:
@@ -615,24 +766,62 @@ class LiveQuotes:
             self._sym_list = sym_list
         return done
 
-    def _poll_quote(self, client: Any, need_eq: list[str], demand: dict[str, float], now: float) -> Optional[str]:
-        """The NextApi quote for ONE recently asked name outside every heatmap list, once all lists are learned."""
+    def _poll_quote(self, client: Any, need_eq: list[str], demand: dict[str, float], now: float,
+                    quiet: Optional[dict[str, float]] = None) -> Optional[str]:
+        """The NextApi quote for ONE needed name outside every heatmap list, once all lists are learned. Every such name asked
+        within FOCUS_TTL_S is queued (no 20-name cut: names 21+ used to wait for ever) and served earliest-DEADLINE first
+        among those allowed a call now (see slot). NSE's rate is unchanged: one call per NEXTAPI_SPACING_S (6 s) and
+        ≤ NEXTAPI_MAX_SYMBOLS per NEXTAPI_TTL_S (today's 20-names-every-120-s ceiling, without its 4 s bursts)."""
         if not self._list_order or any(p not in self._list_members for p in self._list_order):
             return None
-        uncovered = sorted((s for s in need_eq if s not in self._sym_list and now - demand.get(s, -1e9) <= FOCUS_TTL_S),
-                           key=lambda s: demand[s], reverse=True)[:NEXTAPI_MAX_SYMBOLS]
+        quiet = quiet or {}
         t = self._clock()                                  # after this cycle's paced list fetches, not the cycle start
-        due = [s for s in uncovered if t - self._quote_fetched.get(s, -NEXTAPI_TTL_S) >= NEXTAPI_TTL_S]
-        if not due or t - self._last_nextapi < NEXTAPI_GAP_S:
+        def borrows(s: str) -> bool:                   # a heatmap name whose stored copy predates its quiet tick
+            row = self._nse_eq.get(s)
+            return s in quiet and t - quiet[s] > QUIET_LIVE_S and (row is None or row.get("data_t", -math.inf) <= quiet[s])
+        cands = [s for s in need_eq if (s not in self._sym_list or borrows(s)) and now - demand.get(s, -1e9) <= FOCUS_TTL_S]
+        live = set(cands)
+        self._quote_waiting = {s: w for s, w in self._quote_waiting.items() if s in live}
+        for s in cands:
+            if s not in self._quote_fetched:
+                self._quote_waiting.setdefault(s, t)
+        self._quote_queue = {"names": tuple(cands), "at": t}
+
+        def slot(s: str) -> tuple[float, float]:
+            """(earliest allowed call, deadline). Deadline = when the name loses something: a quiet name whose copy predates
+            its tick loses LIVE at tick + QUIET_LIVE_S; a confirmed one when its copy passes QUIET_CONFIRM_MAX_S; any other
+            name is due NEXTAPI_TTL_S after its copy; a new name from when it joined (FIFO)."""
+            last = self._quote_fetched.get(s)
+            if last is None:
+                w = self._quote_waiting.get(s, t)
+                return w, w
+            q = quiet.get(s)
+            if q is None:
+                return last + NEXTAPI_TTL_S, last + NEXTAPI_TTL_S
+            row = self._nse_eq.get(s)
+            data_t = row.get("data_t", -math.inf) if row is not None else -math.inf
+            if data_t > q:                                   # already taken after the tick: keep it fresh before it expires
+                return last + NEXTAPI_TTL_S, data_t + QUIET_CONFIRM_MAX_S
+            return max(last + NEXTAPI_MIN_SPACING_S, q + NEXTAPI_CONFIRM_LAG_S + 1.0), q + QUIET_LIVE_S
+
+        slots = {s: slot(s) for s in cands}
+        ready = sorted((s for s in cands if slots[s][0] <= t),
+                       key=lambda s: (slots[s][1], self._quote_fetched.get(s, -math.inf), -demand.get(s, 0.0)))
+        recent = sum(1 for x in self._nextapi_calls if t - x < NEXTAPI_TTL_S)
+        if not ready or t - self._last_nextapi < NEXTAPI_SPACING_S or recent >= NEXTAPI_MAX_SYMBOLS:
             return None
-        sym = due[0]
-        if len(self._quote_fetched) > 4 * NEXTAPI_MAX_SYMBOLS:
-            self._quote_fetched = {s: ts for s, ts in self._quote_fetched.items() if now - ts < NEXTAPI_TTL_S}
+        sym = ready[0]
+        last = self._quote_fetched.get(sym)
+        ttl = NEXTAPI_TTL_S if last is None else max(NEXTAPI_MIN_SPACING_S, min(NEXTAPI_TTL_S, t - last))   # reach the network
+        if len(self._quote_fetched) > 4 * MAX_REQUEST:
+            self._quote_fetched = {s: ts for s, ts in self._quote_fetched.items() if s in live or now - ts < NEXTAPI_TTL_S}
         self._last_nextapi = self._quote_fetched[sym] = t           # a failed call counts too: no retry storm on errors
+        self._quote_waiting.pop(sym, None)
         self._nse["nextapi_calls"] += 1
         path = equity_quote_path(sym)
-        raw = self._net_get(client, path, NEXTAPI_TTL_S)
+        raw = self._net_get(client, path, ttl)            # a confirming call 60 s after the last one must not hit the cache
         self._last_nextapi = self._quote_fetched[sym] = self._clock()    # the moment the call went out (after pacing)
+        self._nextapi_calls.append(self._last_nextapi)
         q = parse_equity_quote(raw)
         if q.get("price") is not None and q.get("symbol") in (None, sym):
             q.pop("symbol", None)
@@ -664,6 +853,7 @@ class LiveQuotes:
                                  "last_error": self._nse["last_error"], "last_error_at": self._nse["last_error_at"],
                                  "polls": self._nse["polls"], "network_calls": self._nse["network_calls"],
                                  "nextapi_calls": self._nse["nextapi_calls"], "lists_known": len(self._list_members),
+                                 "nextapi_queue": len(self._quote_queue.get("names", ())),
                                  "demand": sum(1 for t in self._demand.values() if now - t <= DEMAND_TTL_S),
                                  "cadence_s": {"all_indices": ALLINDICES_TTL_S, "heatmap_list": HEATMAP_TTL_S,
                                                "equity_quote": NEXTAPI_TTL_S, "min_gap": NSE_GAP_S}}}

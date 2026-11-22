@@ -644,6 +644,8 @@ HOOK_PANES: dict[str, str] = {
     "ui/components/WorldMarkets.tsx": "WEI India row",
     "ui/components/StockTable.tsx": "EQS CMP column",
     "ui/components/PortfolioSummary.tsx": "BRKR day move",
+    "ui/components/LiveMovers.tsx": "MOV sector board tiles + NIFTY 50 tile + drill-down members",
+    "ui/components/IndexValuation.tsx": "MKT valuation Today move",
 }
 # rows not adopted yet: file → reason (ratchet — an adopted row must be removed; the hover card never appears here)
 HOOK_DEFERRED: dict[str, str] = {}
@@ -775,7 +777,8 @@ class TestSourceChipOnEveryLivePaneS2:
         from collections import Counter
 
         assert len(inventory) == 92
-        assert Counter(r.live_capable for r in inventory) == {"yes-breeze": 25, "yes-nse-api": 13, "eod-only": 25,
+        # 22 Nov: MOV's sector board and MKT's valuation "Today" moved to the live hook (yes-nse-api → yes-breeze)
+        assert Counter(r.live_capable for r in inventory) == {"yes-breeze": 27, "yes-nse-api": 11, "eod-only": 25,
                                                                "periodic": 10, "n/a": 19}
         assert all(r.ui_files for r in live_rows(inventory)), [r.pane for r in live_rows(inventory) if not r.ui_files]
 

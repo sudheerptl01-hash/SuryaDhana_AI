@@ -249,6 +249,41 @@ def test_index_names_aliases_legacy_spellings_and_silent_streams():
     assert lt.canonical("Nifty  Bank") == "NIFTY BANK" and lt.canonical("M&M") == "M&M" and lt.canonical("A B;C") is None
 
 
+def test_two_spellings_of_one_index_share_one_token_and_both_get_every_tick():
+    """22 Nov: the sector board asks 'NIFTY FINANCIAL SERVICES' (NSE) while OMON / OSTR ask 'NIFTY FIN SERVICE' (Breeze).
+    A plain token → name dict let the second overwrite the first (ticks reached one name) and dropping either name
+    unsubscribed the token for both."""
+    clock = [1_000.0]
+    obj, prov, fake = make(clock)
+    obj.ensure(["NIFTY FINANCIAL SERVICES", "NIFTY FIN SERVICE"])
+    connect(obj, prov)
+    assert fake.subscribed_tokens().count("4.1!NIFTY FIN SERVICE") == 1      # one join for the shared token
+    fake.emit({**fx.TICKS["NIFTY 50"], "symbol": "4.1!NIFTY FIN SERVICE", "stock_name": "NIFTY FIN SERVICE"})
+    snap = obj.snapshot()
+    assert {"NIFTY FINANCIAL SERVICES", "NIFTY FIN SERVICE"} <= set(snap)
+    assert snap["NIFTY FINANCIAL SERVICES"]["price"] == snap["NIFTY FIN SERVICE"]["price"]
+    # only the Breeze spelling is still wanted: the NSE spelling lapses, the token must stay on the socket
+    clock[0] += lt.SYMBOL_TTL_S + 1
+    obj.ensure(["NIFTY FIN SERVICE"])
+    obj._resync.set()
+    obj._step()
+    assert not any(c[0] == "unsubscribe" and "4.1!NIFTY FIN SERVICE" in c[1] for c in fake.calls)
+    assert obj.is_subscribed("NIFTY FIN SERVICE") and not obj.is_subscribed("NIFTY FINANCIAL SERVICES")
+    clock[0] += 1
+    fake.emit({**fx.TICKS["NIFTY 50"], "symbol": "4.1!NIFTY FIN SERVICE", "stock_name": "NIFTY FIN SERVICE"})
+    assert obj.snapshot()["NIFTY FIN SERVICE"]["ts"] == clock[0]
+    # nobody wants either spelling: now the token goes, once
+    clock[0] += lt.SYMBOL_TTL_S + 1
+    obj._resync.set()
+    obj._step()
+    drops = [c for c in fake.calls if c[0] == "unsubscribe" and "4.1!NIFTY FIN SERVICE" in c[1]]
+    assert len(drops) == 1 and not obj.is_subscribed("NIFTY FIN SERVICE")
+
+
+def test_nifty_private_bank_resolves_through_its_master_alias():
+    assert lt.ws_name("NIFTY PRIVATE BANK") == "NIFTY PVT BANK"
+
+
 # ── cap, pins, eviction ───────────────────────────────────────────────────────────────────────────────────────────────
 
 def test_cap_is_l_capacity_safe_and_covers_index_plus_members():

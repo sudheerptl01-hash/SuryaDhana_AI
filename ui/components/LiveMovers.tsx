@@ -150,7 +150,7 @@ export function LiveMovers() {
   // never LIVE (the old chip said LIVE · NSE while the market was open); CLOSE · <day> once the session is over.
   const feedSource = data ? nseDelayedSource(data.timestamp, { marketOpen: !!data.market_open, now: Date.now(), hint: 'NSE live analysis, 30 s cache' })
     : sourceOf(null, { source: 'NSE' })
-  const sectorSource = data ? nseDelayedSource(data.timestamp, { marketOpen: !!data.market_open, now: Date.now(), hint: 'sector rows from NSE allIndices, typically 1–3 min behind' }) : feedSource
+  const sectorNse = data ? nseDelayedSource(data.indices_timestamp ?? data.timestamp, { marketOpen: !!data.market_open, now: Date.now(), hint: 'sector rows from NSE allIndices, typically 1–3 min behind' }) : feedSource
   // each panel's own chip, reported by the panel itself (null until it has data: the shared feed chip meanwhile)
   const [srcN50, setSrcN50] = useState<SourceInfo | null>(null)
   const [srcBank, setSrcBank] = useState<SourceInfo | null>(null)
@@ -160,6 +160,13 @@ export function LiveMovers() {
   const liveIdx = useLiveQuotes(['NIFTY 50'], { intervalMs: 3_000 })
   const n50 = liveLevel(idx.n50 ?? null, liveIdx.quotes['NIFTY 50'])
   const liveMembers = useLiveQuotes(members?.members.map(m => m.symbol) ?? [], { intervalMs: 3_000, enabled: !!drill })
+  // 22 Nov: the tiles' level and move from the live-quote service (Breeze streams 9 of the 21 sectoral indices at 2/s;
+  // the rest come back as NSE's allIndices copy, DELAYED, through the same service); breadth, 30d / 1y and P/E stay NSE
+  const liveTiles = useLiveQuotes(idx.tiles.map(t => t.index), { intervalMs: 3_000 })
+  const tiles = useMemo(() => idx.tiles
+    .map(t => { const lv = liveLevel(t, liveTiles.quotes[t.index]); return { ...t, last: lv.last, change_pct: lv.change_pct } })
+    .sort((a, b) => (b.change_pct ?? 0) - (a.change_pct ?? 0)), [idx.tiles, liveTiles.quotes])
+  const sectorSource = liveTiles.available && liveTiles.source ? liveTiles.source : sectorNse
   // L-15: A/D figures are context — neutral, never green/red
   const breadth = (i?: LiveIndex) => i ? <span style={{ color: T.text }}>{i.advances} / {i.declines}</span> : '—'
 
@@ -177,7 +184,7 @@ export function LiveMovers() {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 12 }}>
             <Stat label="NIFTY 50" value={px(n50.last)} sub={<span><span style={{ color: tone(n50.change_pct) }}>{fmtPct(n50.change_pct)}</span> · {breadth(idx.n50)}
-              {' '}<SourceChip info={n50.fromService && liveIdx.source ? liveIdx.source : sectorSource} style={{ marginLeft: 4 }} /></span>} />
+              {' '}<SourceChip info={n50.fromService && liveIdx.source ? liveIdx.source : sectorNse} style={{ marginLeft: 4 }} /></span>} />
             {/* m019: name the universe and the clock (MKT's breadth is a different, 1,394-stock liquid universe at the close) */}
             <Stat label="NIFTY 500 breadth" value={breadth(idx.n500)} sub={<span><span style={{ color: tone(idx.n500?.change_pct) }}>{fmtPct(idx.n500?.change_pct)}</span>
               <span style={{ color: T.dim }}> · the index&apos;s members, NSE {data.timestamp?.slice(12, 17) ?? ''}{eod?.breadth?.universe ? ` · MKT counts ${Number(eod.breadth.universe).toLocaleString('en-IN')} liquid stocks` : ''}</span></span>} />
@@ -207,7 +214,7 @@ export function LiveMovers() {
               <Chip key={g} color={T.violet} active={group === g} onClick={() => { setGroup(g); setDrill(null) }}>{g.split(' ')[0]}</Chip>)}</div>}
             style={{ marginBottom: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6 }}>
-              {idx.tiles.map(x => <SectorTile key={x.index} x={x} active={drill === x.index} onClick={() => setDrill(d => (d === x.index ? null : x.index))} />)}
+              {tiles.map(x => <SectorTile key={x.index} x={x} active={drill === x.index} onClick={() => setDrill(d => (d === x.index ? null : x.index))} />)}
             </div>
             {drill && (
               <div style={{ marginTop: 10, borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>

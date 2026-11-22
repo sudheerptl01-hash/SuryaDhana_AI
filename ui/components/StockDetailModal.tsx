@@ -316,7 +316,7 @@ export function StockDetailModal({ ticker, onClose, focus, onNewWindow }: StockD
               <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
                 <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--t-display)', letterSpacing: 1.5, color: '#ffb000' }}>{ticker}</h2>
                 {livePrice !== null && px && (
-                  <span data-sd-price={px.marker} data-sd-age-s={lqInfo?.ageS != null ? lqInfo.ageS.toFixed(1) : undefined} data-sd-feed-source={lqInfo?.source ?? undefined}
+                  <span data-sd-price={px.marker} data-sd-age-s={lqInfo?.ageS != null ? lqInfo.ageS.toFixed(1) : undefined} data-sd-confirm-age-s={lqInfo?.confirmS != null && Number.isFinite(lqInfo.confirmS) ? lqInfo.confirmS.toFixed(1) : undefined} data-sd-feed-source={lqInfo?.source ?? undefined}
                     title={lqPriced && lq ? `${nse.lineFor(tickBase) ?? ''} · live NSE quote service` : px.marker === 'LIVE' ? 'Broker websocket ticks (ICICI Breeze)'
                       : px.marker.startsWith('DELAYED') ? 'Delayed quote (not a broker tick): not a live price' : "NSE closed: the last session's close"}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--t-mono)', fontSize: 13, fontWeight: 700,

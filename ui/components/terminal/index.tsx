@@ -812,6 +812,7 @@ export function SourceChip({ state, hint, info, style }: { state?: SourceState; 
     <span title={title} data-sd-chip={st}
       // live program: machine-readable age / as-of for the freshness audit (scripts/ui_audit.py), only when known
       data-sd-age-s={info?.ageS != null && Number.isFinite(info.ageS) ? info.ageS.toFixed(1) : undefined}
+      data-sd-confirm-age-s={info?.confirmS != null && Number.isFinite(info.confirmS) ? info.confirmS.toFixed(1) : undefined}
       data-sd-asof={info?.asOf ?? undefined} data-sd-feed-source={info?.source ?? undefined}
       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: T.mono, fontSize: 'var(--t-fs-micro)',
                letterSpacing: 1, color, border: `1px solid ${color}55`, padding: '1px 6px',

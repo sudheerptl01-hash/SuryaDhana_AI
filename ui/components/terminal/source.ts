@@ -44,6 +44,8 @@ export interface SourceInfo {
    * gets the on-face cue 'LIVE·q'; the hover keeps the trade age (the hint quoteSource already writes).
    */
   quiet?: boolean | null
+  /** a quiet LIVE row past 120 s: seconds since NSE's confirming copy (SourceChip renders data-sd-confirm-age-s) */
+  confirmS?: number | null
 }
 
 const DAY_RE = /^(\d{4})-(\d{2})-(\d{2})/

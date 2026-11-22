@@ -115,7 +115,29 @@
   "the feed is not healthy". Fixed in the tree (not yet deployed): a tick older than the current subscription is never
   quiet-LIVE and never "covered" for the NSE poller, which now fetches NSE's copy at once; reasons name the cause
   ("re-subscribed 5 s ago, waiting for the first tick").
-- Not shipped, an owner decision: keeping a quiet name LIVE past 120 s when NSE's copy shows the same price and volume.
-  Two review rounds (wf_2d40b24a-03b, wf_45861533-2e5) found it needs transport-gap detection, a 66 s NextApi age floor,
-  stamped copies only and honest-time storage, and even then a silently dead token could read LIVE for about 3.5 min after a
-  missed trade (today's bound is 120 s).
+- Built 22 Nov on the owner's approval (not shipped on 6 Nov): a quiet name stays LIVE past 120 s while NSE's own copy confirms
+  the last tick (see the 22 Nov section below).
+
+## 22 Nov: quiet names confirmed by NSE, and live sector indices (deployed 22 Nov; market-hours proof at the 23 Nov open)
+
+- **Quiet names past 120 s** (`live_quotes._confirmation`): a subscribed name on a healthy socket stays LIVE · quiet while
+  NSE's heatmap row or NextApi quote, taken after the last tick, shows the same price and the same non-zero cumulative
+  volume. Guards: open session and a tick after 09:15; the tick after its current subscription (Breeze sends no snapshot or
+  ack, so a re-joined token is unproven until it ticks); NSE's data time after both the tick and the socket's vouched start
+  (socket.io `disconnect` handler + a whole-socket silence over 2 s), plus 30 s when the tick predates a transport gap;
+  NextApi credited only to fetch − 66 s, heatmap rows to min(stamp − 5 s, fetch − 10 s), unstamped rows never; copies stored
+  by honest data time with session-monotonic volume; at most 240 s since NSE's data. The NextApi queue serves every quiet
+  name earliest-deadline-first at one call per 6 s, ≤ 20 per 120 s (no 20-name cut), fetching from a tick age of 100 s.
+- **Residual risk**: a token the server silently stops streaming reads LIVE after a missed trade until NSE's copy shows it
+  (worst measured 212 s, capped below 240 s; the old bound was about 118 s). Spec, prototype and simulations:
+  `/tmp/lq_spec` (22 Nov); adversarial review D1–D9 closed (variant B limited to transport gaps; mutation-checked).
+- **UI**: the quiet hint names NSE's confirmation age; a pane carrying confirmations says "n NSE-checked"; chips carry
+  `data-sd-confirm-age-s` and the audit holds them to 240 s + the hub's 2 s + the window's 10 s. ui-api's restate on a failed
+  refresh reads a confirmed row DELAYED by when its price was verified (`trade_age_s` keeps the trade age).
+- **Sector indices**: MOV's sector board and MKT's valuation "Today" read the live hook. Breeze streams 9 of NSE's 21
+  sectoral indices (2 ticks/s; L-CAPACITY) plus the derivatives and several thematic ones; the rest come back as NSE's
+  allIndices copy, labelled DELAYED per row. One Breeze token may now serve several spellings of an index (the sector board
+  asks NSE's 'NIFTY FINANCIAL SERVICES', OMON asks 'NIFTY FIN SERVICE'); NIFTY PRIVATE BANK resolves to the master's
+  'NIFTY PVT BANK' (streaming unproven until the open). The sector chip's fallback age now uses allIndices' own stamp.
+- **Still NSE by design**: breadth, 30d / 1y, P/E, P/B, yield (aggregates Breeze does not publish); the heatmap's ~300 names;
+  the option chain (live option contracts are the next build).

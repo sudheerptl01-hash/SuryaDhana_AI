@@ -144,6 +144,13 @@ LIVE_MAX_AGE_S = 10.0
 # the page's fresh live pane.
 QUIET_LIVE_MAX_S = 120.0
 _QUIET = re.compile(r"\bquiet\b|last trade", re.IGNORECASE)
+# Past QUIET_LIVE_S a quiet chip is LIVE only on NSE's confirmation (live_quotes.QUIET_CONFIRM_MAX_S, 22 Nov): it carries
+# `data-sd-confirm-age-s`, which may be at most that bound plus the window's own refresh allowance (LIVE_MAX_AGE_S); a quiet
+# chip whose hover says it has been quiet longer than QUIET_LIVE_MAX_S must carry it.
+QUIET_CONFIRM_MAX_S = 240.0
+HUB_REFRESH_S = 2.0                 # ui-api's LiveQuotesHub cache (REFRESH_S): part of a confirmed chip's age (review D8)
+_NSE_CHECKED = re.compile(r"NSE-checked", re.IGNORECASE)
+_QUIET_FOR = re.compile(r"quiet: no (?:trade|tick|new trade or quote) for (\d+(?:\.\d+)?)\s*(s|m|h)\b", re.IGNORECASE)
 LIVE_EXEMPT_TABS = frozenset({"gold", "mcxgold", "commodity"})
 LIVE_STATE_REFRESH_S = 60.0            # the market-state GETs are repeated at most once a minute (paced, GET only)
 LIVE_PROBE_SYMBOL = "NIFTY 50"         # 10 ticks/s on the Breeze socket (L-CAPACITY): the feed's heartbeat
@@ -161,6 +168,7 @@ LIVE_CHIPS_JS = r"""() => {
       title: (el.getAttribute('title') || '').slice(0, 400),
       asof: el.getAttribute('data-sd-asof'),
       age_s: el.getAttribute('data-sd-age-s'),
+      confirm_age_s: el.getAttribute('data-sd-confirm-age-s'),
       source: el.getAttribute('data-sd-feed-source'),
     })
   }
@@ -241,6 +249,17 @@ def chip_age_s(chip: dict[str, Any], now_ms: float) -> float | None:
     return max(0.0, now_ms / 1000.0 - t.timestamp())
 
 
+def _attr_s(raw: Any) -> float | None:
+    """A numeric DOM attribute in seconds, or None."""
+    if raw in (None, ""):
+        return None
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return None
+    return v if v == v and v >= 0 else None
+
+
 def is_live_market_chip(chip: dict[str, Any]) -> bool:
     """A chip that claims a LIVE market price: state 'live' and its label names a market feed (BREEZE / ICICI / NSE) or
     none at all ('● LIVE'). LIVE · CONTROLLER, LIVE · SERVICE PROBES, LIVE · MCX SESSION CLOCK are not market prices."""
@@ -269,11 +288,21 @@ def live_failures(tab: str | None, probe: dict[str, Any] | None, ctx: dict[str, 
             age = chip_age_s(c, now_ms)
             quiet = bool(_QUIET.search(f"{c.get('label') or ''} {c.get('title') or ''}"))
             bound = QUIET_LIVE_MAX_S if quiet else max_age_s
+            conf = _attr_s(c.get("confirm_age_s"))
+            m = _QUIET_FOR.search(str(c.get("title") or ""))
+            quiet_for = float(m.group(1)) * _AGE_UNIT_S[m.group(2).lower()] if m else None
             if age is None:
                 out.append(f"live: '{c.get('label')}' reads LIVE with no age (data-sd-asof / data-sd-age-s missing)")
             elif age > bound:
                 kind = "a quiet LIVE" if quiet else "LIVE"
                 out.append(f"live: '{c.get('label')}' reads {kind} but is {age:.0f} s old (max {bound:.0f} s while NSE is open)")
+            elif conf is not None and not (quiet or _NSE_CHECKED.search(str(c.get("title") or ""))):
+                out.append(f"live: '{c.get('label')}' carries an NSE confirmation but does not say quiet")
+            elif conf is not None and conf > QUIET_CONFIRM_MAX_S + HUB_REFRESH_S + max_age_s:
+                out.append(f"live: '{c.get('label')}' is LIVE on an NSE copy {conf:.0f} s old "
+                           f"(max {QUIET_CONFIRM_MAX_S + HUB_REFRESH_S + max_age_s:.0f} s)")
+            elif conf is None and quiet_for is not None and quiet_for > QUIET_LIVE_MAX_S + max_age_s:
+                out.append(f"live: '{c.get('label')}' reads quiet LIVE {quiet_for:.0f} s after its last tick with no NSE confirmation")
             elif not quiet:
                 fresh += 1
         if ctx.get("feed") == "LIVE" and fresh == 0:

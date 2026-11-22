@@ -32,6 +32,8 @@ ensure() after the provider reconnects (08:00 login or /provider/configure) star
 """
 from __future__ import annotations
 
+import functools
+import math
 import os
 from pathlib import Path
 import random
@@ -73,6 +75,10 @@ SYMBOL_TTL_S = 600.0               # A1: unsubscribe symbols nobody asked about 
 REQUESTED_CAP = 2 * MAX_SYMBOLS    # hard bound on the request ledger itself (S1)
 FRESH_S = 5.0                      # consumers treat ticks older than this as stale
 HEARTBEAT_S = 10.0                 # L-CAPACITY: NIFTY 50 ticks at 10 Hz; no tick on the socket for 10 s = feed not healthy
+# In session, a silence on the WHOLE socket longer than this is a transport gap: ticks sent in it may be lost, and Breeze sends
+# no snapshot after it. Tick store 5-20 Nov (09:15-15:30, all tokens): p99.99 inter-arrival <= 1 s (1 s stamps); 7-14
+# silences > 2 s per normal session (3-11 s, many at hh:45), none at the 09:15 open (NIFTY 50 ticks at 10 Hz through 09:08-09:15).
+TRANSPORT_GAP_S = 2.0
 RESYNC_EVERY_S = 30.0
 NO_TICK_DEGRADED_S = 120.0         # minor 15: global watchdog, flips back on the next tick
 STRIKES, STRIKE_WINDOW_S, COOLOFF_S = 3, 300.0, 600.0
@@ -90,6 +96,7 @@ INDEX_WS_ALIASES: dict[str, str] = {
     "NIFTY INFRASTRUCTURE": "NIFTY INFRA", "NIFTY SERVICES SECTOR": "NIFTY SERV SECTOR",
     "NIFTY TOTAL MARKET": "NIFTY TOTAL MKT", "NIFTY HEALTHCARE INDEX": "NIFTY HEALTHCARE",
     "NIFTY INDIA CONSUMPTION": "NIFTY CONSUMPTION", "NIFTY INDIA FPI 150": "NIFTY FPI 150",
+    "NIFTY PRIVATE BANK": "NIFTY PVT BANK",      # the master's token appeared after 4 Nov (22 Nov research; ticks unproven)
 }
 # L-CAPACITY: these index tokens exist in the master but never ticked (35 of 40 stream).
 SILENT_INDEX_TOKENS = frozenset({"CNX 100", "CNX DEFTY", "CNX NIFTY JUNIOR", "NIFTY CPSE", "S&P CNX NIFTYY", "DJIA",
@@ -228,7 +235,10 @@ class LiveTicks:
         self._requested: dict[str, float] = {}          # SYM → last_requested (A1 union + TTL)
         self._subscribed: dict[str, str] = {}           # SYM → websocket token on the wire ('4.1!1333')
         self._subscribed_at: dict[str, float] = {}
-        self._token_to_sym: dict[str, str] = {}         # '4.1!1333' → 'HDFCBANK' (what every tick is keyed by)
+        # '4.1!1333' → {'HDFCBANK'}: every name a token serves (22 Nov: two spellings of one index, e.g. 'NIFTY FINANCIAL
+        # SERVICES' and Breeze's 'NIFTY FIN SERVICE', share a token; a plain dict let the second overwrite the first, so
+        # ticks reached one name only and dropping either name unsubscribed both)
+        self._token_to_syms: dict[str, set[str]] = {}
         self._isec_to_sym: dict[str, str] = {}          # legacy path: a tick carrying stock_code (isec) instead
         self._prev_close: dict[str, float] = {}         # bhavcopy fallback (A5)
         self._sub_errors: dict[str, str] = {}
@@ -255,6 +265,12 @@ class LiveTicks:
         self._last_sync = 0.0
         self._first_tick_logged = False
         self._store: Any = None            # W6: lazy TickStore; False = persistence decided OFF
+        # transport gaps the subscription ledger cannot see (python-socketio reconnects on its own; _teardown_ws never runs)
+        self._gap_open = False                          # socket.io said 'disconnect' and no tick has arrived since
+        self._gap_at: Optional[float] = None            # when the last gap began
+        self._gap_cause: Optional[str] = None           # 'disconnect' | 'silence'
+        self._vouch_from: Optional[float] = None        # receive time of the first tick after the last gap
+        self.transport_gaps = 0
 
     # ── public API ──────────────────────────────────────────────────────────────
 
@@ -374,13 +390,33 @@ class LiveTicks:
         with self._lock:
             return self._subscribed_at.get(sym) if sym in self._subscribed else None
 
+    def vouched_since(self, sym: str) -> Optional[float]:
+        """From when the socket vouches for `sym` without a break: the later of its current subscription and the first tick
+        after the last transport gap (a socket.io auto-reconnect re-joins every token with no snapshot and never runs
+        _teardown_ws). math.inf while a gap is open (nothing is vouched); None when `sym` is not subscribed."""
+        with self._lock:
+            if sym not in self._subscribed:
+                return None
+            if self._gap_open:
+                return math.inf
+            at = self._subscribed_at.get(sym)
+            if at is None:
+                return math.inf
+            return at if self._vouch_from is None else max(at, self._vouch_from)
+
+    def transport(self) -> dict:
+        """The last transport gap, for reasons; served on /live/ticks and /provider/status."""
+        with self._lock:
+            return {"gap_open": self._gap_open, "gap_at": self._gap_at, "cause": self._gap_cause,
+                    "vouch_from": self._vouch_from, "gaps": self.transport_gaps}
+
     def heartbeat_age(self) -> Optional[float]:
         """Seconds since ANY tick on the socket (NIFTY 50 is pinned and ticks at 10 Hz in session)."""
         return round(self._clock() - self.last_tick_at, 1) if self.last_tick_at else None
 
     def feed_healthy(self) -> bool:
         age = self.heartbeat_age()
-        return self.state in (LIVE, DEGRADED) and self._ws_up and age is not None and age <= HEARTBEAT_S
+        return self.state in (LIVE, DEGRADED) and self._ws_up and not self._gap_open and age is not None and age <= HEARTBEAT_S
 
     def ticks_per_min(self) -> int:
         now = int(self._clock())
@@ -398,7 +434,8 @@ class LiveTicks:
                     "unmapped_ticks": self.unmapped_ticks,
                     "no_first_tick": {"count": len(silent), "symbols": silent[:20]},
                     "unresolved": sorted(self._unresolved)[:20],
-                    "sub_errors": dict(list(self._sub_errors.items())[:20]) if self._sub_errors else {}}
+                    "sub_errors": dict(list(self._sub_errors.items())[:20]) if self._sub_errors else {},
+                    "transport": self.transport()}
 
     def shutdown(self) -> None:
         """Idempotent full teardown (lifespan shutdown)."""
@@ -482,6 +519,23 @@ class LiveTicks:
         breeze.ws_connect()
         self._conn_breeze = breeze
         self._handler = getattr(breeze, "sio_rate_refresh_handler", None)
+        with self._lock:
+            self._gap_open = False                       # a new socket: _sync_subscriptions restamps every name
+        sio = getattr(self._handler, "sio", None)
+        if sio is not None and callable(getattr(sio, "on", None)):
+            # 'disconnect' ONLY: python-socketio keeps one handler per event and Breeze's rewatch owns 'connect'
+            sio.on("disconnect", functools.partial(self._on_transport_drop, self._handler))
+
+    def _on_transport_drop(self, handler: Any, *_reason: Any) -> None:
+        """socket.io 'disconnect' on OUR socket (python-socketio then reconnects and Breeze re-joins with no snapshot): no
+        cached tick is vouched until the first tick after the gap. Runs on the socket.io thread: O(us), no IO."""
+        if handler is not self._handler:
+            return                                       # a torn-down socket's late event
+        with self._lock:
+            self._gap_open = True
+            self._gap_at = self._clock()
+            self._gap_cause = "disconnect"
+            self.transport_gaps += 1
 
     def _teardown_ws(self) -> None:
         """ws_disconnect() + close OUR handler's socket and clear its tokenlist: ws_disconnect alone leaves python-socketio
@@ -517,7 +571,7 @@ class LiveTicks:
         with self._lock:
             self._subscribed.clear()                     # a reconnect resubscribes everything
             self._subscribed_at.clear()
-            self._token_to_sym.clear()
+            self._token_to_syms.clear()
 
     def _set_state(self, state: str, error: Optional[str] = "__keep__") -> None:
         self.state = state
@@ -593,26 +647,43 @@ class LiveTicks:
                 with self._lock:
                     self._unresolved[sym] = now + UNRESOLVED_RETRY_S
                     self._sub_errors[sym] = str(exc)[:120] or "no websocket token"
+        with self._lock:
+            live_toks = set(self._token_to_syms)
+            shared = [(sym, tok) for sym, tok in resolved if tok in live_toks]
+            for sym, tok in shared:                      # the socket already carries this token: share it, no new join
+                self._subscribed[sym] = tok
+                self._subscribed_at[sym] = now
+                self._token_to_syms.setdefault(tok, set()).add(sym)
+                self._sub_errors.pop(sym, None)
+        fresh: dict[str, list[str]] = {}
+        for sym, tok in resolved:
+            if tok not in live_toks:
+                fresh.setdefault(tok, []).append(sym)    # two new names, one token: one join
+        resolved = [(sym, tok) for tok, syms in fresh.items() for sym in syms]
         for i in range(0, len(resolved), SUB_CHUNK):
             part = resolved[i:i + SUB_CHUNK]
-            tokens = [tok for _, tok in part]
+            tokens = list(dict.fromkeys(tok for _, tok in part))
             try:
                 err = self._failed(breeze.subscribe_feeds(stock_token=tokens, get_exchange_quotes=True,
                                                           get_market_depth=False))
             except Exception as exc:                     # noqa: BLE001
                 err = str(exc)[:120] or "subscribe failed"
-            with self._lock:
+            joined_at = self._clock()                    # 22 Nov review D1: stamp when the join went out (resolution and
+            with self._lock:                             # get_names happen before it)
                 for sym, tok in part:
                     if err:
                         self._sub_errors[sym] = err      # retried at the next resync (not marked subscribed)
                         continue
                     self._subscribed[sym] = tok
-                    self._subscribed_at[sym] = now
-                    self._token_to_sym[tok] = sym
+                    self._subscribed_at[sym] = joined_at
+                    self._token_to_syms.setdefault(tok, set()).add(sym)
                     self._sub_errors.pop(sym, None)
         if drop:
             with self._lock:
-                toks = [self._subscribed[s] for s in drop if s in self._subscribed]
+                dropping = set(drop)
+                toks = list(dict.fromkeys(
+                    self._subscribed[s] for s in drop if s in self._subscribed
+                    and not (self._token_to_syms.get(self._subscribed[s], set()) - dropping)))
             for i in range(0, len(toks), SUB_CHUNK):
                 try:
                     breeze.unsubscribe_feeds(stock_token=toks[i:i + SUB_CHUNK], get_exchange_quotes=True,
@@ -623,8 +694,11 @@ class LiveTicks:
                 for sym in drop:
                     tok = self._subscribed.pop(sym, "")
                     self._subscribed_at.pop(sym, None)
-                    if tok:
-                        self._token_to_sym.pop(tok, None)
+                    names = self._token_to_syms.get(tok) if tok else None
+                    if names is not None:
+                        names.discard(sym)
+                        if not names:
+                            self._token_to_syms.pop(tok, None)
 
     def _join_prev_close(self, symbols: list[str]) -> None:
         """Bhavcopy fallback previous closes (A5), fetched on the worker thread — never the event loop."""
@@ -639,17 +713,19 @@ class LiveTicks:
 
     # ── ticks ───────────────────────────────────────────────────────────────────
 
-    def _map_symbol(self, payload: dict) -> Optional[str]:
-        """'4.1!<token>' through the token map (the real wire format); a stock_code/isec-keyed payload through the
-        legacy map; anything else is unmapped (counted, never stored under a raw key)."""
+    def _map_symbol(self, payload: dict) -> Optional[list[str]]:
+        """Every name a tick belongs to: '4.1!<token>' through the token map (the real wire format; one token may serve
+        two spellings of an index); a stock_code/isec-keyed payload through the legacy map; anything else is unmapped
+        (counted, never stored under a raw key)."""
         raw = payload.get("symbol")
         if isinstance(raw, str) and "!" in raw:
-            return self._token_to_sym.get(raw)
+            with self._lock:
+                names = self._token_to_syms.get(raw)
+                return sorted(names) if names else None
         code = payload.get("stock_code")
-        if code:
-            return self._isec_to_sym.get(str(code).upper())
-        legacy = _first(payload, _SYMBOL_KEYS)
-        return self._isec_to_sym.get(str(legacy).upper()) if legacy else None
+        legacy = str(code).upper() if code else (str(_first(payload, _SYMBOL_KEYS) or "").upper() or None)
+        sym = self._isec_to_sym.get(legacy) if legacy else None
+        return [sym] if sym else None
 
     def _on_tick(self, payload: Any) -> None:
         """Runs on the socketio receive thread: O(µs), one dict write, no IO."""
@@ -659,8 +735,8 @@ class LiveTicks:
             if not self._first_tick_logged:
                 self._first_tick_logged = True
                 logger.debug("first raw tick", keys=sorted(payload.keys()), sample=str(payload)[:400])
-            sym = self._map_symbol(payload)
-            if sym is None:
+            syms = self._map_symbol(payload)
+            if not syms:
                 self.unmapped_ticks += 1
                 if self._unmapped_sample is None:
                     self._unmapped_sample = str(payload.get("symbol") or payload.get("stock_code"))[:40]
@@ -683,8 +759,20 @@ class LiveTicks:
             prev_f = _num(prev) if prev else None
             if prev_f:
                 tick["prev_close"] = prev_f                                # A5: the tick's own close wins
+            last = self.last_tick_at
+            sio = getattr(self._handler, "sio", None) if self._gap_open else None
+            reconnected = sio is None or bool(getattr(sio, "connected", True))   # 22 Nov review D6: engineio threads
+            if (self._gap_open and reconnected) or (not self._gap_open and last is not None and now - last > TRANSPORT_GAP_S
+                                                    and self._market_hours()):
+                with self._lock:                         # the first tick after a gap: the socket vouches again from now
+                    if not self._gap_open:
+                        self._gap_at, self._gap_cause = last, "silence"
+                        self.transport_gaps += 1
+                    self._gap_open = False
+                    self._vouch_from = now
             with self._lock:
-                self._ticks[sym] = tick
+                for sym in syms:
+                    self._ticks[sym] = dict(tick) if len(syms) > 1 else tick
             self.last_tick_at = now
             s = int(now)
             i = s % 60
@@ -702,7 +790,8 @@ class LiveTicks:
                 if self._store is None:
                     self._store = tick_store.get_store() if tick_store.persist_enabled() else False
                 if self._store:
-                    self._store.append(sym, tick)
+                    for sym in syms:
+                        self._store.append(sym, tick)
             except Exception:  # noqa: BLE001 — persistence must never break the stream
                 pass
         except Exception:  # noqa: BLE001 — a bad tick must never kill the stream

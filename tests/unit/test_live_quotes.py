@@ -522,7 +522,11 @@ def test_nextapi_on_demand_one_name_at_a_time_and_capped():
         e.poll_nse_once()
     qs = [(t, p) for t, p in nse.calls if p.startswith("NextApi")]
     assert all(g >= 4.0 - 1e-9 for g in _gaps(qs))                                      # L-CAPACITY floor, literal
-    assert len({p for _, p in qs}) <= lq.NEXTAPI_MAX_SYMBOLS                          # at most 20 names served this way
+    assert all(g >= lq.NEXTAPI_SPACING_S - 1e-9 for g in _gaps(qs))                   # the fair queue's even spacing
+    # 22 Nov: no 20-name cut any more (names 21+ starved for good); the RATE is what is bounded: ≤ 20 calls in any 120 s
+    times = [t for t, _ in qs]
+    assert all(sum(1 for u in times if t <= u < t + 120.0) <= lq.NEXTAPI_MAX_SYMBOLS for t in times)
+    assert len({p for _, p in qs}) > lq.NEXTAPI_MAX_SYMBOLS or len(qs) <= lq.NEXTAPI_MAX_SYMBOLS   # rotation, not a cut
     per = {}
     for t, p in qs:
         per.setdefault(p, []).append(t)

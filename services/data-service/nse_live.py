@@ -421,6 +421,8 @@ class NseLive:
         ts = ((raw.get("gainers") or {}).get(universe) or {}).get("timestamp") or (raw.get("value") or {}).get("timestamp")
         return {
             "universe": universe, "timestamp": ts, "market_open": market_open(), "errors": errors,
+            # allIndices' own minute stamp: the sector rows' age (22 Nov: the board used the live-analysis stamp above)
+            "indices_timestamp": (raw.get("indices") or {}).get("timestamp"),
             "gainers": parse_variations(raw.get("gainers") or {}, universe),
             "losers": parse_variations(raw.get("losers") or {}, universe),
             "most_active": parse_active(raw.get("value") or {}),

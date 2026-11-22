@@ -7,8 +7,9 @@
 import { useEffect, useState } from 'react'
 import { fmtSigned, unicodeMinus } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
 import { getIndexValuation, getIndexValuationHistory, getYieldGap, type IndexValuationHistory, type IndexValuationRow, type YieldGap } from '@/lib/api'
-import { Chip, DataTable, Panel, T, fmtPct, type Column, ordinal, undatedSource } from '@/components/terminal'
-import { nseDelayedSource } from '@/components/liveModel'
+import { Chip, DataTable, Panel, SourceChip, T, fmtPct, type Column, ordinal, undatedSource } from '@/components/terminal'
+import { liveLevel, nseDelayedSource } from '@/components/liveModel'
+import { useLiveQuotes } from '@/lib/liveQuotes'
 import { nseSession } from '@/components/desktop/session'
 import { useMarketOpen } from '@/components/shell/useFeed'
 
@@ -41,7 +42,11 @@ export function IndexValuation() {
     }, 60_000)
     return () => { alive = false; clearInterval(iv) }
   }, [])
+  // 22 Nov: "Today" from the one live-quote service (Breeze ticks where the index streams, NSE's copy otherwise, each row
+  // labelled by the service); P/E, P/B and yield stay NSE allIndices under the panel's own chip
+  const live = useLiveQuotes((rows ?? []).map(r => r.name), { intervalMs: 5_000 })
   if (!rows || rows.length === 0) return null
+  const today = (r: Row) => liveLevel({ last: null, change_pct: r.change_pct ?? null }, live.quotes[r.name]).change_pct
   const n50 = rows.find(r => r.name === 'NIFTY 50')
   const cols: Column<Row>[] = [
     { key: 'name', label: 'Index', render: r => <span style={{ color: r.name === 'NIFTY 50' ? T.amber : T.text }}>{r.name.replace('NIFTY ', '')}</span> },
@@ -61,7 +66,9 @@ export function IndexValuation() {
     { key: 'pb', label: 'P/B', align: 'right', sort: r => r.pb ?? 1e9, render: r => r.pb == null ? '—' : `${r.pb.toFixed(2)}×` },
     { key: 'dy', label: 'Div yield', align: 'right', sort: r => r.dy ?? -1, render: r => r.dy == null ? '—' : <span style={{ color: T.muted }}>{r.dy.toFixed(2)}%</span> },
     { key: 'ey', label: 'Earnings yield', align: 'right', sort: r => (r.pe ? 100 / r.pe : -1), render: r => r.pe ? <span style={{ color: T.muted }}>{(100 / r.pe).toFixed(1)}%</span> : '—' },
-    { key: 'd', label: 'Today', align: 'right', sort: r => r.change_pct ?? -999, render: r => <span style={{ color: (r.change_pct ?? 0) >= 0 ? T.green : T.red }}>{fmtPct(r.change_pct, 2)}</span> },
+    { key: 'd', label: <span>Today{live.available && live.source ? <> <SourceChip info={live.source} /></> : null}</span>, align: 'right', sort: r => today(r) ?? -999,
+      title: "today's move from the live-quote service: Breeze ticks where the index streams, else NSE's allIndices copy (each row's age in the chip)",
+      render: r => { const c = today(r); return <span style={{ color: (c ?? 0) >= 0 ? T.green : T.red }}>{fmtPct(c, 2)}</span> } },
     { key: 'm', label: '1M', align: 'right', sort: r => r.chg_30d ?? -999, render: r => <span style={{ color: (r.chg_30d ?? 0) >= 0 ? T.green : T.red }}>{fmtPct(r.chg_30d, 1)}</span> },
     { key: 'y', label: '1Y', align: 'right', sort: r => r.chg_365d ?? -999, render: r => <span style={{ color: (r.chg_365d ?? 0) >= 0 ? T.green : T.red }}>{fmtPct(r.chg_365d, 1)}</span> },
   ]

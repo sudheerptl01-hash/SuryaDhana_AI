@@ -843,6 +843,8 @@ export interface LiveIndex { group: string; index: string; last: number | null; 
   pct_30d: number | null; pct_365d: number | null; year_high: number | null; year_low: number | null; pe: number | null }
 export interface LiveMovers {
   universe: string; timestamp: string | null; market_open: boolean; errors: Record<string, string>
+  /** allIndices' own minute stamp (the sector and index rows); older data-service builds omit it */
+  indices_timestamp?: string | null
   gainers: LiveMover[]; losers: LiveMover[]; most_active: LiveMover[]; volume_surge: LiveMover[]
   highs: { count: number; rows: LiveMover[] }; lows: { count: number; rows: LiveMover[] }; oi_spurts: LiveOiSpurt[]; indices: LiveIndex[]
 }

@@ -1,9 +1,21 @@
 # Improvement log: the operations journal (newest entry first)
 
-Last updated Fri 13 Nov 2026 15:05 IST (Terminal v2 wave 2 + the 5 Nov review fixes + gold wave 1e DEPLOYED 15:36, entry
+Last updated Sun 22 Nov 2026 (quiet-LIVE confirmation + live sector indices, entry below; Terminal v2 wave 2 + the 5 Nov review fixes + gold wave 1e DEPLOYED 15:36, entry
 below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5 Nov 13:01; GOLD program deployed on the night
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
+
+**22 Nov 2026: quiet names stay LIVE on NSE's confirmation; sector indices live; one Breeze token, several names.**
+- Owner approved (6 Nov decisions, "yes to all"). A genuinely quiet stock past 120 s stays LIVE while NSE's own copy shows the
+  same price and volume after the last tick; every false-LIVE path the two 6 Nov reviews found is closed (transport gaps,
+  NextApi's real lag, unstamped rows, storage order, pre-open volume, starvation, flapping, the UI age, ui-api restate), and a
+  22 Nov adversarial review of the built change (D1–D9) tightened it further: a re-subscription must be proven by a tick, a
+  transport gap needs a 30 s margin, prefetch at 100 s (no extra NSE calls for names that trade every 80–120 s). Residual: a
+  silently dead token, worst 212 s measured, capped < 240 s (`reports/live_nse/COVERAGE.md`, 22 Nov section).
+- MOV's sector board and MKT's valuation "Today" take the live hook (9 of 21 sectoral indices stream on Breeze; the rest stay
+  NSE's copy, labelled). `live_ticks` maps one token to every spelling that asked for it; NIFTY PRIVATE BANK alias added.
+- Ops finding from the suites: the Breeze ledger reached `data-service.live_quote` 1,500 / 1,500 and `iv_intraday` 786 / 800
+  on a recent day (`test_no_quota_sits_at_its_observed_peak`), so live REST quotes were refused that day.
 
 **13 Nov 2026, 15:05: the cold-boot READ-ONLY trap is closed — the watchdog heals it and can no longer cause it.**
 - This morning's incident, end to end: the Mac rebooted 12 Nov 13:11 (FileVault holds everything until login, 14:07

@@ -55,6 +55,10 @@ export interface LiveQuote {
   /** a LIVE row on a healthy socket whose name simply has not traded for a while (data-service QUIET_LIVE_S): its price is
    *  current as of the refresh, and age_s is the time since its last trade, not how old our knowledge is */
   quiet?: boolean
+  /** a quiet row LIVE past data-service's QUIET_LIVE_S because NSE's own copy shows the same price and volume: which copy
+   *  ('nse_quote' | 'nse_heatmap') and how old its data was (conservatively) when data-service composed the row */
+  confirmed_by?: string | null
+  confirmed_age_s?: number | null
 }
 
 export interface LiveMarket { state: LiveMarketState; session_date: string | null }
@@ -141,6 +145,8 @@ export function parseLiveQuotes(body: unknown, receivedAt: number): LiveBatch {
       reason: str(q.reason),
       received_at: receivedAt,
       quiet: price != null && state === 'live' && /^quiet\b/i.test(str(q.reason) ?? ''),
+      confirmed_by: str(q.confirmed_by),
+      confirmed_age_s: num(q.confirmed_age_s),
     }
   }
   return { asOf: str(b.as_of), market, quotes }
@@ -194,8 +200,11 @@ export function quoteSource(q: LiveQuote | null | undefined, market: LiveMarket 
     // G5 (FINAL ROUND): the face carries the cue too — SourceInfo.quiet renders 'LIVE·q'; the policy window is unchanged
     if (q.quiet) {
       const clock = istClock(q.ltt)
-      return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS: Math.max(0, local), quiet: true,
-               hint: `quiet: no trade for ${ageS != null ? fmtAge(ageS) : 'a while'} on a healthy feed${clock ? ` · last trade ${clock} IST` : ''}` }
+      // 22 Nov (owner-approved): past 120 s the row is LIVE only on NSE's confirmation; say how old that copy is NOW
+      const confirmS = q.confirmed_age_s != null ? q.confirmed_age_s + Math.max(0, local) : null
+      const nse = confirmS != null ? ` · NSE's copy ${fmtAge(confirmS)} old shows the same price and volume` : ''
+      return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS: Math.max(0, local), quiet: true, confirmS,
+               hint: `quiet: no trade for ${ageS != null ? fmtAge(ageS) : 'a while'} on a healthy feed${nse}${clock ? ` · last trade ${clock} IST` : ''}` }
     }
     return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS, hint: q.reason }
   }
@@ -236,12 +245,17 @@ export function liveSourceInfo(rows: readonly (LiveQuote | null | undefined)[], 
   for (const i of open) bySource.set(`${i.state} ${i.source}`, (bySource.get(`${i.state} ${i.source}`) ?? 0) + 1)
   const breakdown = [...bySource.entries()].map(([k, n]) => `${n} ${k.toUpperCase()}`).join(' · ')
   const missing = infos.length - priced.length
+  // 22 Nov review D4: a pane carrying an NSE confirmation says so (the audit requires 'quiet' or 'NSE-checked' on it)
+  const nChecked = worst.state === 'live' ? open.filter(i => i.confirmS != null).length : 0
+  const checkedNote = nChecked ? ' · ' + nChecked + ' NSE-checked (no trade on the feed, NSE confirms the price)' : ''
   return {
     state: worst.state, source: worst.source, asOf: worst.asOf ?? null, ageDays: 0, ageS,
     // G5: a pane whose every live row is quiet carries the face cue too (one loud row keeps the plain LIVE face)
     quiet: worst.state === 'live' && open.every(i => i.quiet === true) ? true : undefined,
+    // the oldest NSE confirmation behind a LIVE pane (the audit holds it to data-service's QUIET_CONFIRM_MAX_S)
+    confirmS: worst.state === 'live' ? open.reduce<number | null>((a, i) => (i.confirmS != null && (a == null || i.confirmS > a) ? i.confirmS : a), null) : undefined,
     mix: { live, total: infos.length },
-    hint: `${breakdown}${missing ? ` · ${missing} without a quote` : ''}`,
+    hint: `${breakdown}${missing ? ` · ${missing} without a quote` : ''}${checkedNote}`,
   }
 }
 
@@ -257,7 +271,7 @@ export function quoteLine(q: LiveQuote | null | undefined, market: LiveMarket | 
   const age = s.ageS != null ? `${fmtAge(s.ageS)} ago` : ''
   switch (s.state) {
     case 'live': {
-      if (q.quiet) { const ta = quoteAgeS(q, now); return `${s.source} LIVE · quiet · last trade ${at}${ta != null ? ` (${fmtAge(ta)} ago)` : ''}` }
+      if (q.quiet) { const ta = quoteAgeS(q, now); return `${s.source} LIVE · quiet · last trade ${at}${ta != null ? ` (${fmtAge(ta)} ago)` : ''}${s.confirmS != null ? ` · NSE check ${fmtAge(s.confirmS)} ago` : ''}` }
       return `${s.source} LIVE · ${at}${age ? ` · ${age}` : ''}`
     }
     case 'delayed': return `${s.source} DELAYED · ${at}${age ? ` · ${age}` : ''}`
