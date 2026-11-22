@@ -4,10 +4,12 @@ import csv
 import io
 import sys
 import threading
+import time
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
-from datetime import date, datetime, timedelta
-from typing import Any
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Optional
 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
@@ -81,6 +83,256 @@ def parse_nse_master_tokens(rows: Iterable[list[str]]) -> tuple[dict[str, str], 
             if exch not in eq or (eq_series.get(exch) != "EQ" and series == "EQ"):
                 eq[exch], eq_series[exch] = token, series
     return eq, idx
+
+
+# ── F&O websocket tokens (FONSEScripMaster.txt) ──────────────────────────────────────────────────────────────────────────
+# breeze_connect forms an NFO exchange-quote token exactly like a cash one, '4.1!<Token>' (breeze_connect.py get_stock_token_value:
+# exchange_code_list["NFO"] = "4."), from the FONSE master's Token column. Its own parameter lookup is NOT used: a bad spec comes
+# back as '4.1!False' because subscribe_exception() returns the exception instead of raising it, and get_names cannot resolve
+# F&O. So the token is read here, from the same cached SecurityMaster.zip, and the live-ticks engine verifies every
+# subscription against its first tick.
+FO_MASTER_FILE = "FONSEScripMaster.txt"
+FO_FUTURE = "FUT"
+FO_OPTION_RIGHTS = ("CE", "PE")
+_FO_INDEX_INSTRUMENTS = ("OPTIDX", "FUTIDX")
+_FO_STOCK_INSTRUMENTS = ("OPTSTK", "FUTSTK")
+# the header names the parser needs (the file's own header row gives their positions; no column number is transcribed)
+_FO_COLUMNS = ("Token", "InstrumentName", "ShortName", "ExpiryDate", "StrikePrice", "OptionType", "LotSize", "ExchangeCode")
+_IST = timezone(timedelta(hours=5, minutes=30))
+
+
+@dataclass(frozen=True)
+class FoContract:
+    """One FONSE master row. ``strike`` is written exactly as the master writes it ('24350', '207.5'); None for a future."""
+    token: str                     # the master's Token ('64411'); ticks arrive keyed WS_TOKEN_PREFIX + token
+    symbol: str                    # the NSE F&O symbol (NIFTY, BANKNIFTY, RELIANCE …)
+    expiry: str                    # ISO date
+    strike: Optional[str]
+    right: str                     # 'CE' | 'PE' | 'FUT'
+    lot: Optional[int]
+    instrument: str                # OPTIDX | OPTSTK | FUTIDX | FUTSTK
+
+    @property
+    def ws_token(self) -> str:
+        return WS_TOKEN_PREFIX + self.token
+
+    @property
+    def strike_value(self) -> Optional[float]:
+        return float(self.strike) if self.strike is not None else None
+
+
+ContractId = tuple[str, str, str, str]        # (symbol, expiry ISO, strike as the master writes it or '', right)
+
+
+def contract_id(symbol: str, expiry: str, strike: Optional[str], right: str) -> ContractId:
+    return (symbol.upper(), expiry, "" if strike is None else str(strike), right.upper())
+
+
+@dataclass(frozen=True)
+class FoTokenMaps:
+    """The F&O master for the loaded underlyings. ``version`` = (IST date, source id): a new IST date or a changed archive
+    (path, mtime, size) is a new version, and the live-ticks engine revalidates every subscribed contract against it (ICICI
+    reuses F&O tokens: 1,420 changed contract within 16 days in Nov 2026)."""
+    version: tuple[str, str]
+    contracts: Mapping[ContractId, FoContract] = field(default_factory=dict)
+    symbols: frozenset[str] = frozenset()
+    skipped: Mapping[str, int] = field(default_factory=dict)
+
+    def get(self, symbol: str, expiry: str, strike: Optional[str], right: str) -> Optional[FoContract]:
+        return self.contracts.get(contract_id(symbol, expiry, strike, right))
+
+    def spelling(self, symbol: str, expiry: str, strike: Optional[str], right: str) -> Optional[str]:
+        """The master's spelling of a numerically equal strike ('24350' for '24350.0'), for an honest refusal message."""
+        if strike is None:
+            return None
+        try:
+            want = float(strike)
+        except ValueError:
+            return None
+        for c in self.series(symbol, expiry):
+            if c.right == right.upper() and c.strike_value == want:
+                return c.strike
+        return None
+
+    def series(self, symbol: str, expiry: str) -> list[FoContract]:
+        """The options of one expiry, by strike then right."""
+        sym = symbol.upper()
+        out = [c for c in self.contracts.values() if c.symbol == sym and c.expiry == expiry and c.right != FO_FUTURE]
+        return sorted(out, key=lambda c: (c.strike_value or 0.0, c.right))
+
+    def futures(self, symbol: str) -> list[FoContract]:
+        sym = symbol.upper()
+        return sorted((c for c in self.contracts.values() if c.symbol == sym and c.right == FO_FUTURE), key=lambda c: c.expiry)
+
+    def expiries(self, symbol: str) -> list[str]:
+        """Option expiries listed for ``symbol``, oldest first, as the master writes them (never computed)."""
+        sym = symbol.upper()
+        return sorted({c.expiry for c in self.contracts.values() if c.symbol == sym and c.right != FO_FUTURE})
+
+
+def breeze_index_symbols() -> dict[str, str]:
+    """ICICI ShortName → NSE F&O symbol for the index underlyings: the inverse of fo_iv.intraday.BREEZE_INDEX_CODES (the one
+    table, checked against the master; never retyped here). Codes it does not hold (NIFNEX, NIF150 on 22 Nov) are skipped."""
+    from fo_iv.intraday import BREEZE_INDEX_CODES                 # lazy: only the live-ticks worker parses the F&O master
+    return {code.upper(): sym.upper() for sym, code in BREEZE_INDEX_CODES.items()}
+
+
+def parse_fo_master_tokens(rows: Iterable[list[str]], want: Optional[Iterable[str]] = None,
+                           index_symbols: Optional[Mapping[str, str]] = None) -> tuple[dict[ContractId, FoContract], dict[str, int]]:
+    """FONSEScripMaster.txt rows → ({contract id: FoContract}, {skip reason: count}) for the wanted underlyings (all when None).
+
+    Column positions come from the file's header row. The NSE symbol: index rows through ``index_symbols`` (ICICI's ShortName:
+    NIFTY, CNXBAN, NIFFIN, NIFSEL — the index rows' ExchangeCode reads 'NIFTY 50', 'NIFTY BANK', 'NIFTY FINANCIAL', not the F&O
+    symbol), stock rows through ExchangeCode (the NSE symbol: PIDILITIND, BANDHANBNK). The strike stays the master's text."""
+    want_set = {w.upper() for w in want} if want is not None else None
+    codes = {k.upper(): v.upper() for k, v in (index_symbols if index_symbols is not None else breeze_index_symbols()).items()}
+    out: dict[ContractId, FoContract] = {}
+    skipped: dict[str, int] = {}
+
+    def skip(why: str) -> None:
+        skipped[why] = skipped.get(why, 0) + 1
+
+    pos: Optional[dict[str, int]] = None
+    for raw in rows:
+        cols = [c.strip().strip('"').strip() for c in raw]
+        if pos is None:
+            names = {c: i for i, c in enumerate(cols)}
+            if not all(n in names for n in _FO_COLUMNS):
+                skip("no header row")
+                return out, skipped                       # never guess column positions
+            pos = {n: names[n] for n in _FO_COLUMNS}
+            continue
+        if len(cols) <= max(pos.values()):
+            skip("short row")
+            continue
+        token, inst = cols[pos["Token"]], cols[pos["InstrumentName"]].upper()
+        if not token.isdigit() or not token.strip("0"):
+            skip("placeholder token")
+            continue
+        if inst in _FO_INDEX_INSTRUMENTS:
+            short = cols[pos["ShortName"]].upper()
+            sym = codes.get(short)
+            if sym is None:
+                skip(f"index code {short} not in BREEZE_INDEX_CODES")
+                continue
+        elif inst in _FO_STOCK_INSTRUMENTS:
+            sym = cols[pos["ExchangeCode"]].upper()
+            if not sym:
+                skip("no ExchangeCode")
+                continue
+        else:
+            skip(f"instrument {inst or '?'}")
+            continue
+        if want_set is not None and sym not in want_set:
+            continue
+        try:
+            expiry = datetime.strptime(cols[pos["ExpiryDate"]], "%d-%b-%Y").date().isoformat()
+        except ValueError:
+            skip("unreadable expiry")
+            continue
+        if inst.startswith("FUT"):
+            right, strike = FO_FUTURE, None
+        else:
+            right, strike = cols[pos["OptionType"]].upper(), cols[pos["StrikePrice"]]
+            if right not in FO_OPTION_RIGHTS or not strike:
+                skip("no option type or strike")
+                continue
+        lot_txt = cols[pos["LotSize"]]
+        cid = contract_id(sym, expiry, strike, right)
+        if cid in out:
+            skip("duplicate contract")
+            continue
+        out[cid] = FoContract(token=token, symbol=sym, expiry=expiry, strike=strike, right=right,
+                              lot=int(lot_txt) if lot_txt.isdigit() and int(lot_txt) > 0 else None, instrument=inst)
+    return out, skipped
+
+
+RowsSource = Callable[[], tuple[str, Optional[Callable[[], Iterator[list[str]]]]]]
+
+
+def _fo_master_source() -> tuple[str, Optional[Callable[[], Iterator[list[str]]]]]:
+    """(source id, rows reader) for FONSEScripMaster.txt: the cached SecurityMaster.zip on disk (shared.breeze_cache.CACHE —
+    the copy the daily login refreshes; its path, mtime and size are the id, so a refreshed archive is a new version), else
+    the archive breeze_connect holds in memory (loaded at import, possibly days old: a fallback only), else nothing. Never
+    imports breeze_connect and never opens a socket."""
+    import zipfile
+    from shared.breeze_cache import CACHE
+    try:
+        if CACHE.exists() and zipfile.is_zipfile(CACHE):
+            st = CACHE.stat()
+
+            def from_file() -> Iterator[list[str]]:
+                with zipfile.ZipFile(CACHE) as z, z.open(FO_MASTER_FILE) as fh:
+                    yield from csv.reader(io.TextIOWrapper(fh, encoding="utf-8", errors="replace"))
+            return f"file:{CACHE}:{st.st_mtime_ns}:{st.st_size}", from_file
+    except OSError:
+        pass
+    bc = sys.modules.get("breeze_connect.breeze_connect")
+    zf = getattr(bc, "zip", None) if bc is not None else None
+    if zf is not None and FO_MASTER_FILE in zf.namelist():
+        def from_module() -> Iterator[list[str]]:
+            with zf.open(FO_MASTER_FILE) as fh:
+                yield from csv.reader(io.TextIOWrapper(fh, encoding="utf-8", errors="replace"))
+        return f"module:{id(zf)}", from_module
+    return "none", None
+
+
+def _ist_today() -> str:
+    return datetime.fromtimestamp(time.time(), _IST).date().isoformat()
+
+
+class FoMasterIndex:
+    """The process's F&O token index: parsed per underlying on demand (only the wanted ones), rebuilt on a new IST date or a
+    changed archive. Thread-safe; the live-ticks worker calls it from its own thread (never the event loop)."""
+
+    def __init__(self, source: Optional[RowsSource] = None, today_fn: Optional[Callable[[], str]] = None,
+                 index_symbols_fn: Optional[Callable[[], Mapping[str, str]]] = None) -> None:
+        self._source = source or _fo_master_source
+        self._today = today_fn or _ist_today
+        self._index_symbols = index_symbols_fn or breeze_index_symbols
+        self._lock = threading.Lock()
+        self._maps: Optional[FoTokenMaps] = None
+        self.parses = 0
+
+    def maps(self, underlyings: Iterable[str]) -> FoTokenMaps:
+        want = {u.upper() for u in underlyings if u}
+        with self._lock:
+            sid, reader = self._source()
+            version = (self._today(), sid)
+            cur = self._maps
+            if cur is None or cur.version != version:
+                cur = FoTokenMaps(version=version)
+            missing = want - cur.symbols
+            if missing:
+                got: dict[ContractId, FoContract] = {}
+                skipped: dict[str, int] = dict(cur.skipped)
+                if reader is not None:
+                    try:
+                        got, sk = parse_fo_master_tokens(reader(), missing, self._index_symbols())
+                        self.parses += 1
+                        for k, v in sk.items():
+                            skipped[k] = skipped.get(k, 0) + v
+                    except Exception as exc:  # noqa: BLE001 — an unreadable master leaves these underlyings unresolved
+                        logger.warning("F&O security master unreadable for websocket tokens", error=str(exc)[:160])
+                        got = {}
+                cur = FoTokenMaps(version=version, contracts={**cur.contracts, **got}, symbols=cur.symbols | missing,
+                                  skipped=skipped)
+            self._maps = cur
+            return cur
+
+
+_FO_INDEX: Optional[FoMasterIndex] = None
+_FO_INDEX_LOCK = threading.Lock()
+
+
+def fo_master() -> FoMasterIndex:
+    """The process-wide F&O index (one parse per underlying per IST day per archive), shared by the live-ticks engine and the
+    live option chain so both read one version."""
+    global _FO_INDEX
+    with _FO_INDEX_LOCK:
+        if _FO_INDEX is None:
+            _FO_INDEX = FoMasterIndex()
+        return _FO_INDEX
 
 
 def _date_chunks(start: date, end: date) -> list[tuple[date, date]]:
@@ -404,6 +656,11 @@ class ICICIBreezeProvider(LiveDataProvider):
                     maps = ({}, {})
                 self.__dict__["_ws_maps"] = maps
             return maps
+
+    def fo_token_maps(self, underlyings: Iterable[str]) -> FoTokenMaps:
+        """F&O websocket tokens for the wanted underlyings (FONSEScripMaster.txt from the cached archive), rebuilt on a new IST
+        date or a changed archive. The live-ticks engine calls it from its worker thread; it never touches the SDK."""
+        return fo_master().maps(underlyings)
 
     def _resolve_ws_token(self, ticker: str) -> str:
         """NSE symbol or index name → the websocket token its ticks are keyed by ('HDFCBANK' → '4.1!1333',

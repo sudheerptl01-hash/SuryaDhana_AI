@@ -2977,6 +2977,115 @@ def live_status_view() -> dict:
     return _live_quotes_engine().status()
 
 
+# ── /live/option-chain (22 Nov 2026; live_chain.py) ──────────────────────────────────────────────────────────────────────
+# NSE option-chain v3 (else the last F&O bhavcopy) with the Breeze websocket overlaid on ATM ± width, recomputed by the
+# unchanged option_chain.chain(). /db/option-chain-live above is untouched: the fallback and the paper book's mark source.
+
+_live_chain: Any = None
+_live_chain_lock = threading.Lock()
+
+
+def _live_chain_fo_maps(underlyings: list[str]) -> Any:
+    """The process's F&O token index (FONSEScripMaster.txt from the cached archive), shared with the tick engine."""
+    from providers.icici_breeze_provider import fo_master
+    return fo_master().maps(underlyings)
+
+
+_LIVE_CHAIN_NSE_FAIL_S = 30.0
+_live_chain_nse_failed: dict[tuple[str, str | None], tuple[float, str]] = {}
+
+
+def _live_chain_nse(sym: str, expiry: str | None) -> dict:
+    """NSE option-chain v3 for one expiry through the shared NseLive client (contract info cached 600 s, the chain 30 s;
+    the 403/429 breaker shared with every NSE route). Raises when NSE does not list the expiry or does not answer. A failure
+    is remembered for 30 s and re-raised at once (22 Nov review: NseLive caches only successes and the chain memo is 1 s,
+    so a timing-out or 5xx NSE was asked about once a second, each try holding a threadpool thread up to 8 s)."""
+    import time as _time
+    key = (sym, expiry)
+    failed = _live_chain_nse_failed.get(key)
+    if failed is not None and _time.time() - failed[0] < _LIVE_CHAIN_NSE_FAIL_S:
+        raise LookupError(f"NSE did not answer {int(_time.time() - failed[0])} s ago ({failed[1]}); retried after 30 s")
+    try:
+        out = _live_chain_nse_fetch(sym, expiry)
+    except Exception as exc:  # noqa: BLE001 — remember, re-raise: live_chain falls back to the bhavcopy frame
+        _live_chain_nse_failed[key] = (_time.time(), str(exc)[:80])
+        raise
+    _live_chain_nse_failed.pop(key, None)
+    return out
+
+
+def _live_chain_nse_fetch(sym: str, expiry: str | None) -> dict:
+    import option_chain as oc
+    from datetime import datetime as _dt
+    nl = _live_nse_client()
+    info = nl.get(f"option-chain-contract-info?symbol={sym}", ttl_open=600)
+    exps = list(info.get("expiryDates") or [])
+    if not exps:
+        raise LookupError(f"NSE lists no option expiry for {sym}")
+    want = _dt.fromisoformat(expiry).strftime("%d-%b-%Y") if expiry else exps[0]
+    if want not in exps:
+        raise LookupError(f"NSE does not list the {expiry} expiry for {sym}")
+    kind = "Indices" if sym in oc.INDEX_SYMBOLS else "Equity"
+    path = f"option-chain-v3?type={kind}&symbol={sym}&expiry={want}"
+    payload = nl.get(path, ttl_open=30)
+    return {"payload": payload, "expiries": [_dt.strptime(e, "%d-%b-%Y").date().isoformat() for e in exps],
+            "as_of": (payload.get("records") or {}).get("timestamp") if isinstance(payload, dict) else None,
+            "fetched_at": nl.cached_at(path)}
+
+
+def _live_chain_eod(sym: str) -> dict | None:
+    """The symbol's rows of the latest cached F&O bhavcopy (options and futures) and its lot."""
+    import option_chain as oc
+    fs = oc.files(_fo_root())
+    if not fs:
+        return None
+    day, path = fs[-1]
+    df = oc.load(str(path))
+    rows = df[df["TckrSymb"] == sym]
+    if rows.empty:
+        return None
+    lots = rows.loc[rows["FinInstrmTp"].isin(oc.OPTION_TYPES), "NewBrdLotQty"].dropna()
+    return {"frame": rows.copy(), "date": day.isoformat(), "lot": int(lots.iloc[0]) if len(lots) else None}
+
+
+def _live_chain_prev_oi(sym: str, expiry: str, session: str) -> dict | None:
+    """Stored OI (shares) per (strike, CE|PE) of one expiry from the last cached F&O bhavcopy BEFORE ``session``."""
+    import option_chain as oc
+    fs = [(d, p) for d, p in oc.files(_fo_root()) if d.isoformat() < session]
+    if not fs:
+        return None
+    day, path = fs[-1]
+    df = oc.load(str(path))
+    o = df[(df["TckrSymb"] == sym) & df["FinInstrmTp"].isin(oc.OPTION_TYPES) & (df["XpryDt"] == pd.Timestamp(expiry))]
+    return {"date": day.isoformat(),
+            "oi": {(float(k), str(t)): float(v) for k, t, v in zip(o["StrkPric"], o["OptnTp"], o["OpnIntrst"]) if pd.notna(v)}}
+
+
+def _live_chain_engine() -> Any:
+    global _live_chain
+    with _live_chain_lock:
+        if _live_chain is None:
+            import live_chain as lc
+            _live_chain = lc.LiveChain(ticks_getter=live_ticks_mod.instance, maps_fn=_live_chain_fo_maps,
+                                       nse_fn=_live_chain_nse, eod_fn=_live_chain_eod, prev_oi_fn=_live_chain_prev_oi)
+        return _live_chain
+
+
+@app.get("/live/option-chain/{symbol}")
+def live_option_chain_view(symbol: str, expiry: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+                           width: int = Query(10, ge=1, le=20)) -> dict:
+    """Live option chain: NSE option-chain v3 (else the last F&O bhavcopy) with the Breeze websocket overlaid on ATM ± width
+    strikes (fresh or vouched-quiet ticks only), recomputed by option_chain.chain(); memoised 1 s. Asking ensures the
+    underlying and the band's contracts on the tick engine. Per side: source breeze_ws | nse | eod, age_s, tick_state; a
+    chain-level feed block. Sync route (threadpool): never a Breeze REST call, never Yahoo."""
+    if not re.fullmatch(r"[A-Za-z0-9&\-]{1,20}", symbol):
+        raise HTTPException(status_code=422, detail="Bad symbol")
+    out = _live_chain_engine().chain(symbol.upper(), expiry, width)
+    if not out.get("found"):
+        raise HTTPException(status_code=404, detail=out.get("error") or f"{symbol.upper()}: no option chain")
+    return out
+
+
 @app.get("/provider/status")
 def provider_status(live: LiveDataProvider = Depends(get_live_provider)) -> dict:
     out = {

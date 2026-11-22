@@ -29,6 +29,22 @@ Session handling: the Breeze client is BORROWED from the existing provider (`pro
 second login path. If the provider's session dies, the worker tears down and parks in DISCONNECTED; the next
 ensure() after the provider reconnects (08:00 login or /provider/configure) starts a fresh worker. A provider swap
 (a new `_breeze` object after /provider/configure) tears the old socket down and reconnects on the new client.
+
+F&O contracts (owner-approved 22 Nov 2026; the live option chain, live_chain.py) are a third instrument kind next to equities
+and indices, keyed 'NFO:<SYM>:<YYYY-MM-DD>:<STRIKE>:<CE|PE>' or 'NFO:<SYM>:<YYYY-MM-DD>:FUT' (SYM = the NSE F&O symbol,
+STRIKE exactly as ICICI's FONSE master writes it: '24350', '207.5'; the paper F&O book's legs carry the same four fields):
+- tokens come from the provider's fo_token_maps() (FONSEScripMaster.txt from the cached archive, '4.1!<Token>' like cash),
+  never from the SDK's parameter lookup (it fails silently: '4.1!False'). The map is rebuilt every IST date and whenever the
+  archive changes, and every subscribed contract is revalidated against it (ICICI reuses F&O tokens);
+- a token that is also a subscribed equity's cash token is refused (both stream as '4.1!<Token>'); an equity that needs a
+  token a contract holds takes it and the contract goes. Every contract is checked against its FIRST tick (an F&O-shaped
+  tick, and the SDK's annotated expiry_date / strike_price / right when present); a mismatch drops it with an error;
+- their own cap, LIVE_TICKS_MAX_OPTIONS (default 90, ceiling 200; 0 turns contracts off): equity demand never evicts a
+  contract and contracts never evict equities, holdings or index pins. Within the cap a contract still being asked for keeps
+  its slot (OPTION_HOLD_S) so two chains cannot thrash each other; the rest go by recency, earlier in a request first;
+- ticks keep OI, the bid / ask quantities, ltq, avg price and the circuit limits; chg_pct is never clamped (an option moves
+  hundreds of percent: the recorded NIFTY 24400 CE tick is +350 %); no bhavcopy previous-close join; snapshot kind
+  'option' / 'future'. They are NOT persisted to tick_store (its columns and /ticks/bars are a frozen contract).
 """
 from __future__ import annotations
 
@@ -40,8 +56,8 @@ import random
 import re
 import threading
 import time
-from datetime import datetime
-from typing import Any, Callable, Optional
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Callable, NamedTuple, Optional
 
 import pytz
 
@@ -53,6 +69,7 @@ import tick_store  # W6: tick persistence — lazy, kill-switched; see the _on_t
 logger = get_logger("live-ticks")
 
 IST = pytz.timezone("Asia/Kolkata")
+_IST_FIXED = timezone(timedelta(hours=5, minutes=30))   # IST has no DST: one fixed offset
 SYMBOL_RE = re.compile(r"^[A-Z0-9&-]{1,20}$")
 INDEX_RE = re.compile(r"^[A-Z0-9][A-Z0-9 &:/.()%-]{2,59}$")
 CAP_DEFAULT, CAP_FLOOR, CAP_CEILING = 300, 52, 500
@@ -73,6 +90,30 @@ def cap_from_env(raw: str | None) -> int:
 MAX_SYMBOLS = cap_from_env(os.getenv("LIVE_TICKS_MAX_SYMBOLS"))
 SYMBOL_TTL_S = 600.0               # A1: unsubscribe symbols nobody asked about for 10 min
 REQUESTED_CAP = 2 * MAX_SYMBOLS    # hard bound on the request ledger itself (S1)
+
+OPT_CAP_DEFAULT, OPT_CAP_FLOOR, OPT_CAP_CEILING = 90, 0, 200
+
+
+def options_cap_from_env(raw: str | None) -> int:
+    """LIVE_TICKS_MAX_OPTIONS → the F&O contract cap, a budget SEPARATE from MAX_SYMBOLS. Default 90 (two chains of ATM ± 10
+    plus their futures); ceiling 200 (L-CAPACITY measured 540 tokens clean and recommends about 600 in all: 500 + 90 is
+    within it, 500 + 200 is not measured). 0 turns contract streaming off; junk → the default."""
+    try:
+        v = int(str(raw).strip()) if raw not in (None, "") else OPT_CAP_DEFAULT
+    except ValueError:
+        return OPT_CAP_DEFAULT
+    return max(OPT_CAP_FLOOR, min(OPT_CAP_CEILING, v))
+
+
+MAX_OPTIONS = options_cap_from_env(os.getenv("LIVE_TICKS_MAX_OPTIONS"))
+OPTION_TTL_S = 180.0               # a contract nobody asked about for 3 min is unsubscribed (a chain polls every 1-2 s)
+OPTION_HOLD_S = 60.0               # a subscribed contract asked about within this keeps its slot against newcomers
+OPTION_LEDGER_CAP = 2 * OPT_CAP_CEILING   # bound on the contract request ledger (over-cap names stay visible in status)
+COLLISION_RETRY_S = 300.0          # a contract refused for a token collision is retried after this
+MISMATCH_RETRY_S = 900.0           # a contract whose first tick did not match is retried after this
+FO_EXCHANGE = "NSE Futures & Options"   # breeze_connect labels a 23-field (F&O) tick so; a cash tick is 'NSE Equity'
+CONTRACT_PREFIX = "NFO:"
+CONTRACT_RE = re.compile(r"^NFO:([A-Z0-9&-]{1,20}):(\d{4}-\d{2}-\d{2}):(?:(\d{1,7}(?:\.\d{1,4})?):(CE|PE)|(FUT))$")
 FRESH_S = 5.0                      # consumers treat ticks older than this as stale
 HEARTBEAT_S = 10.0                 # L-CAPACITY: NIFTY 50 ticks at 10 Hz; no tick on the socket for 10 s = feed not healthy
 # In session, a silence on the WHOLE socket longer than this is a transport gap: ticks sent in it may be lost, and Breeze sends
@@ -188,14 +229,113 @@ def parse_ltt(v: Any) -> Optional[float]:
     return None
 
 
+class ContractParts(NamedTuple):
+    symbol: str                    # NSE F&O symbol
+    expiry: str                    # ISO date
+    strike: Optional[str]          # as ICICI's FONSE master writes it; None for a future
+    right: str                     # 'CE' | 'PE' | 'FUT'
+
+
+@functools.lru_cache(maxsize=16384)
+def contract_parts(key: str) -> Optional[ContractParts]:
+    """'NFO:NIFTY:2026-11-23:24350:CE' → ContractParts; None unless the key is exactly the contract format with a real ISO date."""
+    m = CONTRACT_RE.fullmatch(key) if isinstance(key, str) else None
+    if m is None:
+        return None
+    try:
+        date.fromisoformat(m.group(2))
+    except ValueError:
+        return None
+    if m.group(5):
+        return ContractParts(m.group(1), m.group(2), None, "FUT")
+    return ContractParts(m.group(1), m.group(2), m.group(3), m.group(4))
+
+
+def is_contract(sym: str) -> bool:
+    return isinstance(sym, str) and sym.startswith(CONTRACT_PREFIX) and contract_parts(sym) is not None
+
+
+def contract_key(symbol: str, expiry: str, strike: Optional[str], right: str) -> str:
+    """The engine key of a contract. ``strike`` must be the master's text (see strike_text for a float); no normalisation."""
+    r = right.upper()
+    if r == "FUT":
+        return f"{CONTRACT_PREFIX}{symbol.upper()}:{expiry}:FUT"
+    return f"{CONTRACT_PREFIX}{symbol.upper()}:{expiry}:{strike}:{r}"
+
+
+def strike_text(strike: float | int | str) -> str:
+    """A numeric strike in the master's spelling: no trailing zeros ('24350', '207.5'). Held for all 91,818 option rows of the
+    22 Nov 2026 master; a caller holding a float (the paper book stores REAL) uses this before contract_key."""
+    if isinstance(strike, str):
+        return strike
+    return ("%.6f" % float(strike)).rstrip("0").rstrip(".")
+
+
+def expiry_close_epoch(expiry: str) -> float:
+    """15:30 IST on the expiry day (epoch s): the contract stops trading then (black76.TIME_CONVENTION's T = 0)."""
+    d = date.fromisoformat(expiry)
+    return datetime(d.year, d.month, d.day, 15, 30, tzinfo=_IST_FIXED).timestamp()
+
+
+def contract_expired(expiry: str, now: float) -> bool:
+    return now >= expiry_close_epoch(expiry)
+
+
+def _is_fo_tick(payload: dict) -> bool:
+    """breeze_connect's own shape label: 'NSE Futures & Options' for a 23-field tick (OI, CHNGOI), 'NSE Equity' for a cash
+    one; without the label, the OI fields decide."""
+    ex = payload.get("exchange")
+    if isinstance(ex, str) and ex.strip():
+        return ex.strip() == FO_EXCHANGE
+    return "OI" in payload or "CHNGOI" in payload
+
+
+_ANNOTATION_KEYS = ("product_type", "expiry_date", "strike_price", "right")
+
+
+def annotation_mismatch(parts: ContractParts, payload: dict) -> Optional[str]:
+    """Why the SDK's annotation of a tick (product_type, expiry_date 'DD-Mon-YYYY', strike_price, right 'Call'/'Put', taken
+    from ITS copy of the master) contradicts the contract we subscribed; None when it agrees or carries none."""
+    pt = str(payload.get("product_type") or "").strip()
+    if pt:
+        want = "futures" if parts.right == "FUT" else "options"
+        if pt.lower() != want:
+            return f"product {pt}, expected {want}"
+    exp = str(payload.get("expiry_date") or "").strip()
+    if exp:
+        try:
+            iso = datetime.strptime(exp, "%d-%b-%Y").replace(tzinfo=_IST_FIXED).date().isoformat()
+        except ValueError:
+            return f"unreadable expiry_date {exp[:20]!r}"
+        if iso != parts.expiry:
+            return f"expiry {iso}, expected {parts.expiry}"
+    if parts.right != "FUT":
+        k = str(payload.get("strike_price") or "").strip()
+        if k:
+            try:
+                if float(k) != float(parts.strike or "nan"):
+                    return f"strike {k}, expected {parts.strike}"
+            except ValueError:
+                return f"unreadable strike_price {k[:20]!r}"
+        r = str(payload.get("right") or "").strip().lower()
+        if r:
+            got = {"call": "CE", "put": "PE"}.get(r, r.upper())
+            if got != parts.right:
+                return f"right {got}, expected {parts.right}"
+    return None
+
+
 def is_index(sym: str) -> bool:
-    """Index names carry a space ('NIFTY 50', 'INDIA VIX'); NSE equity symbols never do."""
-    return " " in sym
+    """Index names carry a space ('NIFTY 50', 'INDIA VIX'); NSE equity symbols and contract keys never do."""
+    return " " in sym and not sym.startswith(CONTRACT_PREFIX)
 
 
 def canonical(sym: str) -> Optional[str]:
-    """Request spelling → the engine's key: upper case, '.NS' dropped, legacy index names mapped; None if invalid."""
+    """Request spelling → the engine's key: upper case, '.NS' dropped, legacy index names mapped; None if invalid. F&O
+    contract keys are recognised first (they hold colons, never a space): the exact format or None, never normalised."""
     s = re.sub(r"\s+", " ", str(sym)).strip().upper()
+    if s.startswith(CONTRACT_PREFIX):
+        return s if contract_parts(s) is not None else None
     if s.endswith(".NS") or s.endswith(".BO"):
         s = s[:-3]
     s = LEGACY_INDEX_NAMES.get(s, s)
@@ -252,6 +392,16 @@ class LiveTicks:
         self._prev_close: dict[str, float] = {}         # bhavcopy fallback (A5)
         self._sub_errors: dict[str, str] = {}
         self._unresolved: dict[str, float] = {}         # SYM → retry-after (no websocket token)
+        # F&O contracts (their own ledger and cap; see the module docstring)
+        self._requested_opts: dict[str, float] = {}     # contract key → last_requested
+        self._options_over_cap: set[str] = set()        # wanted, resolvable, beyond MAX_OPTIONS at the last sync
+        self._verified: set[str] = set()                # contracts whose first tick on the current subscription matched
+        self._fo_version: Any = None                    # the FoTokenMaps version the subscriptions were last checked against
+        self._fo_error: Optional[str] = None
+        self.collisions = 0
+        self.first_tick_mismatches = 0
+        self.kind_mismatch_ticks = 0                    # a tick of the other shape (cash vs F&O) on a token: not stored
+        self.unannotated_first_ticks = 0                # F&O-shaped first ticks without the SDK's contract annotation
 
         self.state = OFF
         self.error: Optional[str] = None
@@ -291,11 +441,18 @@ class LiveTicks:
         if not self._primed:                            # once per process, off the request path
             self._primed = True
             threading.Thread(target=self._prime_once, name="live-ticks-prime", daemon=True).start()
+        norm = _normalize(symbols)
+        plain = [s for s in norm if not is_contract(s)][:MAX_SYMBOLS]
+        contracts = [s for s in norm if is_contract(s)][:OPTION_LEDGER_CAP] if MAX_OPTIONS > 0 else []
         with self._lock:
-            for s in _normalize(symbols)[:MAX_SYMBOLS]:
+            for s in plain:
                 if s not in self._requested and s not in self._subscribed:
                     new = True
                 self._requested[s] = now
+            for i, s in enumerate(contracts):
+                if s not in self._requested_opts and s not in self._subscribed:
+                    new = True
+                self._requested_opts[s] = now - i * 1e-6          # earlier in one request ranks first at the cap (ATM first)
             # Bound the request ledger HERE, not only in the worker's _target_set(): while the
             # kill switch is OFF no worker runs, so without this the dict grows per distinct
             # symbol forever (bloomberg_verdict defect #5 / S1). TTL first, then hard cap.
@@ -303,6 +460,10 @@ class LiveTicks:
             if len(self._requested) > REQUESTED_CAP:
                 keep = sorted(self._requested, key=self._requested.get, reverse=True)[:REQUESTED_CAP]  # type: ignore[arg-type]
                 self._requested = {s: self._requested[s] for s in keep}
+            self._requested_opts = {s: t for s, t in self._requested_opts.items() if now - t <= OPTION_TTL_S}
+            if len(self._requested_opts) > OPTION_LEDGER_CAP:
+                keep = sorted(self._requested_opts, key=self._requested_opts.get, reverse=True)[:OPTION_LEDGER_CAP]  # type: ignore[arg-type]
+                self._requested_opts = {s: self._requested_opts[s] for s in keep}
         if self._enabled():
             self._kick(resync=new or not self._ws_up)
         else:
@@ -367,6 +528,9 @@ class LiveTicks:
             for sym, t in self._ticks.items():
                 if want is not None and sym not in want:
                     continue
+                if is_contract(sym):
+                    out[sym] = self._contract_row(sym, t, now)
+                    continue
                 prev = t.get("prev_close") or self._prev_close.get(sym)      # A5 preference order
                 chg: Optional[float] = None
                 hint: Optional[str] = None
@@ -387,6 +551,38 @@ class LiveTicks:
                 if hint:
                     row["hint"] = hint
                 out[sym] = row
+        return out
+
+    def _contract_row(self, sym: str, t: dict, now: float) -> dict:
+        """A contract's snapshot row: the tick's own previous close only (no bhavcopy join), chg_pct never clamped, and the
+        F&O fields (OI in shares, quantities in shares, ttv in ₹ lakh as Breeze sends them)."""
+        p = contract_parts(sym)
+        price, prev = t.get("price"), t.get("prev_close")
+        chg = (price / prev - 1) * 100 if price and prev else None
+        ltt_epoch = t.get("ltt_epoch")
+        return {"price": price, "chg_pct": round(chg, 4) if chg is not None else None, "prev_close": prev,
+                "ttq": t.get("ttq"), "bid": t.get("bid"), "ask": t.get("ask"), "bid_qty": t.get("bid_qty"),
+                "ask_qty": t.get("ask_qty"), "ltq": t.get("ltq"), "oi": t.get("oi"), "oi_chg_tick": t.get("oi_chg_tick"),
+                "avg_price": t.get("avg_price"), "open": t.get("open"), "high": t.get("high"), "low": t.get("low"),
+                "upper_circuit": t.get("upper_circuit"), "lower_circuit": t.get("lower_circuit"),
+                "total_buy_qty": t.get("total_buy_qty"), "total_sell_qty": t.get("total_sell_qty"),
+                "ttv_lakh": t.get("ttv_lakh"), "ltt": t.get("ltt"), "as_of": t.get("as_of"),
+                "ts_age_s": round(now - t["ts"], 1) if t.get("ts") else None, "ts": t.get("ts"), "ltt_epoch": ltt_epoch,
+                "last_trade_age_s": round(now - ltt_epoch, 1) if ltt_epoch else None, "token": t.get("token"),
+                "kind": "future" if p is not None and p.right == "FUT" else "option",
+                "contract": p._asdict() if p is not None else None, "verified": sym in self._verified}
+
+    def contract_states(self, keys: list[str]) -> dict[str, dict]:
+        """Per contract key: subscribed, since, vouched_since, the first-tick verdict, over_cap and the last error — what the
+        live chain needs to label a strike side honestly. Dict reads under the lock only."""
+        out: dict[str, dict] = {}
+        with self._lock:
+            for k in keys:
+                sub = k in self._subscribed
+                out[k] = {"subscribed": sub, "since": self._subscribed_at.get(k) if sub else None,
+                          "vouched_since": self.vouched_since(k) if sub else None, "verified": k in self._verified,
+                          "over_cap": k in self._options_over_cap, "requested": k in self._requested_opts,
+                          "error": self._sub_errors.get(k)}
         return out
 
     def is_subscribed(self, sym: str) -> bool:
@@ -435,16 +631,31 @@ class LiveTicks:
         now = self._clock()
         with self._lock:
             age = round(now - self.last_tick_at, 1) if self.last_tick_at else None
-            silent = sorted(s for s, at in self._subscribed_at.items()
-                            if now - at > 60 and (s not in self._ticks or self._ticks[s].get("ts", 0) < at))
+            silent_all = sorted(s for s, at in self._subscribed_at.items()
+                                if now - at > 60 and (s not in self._ticks or self._ticks[s].get("ts", 0) < at))
+            silent = [s for s in silent_all if not is_contract(s)]
+            plain_errors = [(s, e) for s, e in self._sub_errors.items() if not is_contract(s)]
+            fo_errors = [(s, e) for s, e in self._sub_errors.items() if is_contract(s)]
+            fo_subs = [s for s in self._subscribed if is_contract(s)]
             return {"state": self.state, "connected": self.state == LIVE, "error": self.error,
-                    "subscribed": len(self._subscribed), "requested": len(self._requested),
+                    "subscribed": len(self._subscribed) - len(fo_subs), "requested": len(self._requested),
                     "cap": MAX_SYMBOLS, "last_tick_age_s": age, "ticks_per_min": self.ticks_per_min(),
                     "unmapped_ticks": self.unmapped_ticks,
                     "no_first_tick": {"count": len(silent), "symbols": silent[:20]},
-                    "unresolved": sorted(self._unresolved)[:20],
-                    "sub_errors": dict(list(self._sub_errors.items())[:20]) if self._sub_errors else {},
-                    "transport": self.transport()}
+                    "unresolved": sorted(s for s in self._unresolved if not is_contract(s))[:20],
+                    "sub_errors": dict(plain_errors[:20]),
+                    "transport": self.transport(),
+                    "options": {"cap": MAX_OPTIONS, "ttl_s": OPTION_TTL_S, "requested": len(self._requested_opts),
+                                "subscribed": len(fo_subs), "verified": sum(1 for s in fo_subs if s in self._verified),
+                                "over_cap": len(self._options_over_cap),
+                                "no_first_tick": len(silent_all) - len(silent),
+                                "unresolved": sorted(s for s in self._unresolved if is_contract(s))[:20],
+                                "sub_errors": dict(fo_errors[:20]), "collisions": self.collisions,
+                                "first_tick_mismatches": self.first_tick_mismatches,
+                                "kind_mismatch_ticks": self.kind_mismatch_ticks,
+                                "unannotated_first_ticks": self.unannotated_first_ticks,
+                                "master_version": list(self._fo_version) if isinstance(self._fo_version, tuple) else None,
+                                "master_error": self._fo_error}}
 
     def shutdown(self) -> None:
         """Idempotent full teardown (lifespan shutdown)."""
@@ -581,6 +792,7 @@ class LiveTicks:
             self._subscribed.clear()                     # a reconnect resubscribes everything
             self._subscribed_at.clear()
             self._token_to_syms.clear()
+            self._verified.clear()                       # every contract is re-checked against its next first tick
 
     def _set_state(self, state: str, error: Optional[str] = "__keep__") -> None:
         self.state = state
@@ -613,7 +825,7 @@ class LiveTicks:
         """Holdings pinned first, then the pin source, then requested-within-TTL by recency, capped at MAX_SYMBOLS.
         Names with no websocket token are skipped for an hour (they would only hold a slot)."""
         now = self._clock()
-        pinned_all = _normalize(self._holdings_fn()) + self._pins()
+        pinned_all = [s for s in _normalize(self._holdings_fn()) + self._pins() if not is_contract(s)]
         with self._lock:
             self._requested = {s: t for s, t in self._requested.items() if now - t <= SYMBOL_TTL_S}
             self._unresolved = {s: t for s, t in self._unresolved.items() if t > now}
@@ -631,19 +843,173 @@ class LiveTicks:
             return resp[:120]
         return None
 
+    # ── F&O contracts: the master, the option target, revalidation, collisions ──
+
+    def _refuse(self, sym: str, why: str, retry_s: float) -> None:
+        with self._lock:
+            self._unresolved[sym] = self._clock() + retry_s
+            self._sub_errors[sym] = why[:160]
+
+    def _forget_locked(self, sym: str) -> Optional[str]:
+        """Bookkeeping-only removal of a subscribed name (caller holds the lock); returns its token when no other name uses
+        it any more (the caller unsubscribes it)."""
+        tok = self._subscribed.pop(sym, "")
+        self._subscribed_at.pop(sym, None)
+        self._verified.discard(sym)
+        names = self._token_to_syms.get(tok) if tok else None
+        if names is not None:
+            names.discard(sym)
+            if not names:
+                self._token_to_syms.pop(tok, None)
+                return tok
+        return None
+
+    def _fo_maps(self, prov: Any) -> tuple[Any, bool]:
+        """(the provider's FoTokenMaps for every wanted or subscribed underlying, whether the provider has an F&O master at all).
+        A read failure returns (None, True): subscriptions are kept, nothing new is added this round."""
+        fn = getattr(prov, "fo_token_maps", None)
+        if not callable(fn):
+            self._fo_error = "the provider has no F&O security master"
+            return None, False
+        with self._lock:
+            unds = sorted({p.symbol for s in [*self._requested_opts, *self._subscribed]
+                           if (p := contract_parts(s)) is not None and s.startswith(CONTRACT_PREFIX)})
+        try:
+            maps = fn(unds)
+            self._fo_error = None
+            return maps, True
+        except Exception as exc:  # noqa: BLE001 — retried next sync
+            self._fo_error = str(exc)[:160] or "F&O master read failed"
+            logger.warning("live-ticks: F&O master read failed", error=self._fo_error)
+            return None, True
+
+    def _revalidate_contracts(self, maps: Any) -> list[str]:
+        """On a new master version (a new IST date or a changed archive): every subscribed contract whose token moved or
+        vanished is forgotten (its cached tick may belong to another instrument now) and re-added on the new token by the
+        sync; returns the tokens no name uses any more. Expired contracts' cached ticks are pruned."""
+        if maps is None or maps.version == self._fo_version:
+            return []
+        orphans: list[str] = []
+        now = self._clock()
+        with self._lock:
+            for sym, tok in list(self._subscribed.items()):
+                p = contract_parts(sym) if sym.startswith(CONTRACT_PREFIX) else None
+                if p is None:
+                    continue
+                c = maps.get(p.symbol, p.expiry, p.strike, p.right)
+                new_tok = c.ws_token if c is not None else None
+                if new_tok == tok:
+                    continue
+                orphan = self._forget_locked(sym)
+                self._ticks.pop(sym, None)
+                self._sub_errors[sym] = ("token changed in the new security master: re-subscribing" if new_tok
+                                         else "no longer in the F&O security master")
+                if orphan:
+                    orphans.append(orphan)
+            for sym in [s for s in self._ticks if is_contract(s) and s not in self._subscribed]:
+                p = contract_parts(sym)
+                if p is not None and contract_expired(p.expiry, now):
+                    self._ticks.pop(sym, None)
+            self._fo_version = maps.version
+        return orphans
+
+    def _option_target(self, maps: Any, has_master: bool) -> tuple[list[str], dict[str, str]]:
+        """(contracts to carry, their tokens): asked within OPTION_TTL_S, resolvable in today's master and not expired, capped at
+        MAX_OPTIONS — a subscribed contract asked within OPTION_HOLD_S first (no thrash between two chains), then recency."""
+        now = self._clock()
+        with self._lock:
+            self._requested_opts = {s: t for s, t in self._requested_opts.items() if now - t <= OPTION_TTL_S}
+            self._unresolved = {s: t for s, t in self._unresolved.items() if t > now}
+            req = dict(self._requested_opts)
+            cands = [s for s in req if s not in self._unresolved]
+            current = dict(self._subscribed)
+        if maps is None:
+            if not has_master:
+                for s in cands:
+                    self._refuse(s, self._fo_error or "no F&O security master", UNRESOLVED_RETRY_S)
+                return [], {}
+            keep = [s for s in cands if s in current]  # a failed read keeps what is on the socket and adds nothing
+            return keep[:MAX_OPTIONS], {s: current[s] for s in keep[:MAX_OPTIONS]}
+        tokens: dict[str, str] = {}
+        ok: list[str] = []
+        for s in cands:
+            p = contract_parts(s)
+            if p is None:
+                continue
+            if contract_expired(p.expiry, now):
+                self._refuse(s, f"expired: {p.expiry} 15:30 IST has passed", UNRESOLVED_RETRY_S)
+                continue
+            c = maps.get(p.symbol, p.expiry, p.strike, p.right)
+            if c is None:
+                alt = maps.spelling(p.symbol, p.expiry, p.strike, p.right) if p.strike is not None else None
+                self._refuse(s, f"not in the F&O security master{f' (the master spells the strike {alt!r})' if alt else ''}",
+                             UNRESOLVED_RETRY_S)
+                continue
+            tokens[s] = c.ws_token
+            ok.append(s)
+        ok.sort(key=lambda s: (0 if s in current and now - req[s] <= OPTION_HOLD_S else 1, -req[s]))
+        target = ok[:MAX_OPTIONS]
+        with self._lock:
+            self._options_over_cap = set(ok[MAX_OPTIONS:])
+        return target, {s: tokens[s] for s in target}
+
+    def _guard_collisions(self, resolved: list[tuple[str, str]], dropping: set[str]) -> list[tuple[str, str]]:
+        """One token, one kind: a contract on a token a (subscribed or now-added) equity uses is refused — both arrive as
+        '4.1!<Token>' (two such tokens in the 22 Nov masters, e.g. 123654 = NSE SURYAPHARM BE and PIDILITIND 23-Nov 1800 CE);
+        an equity that needs a token a contract holds takes it and the contract goes (contracts never evict equities)."""
+        with self._lock:
+            eq_tok = {tok: s for s, tok in self._subscribed.items() if not is_contract(s) and s not in dropping}
+            fo_tok: dict[str, list[str]] = {}
+            for s, tok in self._subscribed.items():
+                if is_contract(s) and s not in dropping:
+                    fo_tok.setdefault(tok, []).append(s)
+        for sym, tok in resolved:
+            if not is_contract(sym):
+                eq_tok.setdefault(tok, sym)
+        out: list[tuple[str, str]] = []
+        for sym, tok in resolved:
+            if is_contract(sym):
+                owner = eq_tok.get(tok)
+                if owner is not None:
+                    self.collisions += 1
+                    self._refuse(sym, f"token {tok} is also {owner}'s cash-market token (both stream as {tok}): refused",
+                                 COLLISION_RETRY_S)
+                    continue
+            else:
+                for c in fo_tok.get(tok, ()):
+                    self.collisions += 1
+                    with self._lock:
+                        self._forget_locked(c)           # the token stays joined: the equity shares it below
+                        self._ticks.pop(c, None)
+                    self._refuse(c, f"token {tok} is now {sym}'s cash-market token: contract dropped", COLLISION_RETRY_S)
+            out.append((sym, tok))
+        return out
+
     def _sync_subscriptions(self, prov: Any) -> None:
         target = self._target_set()
+        with self._lock:
+            want_fo = bool(self._requested_opts) or any(s.startswith(CONTRACT_PREFIX) for s in self._subscribed)
+        orphans: list[str] = []
+        opt_tokens: dict[str, str] = {}
+        if want_fo:
+            maps, has_master = self._fo_maps(prov)
+            orphans = self._revalidate_contracts(maps)
+            opt_target, opt_tokens = self._option_target(maps, has_master)
+            target = target + opt_target                 # equities and index pins join first, their chains after
         with self._lock:
             current = set(self._subscribed)
         target_set = set(target)
         add = [s for s in target if s not in current]
         drop = [s for s in current if s not in target_set]
         if add:
-            self._join_prev_close([s for s in add if not is_index(s)])
+            self._join_prev_close([s for s in add if not is_index(s) and not is_contract(s)])
         breeze = prov._breeze
         resolved: list[tuple[str, str]] = []
         now = self._clock()
         for sym in add:
+            if is_contract(sym):
+                resolved.append((sym, opt_tokens[sym]))
+                continue
             name = ws_name(sym)
             if is_index(sym) and name.upper() in SILENT_INDEX_TOKENS:
                 with self._lock:
@@ -656,6 +1022,8 @@ class LiveTicks:
                 with self._lock:
                     self._unresolved[sym] = now + UNRESOLVED_RETRY_S
                     self._sub_errors[sym] = str(exc)[:120] or "no websocket token"
+        if want_fo:
+            resolved = self._guard_collisions(resolved, set(drop))
         with self._lock:
             live_toks = set(self._token_to_syms)
             shared = [(sym, tok) for sym, tok in resolved if tok in live_toks]
@@ -687,12 +1055,13 @@ class LiveTicks:
                     self._subscribed_at[sym] = joined_at
                     self._token_to_syms.setdefault(tok, set()).add(sym)
                     self._sub_errors.pop(sym, None)
-        if drop:
+        if drop or orphans:
             with self._lock:
                 dropping = set(drop)
                 toks = list(dict.fromkeys(
-                    self._subscribed[s] for s in drop if s in self._subscribed
-                    and not (self._token_to_syms.get(self._subscribed[s], set()) - dropping)))
+                    [self._subscribed[s] for s in drop if s in self._subscribed
+                     and not (self._token_to_syms.get(self._subscribed[s], set()) - dropping)]
+                    + [t for t in orphans if t not in self._token_to_syms]))     # a reused token re-added above stays
             for i in range(0, len(toks), SUB_CHUNK):
                 try:
                     breeze.unsubscribe_feeds(stock_token=toks[i:i + SUB_CHUNK], get_exchange_quotes=True,
@@ -703,6 +1072,7 @@ class LiveTicks:
                 for sym in drop:
                     tok = self._subscribed.pop(sym, "")
                     self._subscribed_at.pop(sym, None)
+                    self._verified.discard(sym)
                     names = self._token_to_syms.get(tok) if tok else None
                     if names is not None:
                         names.discard(sym)
@@ -750,24 +1120,38 @@ class LiveTicks:
                 if self._unmapped_sample is None:
                     self._unmapped_sample = str(payload.get("symbol") or payload.get("stock_code"))[:40]
                 return
-            price = _first(payload, _PRICE_KEYS)
-            if price is None or _num(price) is None:
-                return
-            prev = _first(payload, _PREV_CLOSE_KEYS)
+            fo = _is_fo_tick(payload)
+            contracts = [s for s in syms if s.startswith(CONTRACT_PREFIX)]
+            if contracts:
+                syms = [s for s in syms if not s.startswith(CONTRACT_PREFIX)]
+                contracts = [s for s in contracts if self._contract_tick_ok(s, payload, fo)]
+            if syms and fo:
+                self.kind_mismatch_ticks += 1                              # an F&O tick on an equity / index token
+                syms = []
             now = self._clock()
-            ltt_raw = _first(payload, _LTT_KEYS)
-            ltt_epoch = parse_ltt(ltt_raw)
-            ttq = _num(payload.get(_TTQ_KEYS[0]) if payload.get(_TTQ_KEYS[0]) not in (None, "") else _first(payload, _TTQ_KEYS))
-            tick = {"price": float(_num(price) or 0.0), "ts": now,
-                    "as_of": datetime.fromtimestamp(now, IST).isoformat(timespec="seconds"),
-                    "ttq": ttq, "ltt": ltt_raw, "ltt_epoch": ltt_epoch,
-                    "bid": _num(_first(payload, _BID_KEYS)), "ask": _num(_first(payload, _ASK_KEYS)),
-                    "open": _num(payload.get("open")), "high": _num(payload.get("high")), "low": _num(payload.get("low")),
-                    "avg_price": _num(payload.get("avgPrice")), "ltq": _num(payload.get("ltq")),
-                    "token": payload.get("symbol") if isinstance(payload.get("symbol"), str) else None}
-            prev_f = _num(prev) if prev else None
-            if prev_f:
-                tick["prev_close"] = prev_f                                # A5: the tick's own close wins
+            tick: Optional[dict[str, Any]] = None
+            if syms:
+                price = _first(payload, _PRICE_KEYS)
+                if price is None or _num(price) is None:
+                    syms = []
+                else:
+                    prev = _first(payload, _PREV_CLOSE_KEYS)
+                    ltt_raw = _first(payload, _LTT_KEYS)
+                    ttq = _num(payload.get(_TTQ_KEYS[0]) if payload.get(_TTQ_KEYS[0]) not in (None, "")
+                               else _first(payload, _TTQ_KEYS))
+                    tick = {"price": float(_num(price) or 0.0), "ts": now,
+                            "as_of": datetime.fromtimestamp(now, IST).isoformat(timespec="seconds"),
+                            "ttq": ttq, "ltt": ltt_raw, "ltt_epoch": parse_ltt(ltt_raw),
+                            "bid": _num(_first(payload, _BID_KEYS)), "ask": _num(_first(payload, _ASK_KEYS)),
+                            "open": _num(payload.get("open")), "high": _num(payload.get("high")), "low": _num(payload.get("low")),
+                            "avg_price": _num(payload.get("avgPrice")), "ltq": _num(payload.get("ltq")),
+                            "token": payload.get("symbol") if isinstance(payload.get("symbol"), str) else None}
+                    prev_f = _num(prev) if prev else None
+                    if prev_f:
+                        tick["prev_close"] = prev_f                        # A5: the tick's own close wins
+            ctick = self._contract_tick(payload, now) if contracts else None
+            if not syms and not contracts:
+                return
             last = self.last_tick_at
             sio = getattr(self._handler, "sio", None) if self._gap_open else None
             reconnected = sio is None or bool(getattr(sio, "connected", True))   # 22 Nov review D6: engineio threads
@@ -780,8 +1164,12 @@ class LiveTicks:
                     self._gap_open = False
                     self._vouch_from = now
             with self._lock:
-                for sym in syms:
-                    self._ticks[sym] = dict(tick) if len(syms) > 1 else tick
+                if tick is not None:
+                    for sym in syms:
+                        self._ticks[sym] = dict(tick) if len(syms) > 1 else tick
+                if ctick is not None:
+                    for sym in contracts:
+                        self._ticks[sym] = dict(ctick) if len(contracts) > 1 else ctick
             self.last_tick_at = now
             s = int(now)
             i = s % 60
@@ -795,8 +1183,11 @@ class LiveTicks:
             # whenever ticks flow; read once per worker life. append() never raises (strike
             # counter in store stats) and this guard covers construction too: persistence can
             # NEVER break the feed.
+            # TODO(fo-store): F&O contract ticks are deliberately NOT persisted here. tick_store's columns (no OI, no bid/ask
+            # quantities, symbol ≤ 24 characters) and its /ticks/bars contract are frozen; contracts need their own store
+            # (key, token, OI, quantities, circuit limits) before any chain history or replay reads them.
             try:
-                if self._store is None:
+                if syms and self._store is None:
                     self._store = tick_store.get_store() if tick_store.persist_enabled() else False
                 if self._store:
                     for sym in syms:
@@ -805,6 +1196,61 @@ class LiveTicks:
                 pass
         except Exception:  # noqa: BLE001 — a bad tick must never kill the stream
             pass
+
+    def _contract_tick_ok(self, sym: str, payload: dict, fo: bool) -> bool:
+        """The first tick on a contract subscription proves it: it must be F&O-shaped, and the SDK's annotation (expiry_date,
+        strike_price, right, product_type — present when the SDK's own master knows the token as NFO only) must agree. A
+        mismatch stops storing at once and leaves the unsubscribe to the worker (receive thread: dict writes only)."""
+        if sym in self._verified:
+            if not fo:
+                self.kind_mismatch_ticks += 1
+                return False
+            return True
+        parts = contract_parts(sym)
+        why = "a cash-market tick arrived on this F&O token" if not fo else (
+            annotation_mismatch(parts, payload) if parts is not None else "not a contract key")
+        if why is None:
+            with self._lock:
+                if sym in self._subscribed:
+                    self._verified.add(sym)
+            if not any(payload.get(k) not in (None, "") for k in _ANNOTATION_KEYS):
+                self.unannotated_first_ticks += 1
+            return True
+        with self._lock:
+            tok = self._subscribed.get(sym)
+            names = self._token_to_syms.get(tok) if tok else None
+            if tok and names is not None:
+                names.discard(sym)                       # no further tick lands on this name
+                if not names:
+                    self._token_to_syms.pop(tok, None)
+            self._ticks.pop(sym, None)
+            self._unresolved[sym] = self._clock() + MISMATCH_RETRY_S
+            self._sub_errors[sym] = f"first tick does not match the contract: {why}"[:160]
+        self.first_tick_mismatches += 1
+        self._resync.set()                               # the worker unsubscribes the token at its next step
+        logger.warning("live-ticks: contract dropped on its first tick", contract=sym, why=why[:120])
+        return False
+
+    @staticmethod
+    def _contract_tick(payload: dict, now: float) -> dict[str, Any]:
+        """A contract tick (breeze_connect's 23 F&O fields): OI in shares, quantities in shares, ttv in ₹ lakh (Breeze's 'C'
+        suffix notwithstanding: the recorded tick's ttq × avgPrice = ttv × 1e5), CHNGOI kept raw (it arrives empty). last = 0 /
+        '' is stored as price None (no trade yet), never as a 0 price."""
+        ltt_raw = _first(payload, _LTT_KEYS)
+        prev = _num(_first(payload, _PREV_CLOSE_KEYS))
+        sym = payload.get("symbol")
+        return {"price": _num(_first(payload, _PRICE_KEYS)), "ts": now,
+                "as_of": datetime.fromtimestamp(now, IST).isoformat(timespec="seconds"),
+                "ttq": _num(payload.get("ttq")), "ltt": ltt_raw, "ltt_epoch": parse_ltt(ltt_raw),
+                "bid": _num(_first(payload, _BID_KEYS)), "ask": _num(_first(payload, _ASK_KEYS)),
+                "bid_qty": _num(payload.get("bQty")), "ask_qty": _num(payload.get("sQty")),
+                "open": _num(payload.get("open")), "high": _num(payload.get("high")), "low": _num(payload.get("low")),
+                "avg_price": _num(payload.get("avgPrice")), "ltq": _num(payload.get("ltq")),
+                "oi": _num(payload.get("OI")), "oi_chg_tick": _num(payload.get("CHNGOI")),
+                "upper_circuit": _num(payload.get("upperCktLm")), "lower_circuit": _num(payload.get("lowerCktLm")),
+                "total_buy_qty": _num(payload.get("totalBuyQt")), "total_sell_qty": _num(payload.get("totalSellQ")),
+                "ttv_lakh": _num(payload.get("ttv")), "prev_close": prev if prev else None,
+                "token": sym if isinstance(sym, str) else None}
 
     def _watchdog_check(self) -> None:
         if self.state != LIVE or not self._market_hours():

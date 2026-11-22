@@ -229,7 +229,9 @@ class LiveQuotes:
 
     def quotes(self, symbols: list[str]) -> dict:
         now = self._clock()
-        syms = lt_mod._normalize(list(symbols))[:MAX_REQUEST]
+        # F&O contract keys are served by /live/option-chain (live_chain.py), never here: this composer and its NSE poller
+        # speak cash symbols and index names only (before 22 Nov canonical() rejected the keys, so this keeps that contract)
+        syms = [s for s in lt_mod._normalize(list(symbols)) if not lt_mod.is_contract(s)][:MAX_REQUEST]
         state, session = self.market(now)
         with self._lock:
             for s in syms:
@@ -391,7 +393,7 @@ class LiveQuotes:
             conf = self._confirmation(b, n, state=state, healthy=healthy, subscribed=subscribed,
                                       vouch_from=vouched_since if confirmable else None, now=now,
                                       subscribed_since=subscribed_since) if b_today else None
-            if conf is not None:
+            if conf is not None and b is not None and n is not None:      # a confirmation implies both (typing)
                 why = (f"quiet: no tick for {b['age_s']:.0f} s on a healthy feed; NSE's copy ({conf:.0f} s old) shows the same "
                        "price and volume")
                 q = self._finish(b, LIVE, why, base)
@@ -487,11 +489,11 @@ class LiveQuotes:
         lead = f"no tick for {b['age_s']:.0f} s; "
         same_day = n is not None and n.get("date") == b.get("date")
         nv, bv = (n.get("volume"), b.get("volume")) if n is not None else (None, None)
-        if same_day and nv is not None and bv is not None and float(nv) > float(bv) and n["age_s"] < b["age_s"]:
+        if n is not None and same_day and nv is not None and bv is not None and float(nv) > float(bv) and n["age_s"] < b["age_s"]:
             return lead + "NSE's volume is higher; "
         if not confirmable or state != "open":
             return lead                                   # no confirmation here (pre-open, or an engine without vouched_since)
-        if not same_day:
+        if n is None or not same_day:
             return lead + (queue or "no NSE copy yet; ")
         if b["_t"] < self._session_open_t(b["_t"]):
             return lead + "the last tick is from the pre-open; "
