@@ -9,11 +9,11 @@ import { fmtSigned, sessionDayLabel } from '@/lib/format'   // signed numbers wi
  */
 import { RiskChips } from '@/components/RiskChips'
 import { useSurveillance } from '@/lib/useSurveillance'
-import { useCallback, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import {
   getDashboardSummary, getDeskStatus, getICICIConnectionStatus, getMarketEvents, getMarketMonitor,
-  getCrashFilter, getInsiderBuys, getMarketHeadlines, getNewsQuotes, getPreOpen, type PreOpen, getFiiDiiCash, type FiiDiiCash, getOptionChainLive, getSetupStatus, type SetupCheck, getFomc, type FomcMeeting, getRbiMpc, getEcoCalendar, type EcoEvent, getGiftNifty, type GiftNifty, getAnnouncementsCore, type FilingCore, getNewsScan, getOptionChain, getNewsTrackRecord, getOpenPositions, getRecentResults, getResultsReacting, type ReactingResult, getMarketInternals, type MarketInternals, getIndexContribution, type IndexContribution as IndexContributionData, getIndexValuation, type IndexValuationRow, getTelemetryStatus,
-  type CrashFilter, type Headline, type InsiderBuy, type OptionChain, type RecentResult,
+  getCrashFilter, getInsiderBuys, getMarketHeadlines, getNewsQuotes, getPreOpen, type PreOpen, getFiiDiiCash, type FiiDiiCash, getLiveOptionChain, type LiveOptionChain, getSetupStatus, type SetupCheck, getFomc, type FomcMeeting, getRbiMpc, getEcoCalendar, type EcoEvent, getGiftNifty, type GiftNifty, getAnnouncementsCore, type FilingCore, getNewsScan, getOptionChain, getNewsTrackRecord, getOpenPositions, getRecentResults, getResultsReacting, type ReactingResult, getMarketInternals, type MarketInternals, getIndexContribution, type IndexContribution as IndexContributionData, getIndexValuation, type IndexValuationRow, getTelemetryStatus,
+  type CrashFilter, type Headline, type InsiderBuy, type RecentResult,
   type CorpEvent, type MarketMonitor as Monitor, heldSymbols } from '@/lib/api'
 import { getGoldHealth } from '@/lib/gold/api'
 import { brfLine } from '@/lib/gold/format'
@@ -36,7 +36,9 @@ import { nseSession } from '@/components/desktop/session'
 import { getAlertFires } from '@/lib/alertsClient'
 import { BRIEF_LASTLOOK_KEY, briefChanges, istStamp, parseBriefSnapshot, sinceLabel, type BriefSnapshot } from '@/lib/alertOverlay'
 import { useLiveQuotes } from '@/lib/liveQuotes'
-import { liveContribution, nseDelayedSource } from '@/components/liveModel'
+import { isLiveWsChain, liveContribution, nseDelayedSource, optionsSessionMode } from '@/components/liveModel'
+import { LiveChainChip } from '@/components/LiveChainChip'
+import { useMarketOpen } from '@/components/shell/useFeed'
 import { trackVerdict, type TrackRecordData } from '@/components/news/TrackRecord'
 import { cfCoverage, crashLines, dayMonth, ecoFamily, ecoShortLabel, type DeskLike } from '@/components/marketPagesModel'
 
@@ -157,10 +159,12 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const contrib = useLoad<IndexContributionData>(() => getIndexContribution('NIFTY 50'), [], { ms: 120_000 })
   const valuation = useLoad<{ timestamp?: string; indices: Record<string, IndexValuationRow>; vs_history?: Record<string, { pctl: number; since: string }>; rel_history?: Record<string, { ratio: number; pctl: number; median: number }> }>(() => getIndexValuation(), [], { ms: 60_000 })
   const reacting = useLoad<{ rows: ReactingResult[]; since: string; phase?: string }>(() => getResultsReacting(), [], { ms: 120_000 })
-  // live chain during the session (falls back to the last close), end of day otherwise
-  const opt = useLoad<OptionChain>(() => {
-    const d = new Date(), m = d.getHours() * 60 + d.getMinutes()
-    return d.getDay() >= 1 && d.getDay() <= 5 && m >= 555 && m <= 935 ? getOptionChainLive('NIFTY').catch(() => getOptionChain('NIFTY')) : getOptionChain('NIFTY')
+  // the live chain during the session (22 Nov: Breeze ticks on the band, NSE's chain elsewhere; ui-api falls back to NSE's
+  // chain alone; it failing, the last close), end of day otherwise. The session is the live quote service's market state
+  // (else the NSE calendar from 09:15 IST), read when the poll fires — never the browser's local clock.
+  const optMode = useRef<() => 'live' | 'eod'>(() => 'eod')
+  const opt = useLoad<LiveOptionChain>(() => {
+    return optMode.current() === 'live' ? getLiveOptionChain('NIFTY').catch(() => getOptionChain('NIFTY')) : getOptionChain('NIFTY')
   }, [], { ms: 60_000 })
   const heads = useLoad<{ headlines: Headline[] }>(getMarketHeadlines)
   const insiders = useLoad<{ rows: InsiderBuy[] }>(() => getInsiderBuys(7, 1e7))
@@ -183,6 +187,9 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
   // holdings call has no previous close. The old 120 s quotes call runs only while the live service does not answer.
   const holdSyms = heldSymbols(holdings.data).sort().join(',')
   const liveBook = useLiveQuotes(holdSyms ? holdSyms.split(',') : [], { intervalMs: 5_000 })
+  const calendarOpen = useMarketOpen()
+  const optSession = optionsSessionMode({ marketState: liveBook.market?.state ?? null, calendarOpen, nowMs: Date.now() })
+  optMode.current = () => optionsSessionMode({ marketState: liveBook.market?.state ?? null, calendarOpen, nowMs: Date.now() })
   const [holdDayOld, setHoldDay] = useState<Record<string, number>>({})
   const [holdPxOld, setHoldPx] = useState<Record<string, number>>({})
   const { holdDay, holdPx } = useMemo(() => {
@@ -452,12 +459,18 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                 )
               })()}
               {opt.data && (
-                <Line k={<span>NIFTY options{opt.data.live
+                // the expected move may read the live chain (its chip: LIVE · BREEZE only while the band's ticks are seconds
+                // old); PCR and walls mix live and NSE OI, so they keep the base frame's NSE chip. m003: the walls are a
+                // side (calls cyan, puts violet, as on OMON), never red / green
+                <Line k={<span>NIFTY options{isLiveWsChain(opt.data)
+                        ? <LiveChainChip chain={opt.data} marketOpen={optSession === 'live'} style={{ marginLeft: 5, fontSize: 9 }} />
+                        : opt.data.live
                         ? <SourceChip info={nseDelayedSource(opt.data.as_of ?? null, { marketOpen: true, now: now.getTime(), hint: 'NSE option chain (v3), refreshed by NSE about once a minute' })} style={{ marginLeft: 5, fontSize: 9 }} />
                         : <span style={{ color: T.dim, fontSize: 10 }}> · F&O EOD {opt.data.date}</span>} <span role="button" onClick={() => onNavigate('options')} style={{ color: T.cyan, cursor: 'pointer', fontSize: 10 }}>OMON ›</span></span>}
                       v={<span>±{opt.data.expected_move_pct}% by {new Date(`${opt.data.expiry}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                         <span style={{ color: T.dim }}> · PCR {opt.data.pcr_oi} · walls </span>
-                        <span style={{ color: T.red }}>{opt.data.resistance[0]?.toLocaleString('en-IN')}</span>/<span style={{ color: T.green }}>{opt.data.support[0]?.toLocaleString('en-IN')}</span></span>} />
+                        <span style={{ color: T.cyan }} title="call wall: the strike with the most call open interest (where writers sit; context)">{opt.data.resistance[0]?.toLocaleString('en-IN')}</span>/<span style={{ color: T.violet }} title="put wall: the strike with the most put open interest (where writers sit; context)">{opt.data.support[0]?.toLocaleString('en-IN')}</span>
+                        {isLiveWsChain(opt.data) && <LiveChainChip chain={opt.data} marketOpen={optSession === 'live'} kind="oi" style={{ marginLeft: 5, fontSize: 9 }} />}</span>} />
               )}
               <div style={{ fontSize: 11, color: T.muted, marginTop: 8 }}>
                 {(() => {   // industries over the last month: best three and worst three (both can be negative in a falling market)

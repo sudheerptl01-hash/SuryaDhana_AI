@@ -888,7 +888,7 @@ class TestLiveHookAdoptedS3:
 
 
 # L2-UI (live program round 2, 5 Nov): the NSE rows of COMP, WTCH and the news dock never reach a Yahoo path while the
-# live service answers, and OSTR's live chain seed is DELAYED with its age, never LIVE. Static, comments stripped; each
+# live service answers, and OSTR's seed is LIVE only as a fresh Breeze-priced snapshot (23 Nov), NSE's chain never. Static; each
 # test carries a negative control on the pre-round-2 form.
 class TestRound2NseRowsL2UI:
     def test_comp_reads_nse_closes_and_sends_only_non_nse_codes_to_yahoo(self):
@@ -918,11 +918,22 @@ class TestRound2NseRowsL2UI:
         old = "const syms = yahooKey ? yahooKey.split(',') : []\ngetNewsQuotes(syms.slice(i, i + 60))"
         assert "const syms = callKey ? callKey.split" not in old                                                   # control
 
-    def test_ostr_seed_is_nse_delayed_never_live_and_pricing_reads_the_chain(self):
+    def test_ostr_seed_is_live_only_as_a_fresh_breeze_snapshot_and_pricing_reads_the_chain(self):
+        """23 Nov: the seed may come from the live option chain (Breeze ticks on ATM ± width). NSE's chain on its own is
+        still never LIVE; a Breeze seed is LIVE only through liveModel.liveChainSource, which requires Breeze-PRICED sides
+        (price_source) ticked ≤ CHAIN_LIVE_MAX_S ago."""
         sb = ts_code(UI / "components" / "StrategyBuilder.tsx")
         seed = ts_code(UI / "components" / "strategySeed.ts")
-        assert re.search(r"mode === 'live'\s*\?\s*getOptionChainLive\(symbol, expiry \?\? undefined\)", sb)
+        model = ts_code(UI / "components" / "liveModel.ts")
+        assert re.search(r"mode === 'live'\s*\?\s*getLiveOptionChain\(symbol, expiry \?\? undefined\)", sb)
         assert "nseDelayedSource(chain.as_of" in seed and not re.search(r"state:\s*'live'|\blive:\s*true", seed)
+        assert "if (isLiveWsChain(chain))" in seed and "return liveChainSource(chain" in seed
+        body = model[model.index("export function liveChainSource"):]
+        body = body[:body.index("\nexport ", 1)] if "\nexport " in body[1:] else body
+        live_at = body.index("state: 'live'")
+        assert "CHAIN_LIVE_MAX_S" in body[:live_at], "liveChainSource's LIVE is not bounded by CHAIN_LIVE_MAX_S"
+        assert re.search(r"pricedLive\s*=.*price_source\s*===\s*'breeze_ws'", model), "LIVE count is not by price_source"
+        assert not re.search(r"state:\s*'live'", "return nseDelayedSource(chain.as_of, o)")                              # control
         assert nse_live_sites(sb) == 0
         start = sb.index("axios.post<Analysis>('/api/options/strategy/analyze'")
         analyze = sb[start:sb.index("}, { timeout: 15000 })", start)]

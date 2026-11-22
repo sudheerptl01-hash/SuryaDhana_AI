@@ -16,11 +16,15 @@
  * else the 12 %-of-notional heuristic — and prints which answered (BREEZE / NSE SPAN FILE / HEURISTIC); the heuristic's
  * measured 4.8× error is printed only when the heuristic is the answer (review m059). No order route exists.
  *
- * Live program round 2 (reports/live_nse, L2-UI): while NSE trades the legs, spot and forward are seeded from NSE's
- * live option chain (GET /api/market/option-chain-live, option-chain-v3 through data-service, ≈ 1 min behind) with its
- * own timestamp and a DELAYED · NSE · <age> chip — never LIVE; the seed is taken once (↻ CHAIN re-seeds) and the
- * underlying's spot now (live quote service: Breeze websocket → NSE) is shown beside it as context. After the close the
- * F&O bhavcopy chain, labelled CLOSE · <date>. Rules + chips: ./strategySeed.ts.
+ * Live program round 2 (reports/live_nse, L2-UI) + the live chain (22 Nov 2026): while NSE trades the legs, spot and
+ * forward are seeded from the live chain (GET /api/live/option-chain: NSE's option-chain v3 with the Breeze websocket
+ * overlaid on the strikes around the money; ui-api falls back to NSE's chain alone). A seed is a SNAPSHOT: its chip
+ * reads LIVE · BREEZE only while it is within 10 s of its as_of with the band's ticks seconds old, then DELAYED / STALE
+ * by age; NSE's chain alone reads DELAYED · NSE · <age> — never LIVE. The seed is taken once (↻ CHAIN re-seeds), each
+ * seeded leg records its own side's source (a Breeze tick / NSE's chain / the bhavcopy), and the underlying's spot now
+ * (live quote service: Breeze websocket → NSE) is shown beside it as context. Calendar legs on another expiry read NSE's
+ * chain (no websocket subscriptions for them). After the close the F&O bhavcopy chain, labelled CLOSE · <date>. Rules +
+ * chips: ./strategySeed.ts, ./liveModel.ts.
  *
  * OSTR v2 (PLAN 2.2, review M39 / M40 / m059–m063, W2-BOOK, 6 Nov 2026): every leg has its OWN expiry (calendars and
  * diagonals: each expiry's chain is read once, the leg priced on its forward and margined on its contract); T+n and
@@ -38,14 +42,14 @@
  */
 import axios from 'axios'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { getOptionChain, getOptionChainLive, type OptionChain as Chain } from '@/lib/api'
+import { getLiveOptionChain, getOptionChain, getOptionChainLive, type LiveOptionChain as Chain } from '@/lib/api'
 import { apiError } from '@/lib/errors'
 import { useRequestSeq } from '@/components/useRequestSeq'
 import { BadgeChip, Btn, CHART_BOX, Chip, ErrorBox, Input, Label, Loading, Notice, PageHeader, Panel, Select, SourceChip, Stat, T, fmtInr, inputSource, sourceOf, useChartSize, type SourceInfo } from '@/components/terminal'
 import { useMarketOpen } from '@/components/shell/useFeed'
 import { isStaleEod, useLiveQuotes } from '@/lib/liveQuotes'
 import { underlyingLiveSymbol } from '@/components/liveModel'
-import { chainSeedSource, seedMode, seedPhrase, spotDriftPct, stampClock, type SeedMode } from '@/components/strategySeed'
+import { chainSeedSource, seedHeadline, seedMode, seedPhrase, seedSourcePhrase, spotDriftPct, stampClock, type SeedMode } from '@/components/strategySeed'
 import type { MarginAnswer, MarginLeg } from '@/components/vol/api'
 import { legsFromStrikes } from '@/components/vol/volModel'
 import { readActiveSymbol, useActiveSymbol, type ActiveSymbol } from '@/lib/activeSymbol'
@@ -408,9 +412,10 @@ export function StrategyBuilder() {
     setLoading(true); setChainErr(null)
     const mode = modeNow.current()
     const eod = () => getOptionChain(symbol, expiry ?? undefined)
-    // in session NSE's live chain (≈ 1 min behind, never live); it failing falls back to end of day, with the reason
+    // in session the live chain (Breeze ticks on the band, NSE's chain elsewhere; ui-api falls back to NSE's chain
+    // alone); it failing falls back to end of day, with the reason
     const seedReq = mode === 'live'
-      ? getOptionChainLive(symbol, expiry ?? undefined)
+      ? getLiveOptionChain(symbol, expiry ?? undefined)
           .then(r => { if (current()) setLiveNote(null); return r })
           .catch(e => { if (current()) setLiveNote(`live chain unavailable (${apiError(e).slice(0, 80)}): seeded from end of day`); return eod() })
       : eod().then(r => { if (current()) setLiveNote(null); return r })
@@ -688,7 +693,9 @@ export function StrategyBuilder() {
     const c = l.kind === 'EQ' ? chain : chainFor(l.expiry)
     if (!c) return 'unstated'
     if (l.kind === 'EQ') return `spot on the ${c.live ? 'NSE option chain' : `F&O bhavcopy ${c.date}`}`
-    const base = c.live ? `NSE option chain in session ${stampClock(c.as_of) || c.as_of || ''} IST` : `NSE F&O bhavcopy ${c.date}`
+    // the strike side's own source on the live chain (a Breeze tick, NSE's chain, the bhavcopy): booked and saved as is
+    const row = l.kind === 'CE' || l.kind === 'PE' ? c.rows.find(r => r.strike === l.strike) : undefined
+    const base = seedSourcePhrase(c, row ? (l.kind === 'CE' ? row.ce : row.pe) : null)
     if (l.kind === 'FUT') return l.basis === 'parity-forward' ? `${base} · the ${l.expiry} put-call-parity forward (no traded future for it in the payload)` : `${base} · traded future`
     return base
   }
@@ -728,7 +735,8 @@ export function StrategyBuilder() {
   const net = analysis?.greeks.net
   const units = analysis?.greeks.net_units
   const du = net && forward != null ? deltaUnits(net.delta, lot, forward) : null
-  // the seed's chip (DELAYED · NSE · age in session — never LIVE — / CLOSE · <date> after the close) and the spot now
+  // the seed's chip (the live chain: LIVE · BREEZE ≤ 10 s past its as_of, then DELAYED / STALE by age; NSE's chain alone:
+  // DELAYED · NSE · age, never LIVE; CLOSE · <date> after the close) and the spot now
   const seedSrc: SourceInfo | null = chain ? chainSeedSource(chain, { mode: loadedMode, nowMs: ul.now || Date.now(), marketState: ul.market?.state ?? null,
     sessionDate: ul.market?.session_date ?? null, liveNote }) : null
   const spotNow = chain?.live && ulRow && ulRow.price != null && ulRow.state !== 'unavailable' && !isStaleEod(ulRow) ? ulRow.price : null
@@ -744,7 +752,7 @@ export function StrategyBuilder() {
   return (
     <div>
       <PageHeader code="OSTR" title="Options strategies"
-        subtitle={chain ? `${chain.symbol} · ${chain.live ? `NSE option chain in session (≈1 min behind) as of ${stampClock(chain.as_of) || chain.as_of || '—'} IST` : `NSE F&O bhavcopy ${chain.date}`} · expiry ${chain.expiry} (${chain.days_to_expiry}d) · lot ${chain.lot ?? '?'} · fwd ${n2(forward, 2)} (${chain.forward_source}) · ATM IV ${chain.atm_iv ?? '—'}%` : 'payoffs · Greeks · breakevens'}
+        subtitle={chain ? `${chain.symbol} · ${seedHeadline(chain)} · expiry ${chain.expiry} (${chain.days_to_expiry}d) · lot ${chain.lot ?? '?'} · fwd ${n2(forward, 2)} (${chain.forward_source}) · ATM IV ${chain.atm_iv ?? '—'}%` : 'payoffs · Greeks · breakevens'}
         status={<Chip color={T.violet}>PRICES ONLY · NO ORDERS</Chip>}
         right={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* T-15: filter-as-you-type over the full F&O underlying list (recents first, Enter selects) — no chip wall */}

@@ -628,6 +628,15 @@ export function _clockForTest() { return { subscribeClock, clockNow, CLOCK_MS } 
 const noopSubscribe = () => () => {}
 
 /**
+ * The same shared 1 s clock for a pane whose chip ages between its own polls (a live option-chain snapshot read every
+ * 60 s must not hold 'LIVE · 2s' for a minute). Epoch ms; `enabled: false` = no subscription (the render's Date.now()).
+ */
+export function useLiveClock(enabled = true): number {
+  const tick = useSyncExternalStore(enabled ? subscribeClock : noopSubscribe, clockNow, clockServer)
+  return Math.max(Date.now(), tick)
+}
+
+/**
  * Live NSE quotes for `symbols` (NSE codes or index names; '.NS' is stripped; anything else is ignored). Empty list or
  * `enabled: false` = nothing polled. `intervalMs` (default 3 s, never under 2 s) is the cadence this pane wants; the
  * window's single poller runs at the fastest one asked.

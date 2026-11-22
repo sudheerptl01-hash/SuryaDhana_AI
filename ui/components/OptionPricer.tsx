@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { black76 } from '@/lib/black76'
 import type { OptionChain } from '@/lib/api'
 import { Btn, Input, Panel, T, sourceOf } from '@/components/terminal'
-import { nseDelayedSource } from '@/components/liveModel'
+import { chainSideFeed, isLiveWsChain, nseDelayedSource, type LiveChainLike } from '@/components/liveModel'
 
 export type PricerPick = { strike: number; side: 'call' | 'put' }
 /** M04: the chain's T in calendar days (`t_days`, fractional in session); whole days to expiry when an older payload lacks it */
@@ -23,7 +23,7 @@ export const chainTDays = (data: Pick<OptionChain, 'days_to_expiry'> & { t_days?
 const fmtDays = (d: number) => String(Number.isInteger(d) ? d : Number(d.toFixed(2)))
 const n = (v: number | null | undefined, d = 2) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d }))
 
-export function OptionPricer({ data, pick, onClose }: { data: OptionChain; pick: PricerPick; onClose: () => void }) {
+export function OptionPricer({ data, pick, onClose, marketOpen = true }: { data: OptionChain & LiveChainLike; pick: PricerPick; onClose: () => void; marketOpen?: boolean }) {
   const row = data.rows.find(r => r.strike === pick.strike)
   const leg = row ? (pick.side === 'call' ? row.ce : row.pe) : null
   // OMON computes IV for out-of-the-money strikes only; put–call parity gives the same IV to both sides of a strike
@@ -65,7 +65,10 @@ export function OptionPricer({ data, pick, onClose }: { data: OptionChain; pick:
     <div title={title} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '3px 0', borderBottom: `1px solid ${T.border}` }}>
       <span style={{ color: T.muted }}>{label}</span><span style={{ color: T.text }}>{value}</span></div>)
   return (
-    <Panel source={data.live
+    <Panel source={isLiveWsChain(data) && leg
+        // the live chain (22 Nov): the picked side's own feed — a Breeze tick seconds old, else NSE's chain / the bhavcopy
+        ? chainSideFeed(leg, data, { now: Date.now(), marketOpen })?.info ?? sourceOf(data.date, { source: 'NSE F&O bhavcopy' })
+        : data.live
         // live program: NSE's option chain (v3) is about a minute behind — DELAYED · NSE · <age>, never LIVE
         ? nseDelayedSource(data.as_of ?? null, { marketOpen: true, now: Date.now(), hint: 'NSE option chain (v3)' })
         : sourceOf(data.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic" title={`Pricer · ${data.symbol} ${K} ${pick.side === 'call' ? 'CE' : 'PE'} · ${data.expiry}`} accent={T.violet} pad={10} style={{ marginBottom: 12 }}

@@ -5,8 +5,8 @@ import { apiError } from '@/lib/errors'
 /**
  * OMON — end-of-day option chain for NIFTY, BANKNIFTY or any F&O stock, from NSE's F&O bhavcopy:
  * open interest per strike (where option writers sit: context, not a level), OI change, implied volatility smile,
- * put/call ratio, max pain and the move the options price in by expiry. LIVE from NSE during the session (every 30 s,
- * same engine), otherwise the last published end-of-day F&O bhavcopy.
+ * put/call ratio, max pain and the move the options price in by expiry. In session the live chain (below: NSE's chain
+ * with the Breeze websocket overlaid, same engine), otherwise the last published end-of-day F&O bhavcopy.
  * Open from GO: `OMON`, `OMON RELIANCE`, or `TCS OMON 27NOV` (that expiry: the active-symbol store carries it, read on mount
  * and on the hand-off event by volModel.handoffExpiry; an unlisted expiry says so, the chain answers with its nearest).
  *
@@ -36,14 +36,23 @@ import { apiError } from '@/lib/errors'
  * COLLAPSED at the bottom (open on demand; each number still appears once per page). The smile and OI-by-strike are
  * SVG kit v2 (terminal/chart.ts useChartInteraction): wheel + pinch zoom, drag pan, double-click reset, nearest-point
  * crosshair printing strike + value in the ExpandableChart legend. j / k + space and OPEN IN OSTR are untouched.
+ *
+ * Live chain (22 Nov 2026): in session (the live quote service's market state, else the NSE calendar from 09:15 IST —
+ * liveModel.optionsSessionMode, never the browser's local clock) OMON polls GET /api/live/option-chain every 2.5 s: NSE's
+ * v3 frame with the Breeze websocket overlaid on ATM ± width strikes (ui-api falls back to NSE's chain alone, polled
+ * every 30 s); outside the session the EOD route. The chain chip (shared by the smile, OI and tiles panels) comes from
+ * the payload's feed block (liveModel.liveChainSource): LIVE · BREEZE · <age> · <n>/<m> LIVE only while the band's
+ * freshest tick is seconds old, else DELAYED with its age, CLOSE after the session. A strike side served by NSE or the
+ * bhavcopy is dimmed, its source and age on hover (liveModel.chainSideFeed). Greeks stay on the chain's own IV.
  */
 import { OptionPricer, type PricerPick } from '@/components/OptionPricer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getSurveillance, getOptionChain, getOptionChainLive, getOptionHistory, type OptionChain as Chain, type OptionHistoryRow } from '@/lib/api'
+import { getSurveillance, getOptionChain, getLiveOptionChain, getOptionHistory, type OptionChain as Chain, type LiveOptionChain, type OptionHistoryRow } from '@/lib/api'
 import { BadgeChip, CHART_BOX, Chip, ErrorBox, Loading, PageHeader, Panel, SourceChip, Stat, T, fmtNum, setSubInUrl, sourceOf, useChartSize } from '@/components/terminal'
 import { useCatalogTone } from '@/lib/dataHealthStore'
 import { useLiveQuotes } from '@/lib/liveQuotes'
-import { nseDelayedSource, underlyingLiveSymbol } from '@/components/liveModel'
+import { useMarketOpen } from '@/components/shell/useFeed'
+import { chainSideFeed, isLiveWsChain, liveChainCensus, liveChainPollMs, liveChainSource, optionsSessionMode, underlyingLiveSymbol, type ChainMode, type SideFeed } from '@/components/liveModel'
 import { IvHistoryChart, useIvHistory } from '@/components/vol/IvHistoryChart'
 import { ChainStrip, greeksFor } from '@/components/vol/ChainStrip'
 import { OiTape } from '@/components/expiry/OiTape'
@@ -287,10 +296,20 @@ export function OptionChain() {
   // GO `TCS OMON 27NOV`: the expiry rides in the active-symbol store; read once on mount (and on the hand-off event below)
   const [expiry, setExpiry] = useState<string | null>(() => (typeof window === 'undefined' ? null : handoffExpiry(readActiveSymbol(), omonInitialSymbol(readHandoff()), istDay())))
   const [askedExpiry, setAskedExpiry] = useState<string | null>(expiry)   // what GO asked for, to say so when it is not listed
-  const [data, setData] = useState<Chain | null>(null)
+  const [data, setData] = useState<LiveOptionChain | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [input, setInput] = useState('')
-  const [live, setLive] = useState(() => { const d = new Date(), m = d.getHours() * 60 + d.getMinutes(); return d.getDay() >= 1 && d.getDay() <= 5 && m >= 555 && m <= 935 })
+  // the session from the live quote service's market state (else the NSE calendar from 09:15 IST), never the browser's
+  // local clock; the LIVE / EOD chips pin a mode, clicking the session's own mode follows the session again
+  const calendarOpen = useMarketOpen()
+  const ulSym = underlyingLiveSymbol(symbol)
+  const ul = useLiveQuotes(ulSym ? [ulSym] : [], { intervalMs: 3_000 })
+  const now = ul.now || Date.now()
+  const sessionMode = optionsSessionMode({ marketState: ul.market?.state ?? null, calendarOpen, nowMs: now })
+  const [modePref, setModePref] = useState<ChainMode | null>(null)
+  const live = (modePref ?? sessionMode) === 'live'
+  const choose = (m: ChainMode) => setModePref(m === sessionMode ? null : m)
+  const marketOpen = sessionMode === 'live'
   const [liveNote, setLiveNote] = useState<string | null>(null)
   const [underlyings, setUnderlyings] = useState<string[]>([])
   const [ulReady, setUlReady] = useState<'loading' | 'ok' | 'failed'>('loading')
@@ -353,7 +372,7 @@ export function OptionChain() {
     })
     const fail = (e: unknown) => { if (current()) { setData(null); setError(apiError(e, 'Option chain unavailable')) } }
     const run = !live ? eod().catch(fail)
-      : getOptionChainLive(symbol, expiry ?? undefined).then(r => { if (current()) { setData(r.data); setLiveNote(null) } })
+      : getLiveOptionChain(symbol, expiry ?? undefined).then(r => { if (current()) { setData(r.data); setLiveNote(null) } })
         .catch(e => {                                 // NSE live down or throttled: fall back to end of day
           if (!current()) return
           setLiveNote(`live chain unavailable (${apiError(e).slice(0, 80)}): showing end of day`)
@@ -404,7 +423,14 @@ export function OptionChain() {
     const next = data.expiries.find(e => e > data.expiry)
     if (next) { setRolled(data.expiry); setExpiry(next) }
   }, [data, expiry])
-  useEffect(() => { if (!live) return; const iv = setInterval(() => load(true), 30_000); return () => clearInterval(iv) }, [live, load])
+  // in session: every 2.5 s while the live chain can tick, 30 s on NSE's chain alone (liveModel.liveChainPollMs); never
+  // while the window is hidden. The guard above never lets a refresh supersede a slower answer for the same selection.
+  const pollMs = live ? liveChainPollMs(data) : 0
+  useEffect(() => {
+    if (!pollMs) return
+    const iv = setInterval(() => { if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return; load(true) }, pollMs)
+    return () => clearInterval(iv)
+  }, [pollMs, load])
   useEffect(() => {
     getOptionChain('NIFTY').then(r => { setUnderlyings(r.data.underlyings ?? []); setUlReady('ok') }).catch(() => setUlReady('failed'))
   }, [])
@@ -461,26 +487,34 @@ export function OptionChain() {
   const unitLabel = perLot && data?.lot ? `₹ per lot of ${data.lot}` : '₹ per unit'
   const oiUnit = data?.lot ? 'contracts' : 'shares'
   const ctr = (v: number | null | undefined) => (v == null ? null : data?.lot ? v / data.lot : v)
-  // PLAN §0.5 + live program (reports/live_nse): NSE's option-chain-v3 is never LIVE — NSE refreshes it about once a
-  // minute and L-INVENTORY measured it 34–92 s behind — so in session it reads DELAYED · NSE · <age> from its own
-  // records.timestamp; otherwise the bhavcopy's date (daily data shows its date, never a clock)
-  const chainSource = data?.live ? nseDelayedSource(data.as_of ?? null, { marketOpen: true, now: Date.now(), hint: 'NSE option chain (v3), 30 s cache, NSE refreshes it about once a minute' })
+  // PLAN §0.5 + live program (reports/live_nse) + the live chain (22 Nov): the chip comes from the payload's feed block —
+  // LIVE · BREEZE · <age> · <n>/<m> LIVE only while the band's freshest tick is seconds old, DELAYED / STALE by age, NSE's
+  // chain alone DELAYED · NSE · <age> (NSE refreshes it about once a minute: never LIVE), CLOSE after the session;
+  // otherwise the bhavcopy's date (daily data shows its date, never a clock). The smile, OI and tiles panels reuse it.
+  const chainSource = data?.live ? liveChainSource(data, { now, marketOpen })
     : catTone(sourceOf(data?.date ?? null, { source: 'NSE F&O bhavcopy', hint: liveNote }), 'option_chain_eod')
+  const lw = isLiveWsChain(data) ? data : null
+  const lwCensus = lw ? liveChainCensus(lw) : null
+  /** one strike side's feed (dim + hover) on the live chain; null on any other chain (one source: the chip says it) */
+  const sideOf = (s: LiveOptionChain['rows'][number]['ce']): SideFeed | null => chainSideFeed(s, data, { now, marketOpen })
+  const DIM = 0.45
   // the underlying's spot from the live NSE quote service (Breeze websocket index / stock tick) while the chain is live
-  const ulSym = underlyingLiveSymbol(data?.symbol ?? symbol)
-  const ul = useLiveQuotes(ulSym ? [ulSym] : [], { intervalMs: 3_000, enabled: !!data?.live })
   const ulRow = ulSym ? ul.quotes[ulSym] : undefined
   const ulPriced = !!data?.live && !!ulRow && ulRow.price != null && ulRow.state !== 'unavailable'
 
   return (
     <div>
       <PageHeader code="OMON" title="Option Monitor"
-        subtitle={data ? (data.live
-          ? `${data.symbol} · NSE option chain in session (≈1 min behind) · as of ${data.as_of ?? '—'} · expiry ${data.expiry} (${data.days_to_expiry}d) · lot ${data.lot ?? '—'} · every 30 s`
+        subtitle={data ? (lw
+          ? `${data.symbol} · live chain: ${lwCensus?.priced ?? 0} of ${lwCensus?.total ?? 0} strike sides priced from Breeze trades (band ATM ± ${lw.feed.band?.width ?? '—'}, ${lwCensus?.ticking ?? 0} on the socket), ${lw.feed.base === 'eod' ? `the ${lw.feed.eod_date ?? ''} F&O bhavcopy${lw.feed.base_error ? " (NSE's chain unavailable)" : ''}` : "NSE's option chain"} elsewhere · as of ${String(lw.feed.as_of ?? '').slice(11, 19) || '—'} IST · expiry ${data.expiry} (${data.days_to_expiry}d) · lot ${data.lot ?? '—'} · every ${pollMs / 1000} s`
+          : data.live
+          ? `${data.symbol} · NSE option chain in session (≈1 min behind) · as of ${data.as_of ?? '—'} · expiry ${data.expiry} (${data.days_to_expiry}d) · lot ${data.lot ?? '—'} · every ${(pollMs || 30_000) / 1000} s`
           : `${data.symbol} · NSE F&O bhavcopy ${data.date} · expiry ${data.expiry} (${data.days_to_expiry}d) · lot ${data.lot ?? '—'} · end of day`) : 'option chain'}
         right={<form onSubmit={e => { e.preventDefault(); pick(input) }} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <Chip color={T.green} active={live} onClick={() => setLive(true)}>● LIVE</Chip>
-          <Chip color={T.muted} active={!live} onClick={() => setLive(false)}>EOD</Chip>
+          <Chip color={T.green} active={live} onClick={() => choose('live')}
+            title={sessionMode === 'live' ? 'the live chain (follows the session)' : 'pin the live chain outside the session (it reads CLOSE · <session>)'}>● LIVE</Chip>
+          <Chip color={T.muted} active={!live} onClick={() => choose('eod')}
+            title={sessionMode === 'eod' ? 'the end-of-day chain (follows the session)' : 'pin the end-of-day chain while NSE trades'}>EOD</Chip>
           <span style={{ width: 6 }} />
           {['NIFTY', 'BANKNIFTY', 'FINNIFTY'].map(s => <Chip key={s} color={T.amber} active={symbol === s} onClick={() => pick(s)}>{s}</Chip>)}
           <input list="omon-underlyings" value={input} onChange={e => setInput(e.target.value)} placeholder="F&O stock…"
@@ -489,6 +523,8 @@ export function OptionChain() {
         </form>} />
       {error && <ErrorBox error={error} onRetry={() => load()} />}
       {liveNote && <div style={{ fontSize: 11, color: T.amber, marginBottom: 8 }}>⚠ {liveNote}</div>}
+      {data?.served_by === 'nse_fallback' && <div style={{ fontSize: 11, color: T.muted, marginBottom: 8 }} data-omon-fallback>
+        Breeze overlay unavailable{data.fallback_reason ? ` (${data.fallback_reason})` : ''}: NSE&apos;s option chain alone, about a minute behind.</div>}
       {ban && ban.list.includes(symbol) && <div style={{ fontSize: 12, color: T.red, border: `1px solid ${T.red}55`, padding: '6px 10px', marginBottom: 8 }}>
         ⚑ {symbol} is in the F&O ban period{ban.date ? ` for ${ban.date}` : ''}: open interest crossed 95% of the market-wide limit, so no new positions (only closing trades) until it drops below 80%.</div>}
       {ban && ban.list.length > 0 && <div style={{ fontSize: 11, color: T.muted, marginBottom: 8 }}>
@@ -540,9 +576,9 @@ export function OptionChain() {
         {/* chain-first (FINAL ROUND B-OMON): the header strip sits directly above the chain; the tiles moved to the
             collapsed Summary panel at the bottom of the page */}
         <ChainStrip chain={data} history={ivHist.v2} surface={surface} nearSkew={nearSkew} />
-        {pricer && data.rows.some(r => r.strike === pricer.strike) && <OptionPricer data={data} pick={pricer} onClose={() => setPricer(null)} />}
+        {pricer && data.rows.some(r => r.strike === pricer.strike) && <OptionPricer data={data} pick={pricer} onClose={() => setPricer(null)} marketOpen={marketOpen} />}
         <Panel title="Chain" pad={0} accent={T.amber} style={{ marginBottom: 12 }} source={chainSource} badge="arithmetic"
-          subtitle={`calls left · puts right · OI, OI change and volume in ${oiUnit} · bars = open interest · IV only for out-of-the-money strikes · a dim price with ˢ is NSE's settlement (no trade today) · click a price for the pricer (OVME) · click a strike (or j / k + space) to pick it for OSTR`}
+          subtitle={`calls left · puts right · OI, OI change and volume in ${oiUnit} · bars = open interest · IV only for out-of-the-money strikes · a dim price with ˢ is NSE's settlement (no trade today)${lw ? " · faded cells are priced from NSE's chain or the bhavcopy, not a Breeze trade (hover: source and age)" : ''} · click a price for the pricer (OVME) · click a strike (or j / k + space) to pick it for OSTR`}
           right={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', rowGap: 4, justifyContent: 'flex-end' }} data-omon-controls>
             {picks.length > 0 && <span style={{ fontFamily: T.mono, fontSize: 11, color: T.violet }} data-omon-picks>
               {picks.map(k => num(k, k % 1 ? 1 : 0)).join(' · ')} → {SEED_NAME[Math.min(picks.length, 4)]}</span>}
@@ -590,39 +626,42 @@ export function OptionChain() {
                     ? <span style={{ color: T.dim }} title="NSE settlement price: this strike did not trade today (no IV, not a quote)">{num(side.price, 2)}<sup style={{ fontSize: 'var(--t-fs-nano)' }}>s</sup></span>
                     : num(side.price, 2)
                   const picked = picks.includes(r.strike), cur = cursor === ri
-                  const gcell = (v: string, shade: boolean, align: 'left' | 'right') => <td style={{ padding: '4px 6px', textAlign: align, color: T.cyan, opacity: 0.9, background: shade ? '#0c1018' : undefined }}>{v}</td>
+                  // the live chain: a side served by NSE's chain or the bhavcopy is faded, its source and age on hover
+                  const cf = sideOf(r.ce), pf = sideOf(r.pe)
+                  const cO = cf?.dim ? DIM : undefined, pO = pf?.dim ? DIM : undefined
+                  const gcell = (v: string, shade: boolean, align: 'left' | 'right', f?: SideFeed | null) => <td title={f?.title} style={{ padding: '4px 6px', textAlign: align, color: T.cyan, opacity: f?.dim ? DIM : 0.9, background: shade ? '#0c1018' : undefined }}>{v}</td>
                   return (
                     <tr key={r.strike} data-atm={atm ? '1' : undefined} data-strike-row={ri} data-picked={picked ? '1' : undefined}
                       style={{ borderBottom: `1px solid ${T.border}`, background: cur ? '#16202e' : atm ? '#141106' : undefined, boxShadow: cur ? `inset 2px 0 0 ${T.amber}` : undefined }}>
-                      <td style={{ padding: '4px 8px', textAlign: 'right', position: 'relative', background: itmCall ? '#0c1018' : undefined }}>
+                      <td title={cf?.title} style={{ padding: '4px 8px', textAlign: 'right', position: 'relative', background: itmCall ? '#0c1018' : undefined, opacity: cO }}>
                         <span style={{ position: 'absolute', right: 0, top: 3, bottom: 3, width: `${((r.ce.oi ?? 0) / maxOi) * 100}%`, background: `${CALL_C}33` }} />
                         <span style={{ position: 'relative', color: walls.has(r.strike) && data.resistance[0] === r.strike ? CALL_C : T.text, fontWeight: walls.has(r.strike) ? 700 : 400 }}>{lakh(inContracts(ce, 'oi', data.lot))}</span>
                       </td>
-                      <td style={{ padding: '4px 8px', textAlign: 'right', background: itmCall ? '#0c1018' : undefined }}>{chg(inContracts(ce, 'oi_chg', data.lot))}</td>
-                      <td style={{ padding: '4px 8px', textAlign: 'right', color: T.muted, background: itmCall ? '#0c1018' : undefined }}>{lakh(r.ce.volume)}</td>
-                      <td style={{ padding: '4px 8px', textAlign: 'right', color: T.violet, background: itmCall ? '#0c1018' : undefined }}>{r.ce.iv ?? ''}</td>
-                      {greeks && gcell(gfmt(gc?.delta, 'd'), itmCall, 'right')}
+                      <td title={cf?.title} style={{ padding: '4px 8px', textAlign: 'right', background: itmCall ? '#0c1018' : undefined, opacity: cO }}>{chg(inContracts(ce, 'oi_chg', data.lot))}</td>
+                      <td title={cf?.title} style={{ padding: '4px 8px', textAlign: 'right', color: T.muted, background: itmCall ? '#0c1018' : undefined, opacity: cO }}>{lakh(r.ce.volume)}</td>
+                      <td title={cf?.title} style={{ padding: '4px 8px', textAlign: 'right', color: T.violet, background: itmCall ? '#0c1018' : undefined, opacity: cO }}>{r.ce.iv ?? ''}</td>
+                      {greeks && gcell(gfmt(gc?.delta, 'd'), itmCall, 'right', cf)}
                       {greeks && hasNseDelta && gcell(gfmt(nd?.ce, 'd'), itmCall, 'right')}
-                      {greeks && gcell(gfmt(gc == null ? null : gc.thetaDay * lotMult, 't'), itmCall, 'right')}
-                      <td onClick={() => setPricer({ strike: r.strike, side: 'call' })} title="price this call (OVME)"
+                      {greeks && gcell(gfmt(gc == null ? null : gc.thetaDay * lotMult, 't'), itmCall, 'right', cf)}
+                      <td onClick={() => setPricer({ strike: r.strike, side: 'call' })} title={`price this call (OVME)${cf ? ` · ${cf.title}` : ''}`} data-side-src={r.ce.source ?? undefined}
                         style={{ padding: '4px 8px', textAlign: 'right', color: T.bright, cursor: 'pointer', textDecoration: pricer?.strike === r.strike && pricer.side === 'call' ? 'underline' : undefined,
-                                 background: pricer?.strike === r.strike && pricer.side === 'call' ? `${T.violet}33` : itmCall ? '#0c1018' : undefined }}>{px(ce)}</td>
+                                 background: pricer?.strike === r.strike && pricer.side === 'call' ? `${T.violet}33` : itmCall ? '#0c1018' : undefined, opacity: cO }}>{px(ce)}</td>
                       <td onClick={() => togglePick(r.strike)} title={picked ? 'picked for OSTR · click to drop' : 'click to pick this strike for OSTR (up to 4)'}
                         style={{ padding: '4px 10px', textAlign: 'center', color: atm ? T.bg : T.amber, background: atm ? T.amber : T.panel, fontWeight: 700, cursor: 'pointer',
                                  outline: picked ? `1px solid ${T.violet}` : undefined, outlineOffset: -2 }}>
                         {picked && <span style={{ color: atm ? T.bg : T.violet, marginRight: 4 }}>✓</span>}{num(r.strike, r.strike % 1 ? 1 : 0)}</td>
                       {greeks && gcell(gfmt(gc?.gamma, 'g'), false, 'right')}
                       {greeks && gcell(gfmt(gc == null ? null : gc.vega * lotMult, 'v'), false, 'right')}
-                      <td onClick={() => setPricer({ strike: r.strike, side: 'put' })} title="price this put (OVME)"
+                      <td onClick={() => setPricer({ strike: r.strike, side: 'put' })} title={`price this put (OVME)${pf ? ` · ${pf.title}` : ''}`} data-side-src={r.pe.source ?? undefined}
                         style={{ padding: '4px 8px', color: T.bright, cursor: 'pointer', textDecoration: pricer?.strike === r.strike && pricer.side === 'put' ? 'underline' : undefined,
-                                 background: pricer?.strike === r.strike && pricer.side === 'put' ? `${T.violet}33` : !itmCall ? '#0c1018' : undefined }}>{px(pe)}</td>
-                      {greeks && gcell(gfmt(gp == null ? null : gp.thetaDay * lotMult, 't'), !itmCall, 'left')}
+                                 background: pricer?.strike === r.strike && pricer.side === 'put' ? `${T.violet}33` : !itmCall ? '#0c1018' : undefined, opacity: pO }}>{px(pe)}</td>
+                      {greeks && gcell(gfmt(gp == null ? null : gp.thetaDay * lotMult, 't'), !itmCall, 'left', pf)}
                       {greeks && hasNseDelta && gcell(gfmt(nd?.pe, 'd'), !itmCall, 'left')}
-                      {greeks && gcell(gfmt(gp?.delta, 'd'), !itmCall, 'left')}
-                      <td style={{ padding: '4px 8px', color: T.violet, background: !itmCall ? '#0c1018' : undefined }}>{r.pe.iv ?? ''}</td>
-                      <td style={{ padding: '4px 8px', color: T.muted, background: !itmCall ? '#0c1018' : undefined }}>{lakh(r.pe.volume)}</td>
-                      <td style={{ padding: '4px 8px', background: !itmCall ? '#0c1018' : undefined }}>{chg(inContracts(pe, 'oi_chg', data.lot))}</td>
-                      <td style={{ padding: '4px 8px', position: 'relative', background: !itmCall ? '#0c1018' : undefined }}>
+                      {greeks && gcell(gfmt(gp?.delta, 'd'), !itmCall, 'left', pf)}
+                      <td title={pf?.title} style={{ padding: '4px 8px', color: T.violet, background: !itmCall ? '#0c1018' : undefined, opacity: pO }}>{r.pe.iv ?? ''}</td>
+                      <td title={pf?.title} style={{ padding: '4px 8px', color: T.muted, background: !itmCall ? '#0c1018' : undefined, opacity: pO }}>{lakh(r.pe.volume)}</td>
+                      <td title={pf?.title} style={{ padding: '4px 8px', background: !itmCall ? '#0c1018' : undefined, opacity: pO }}>{chg(inContracts(pe, 'oi_chg', data.lot))}</td>
+                      <td title={pf?.title} style={{ padding: '4px 8px', position: 'relative', background: !itmCall ? '#0c1018' : undefined, opacity: pO }}>
                         <span style={{ position: 'absolute', left: 0, top: 3, bottom: 3, width: `${((r.pe.oi ?? 0) / maxOi) * 100}%`, background: `${PUT_C}33` }} />
                         <span style={{ position: 'relative', color: data.support[0] === r.strike ? PUT_C : T.text, fontWeight: data.support[0] === r.strike ? 700 : 400 }}>{lakh(inContracts(pe, 'oi', data.lot))}</span>
                       </td>

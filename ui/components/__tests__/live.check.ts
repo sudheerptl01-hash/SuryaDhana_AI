@@ -662,8 +662,9 @@ const NC = (await import(new URL('../news/nseChart.ts', import.meta.url).href)) 
   check('L21 a file older than 4 days is STALE', SEED.chainSeedSource({ date: '2026-10-28' }, { mode: 'eod', nowMs: at(8, 30, 6), marketState: 'closed', sessionDate: '2026-11-05' }).state === 'stale')
   check('L21 stamp clock + drift', SEED.stampClock('05-Nov-2026 10:19:30') === '10:19:30' && Math.abs((SEED.spotDriftPct(24000, 24120) ?? 0) - 0.5) < 1e-9 && SEED.spotDriftPct(null, 1) === null)
   const sb = code(read('components/StrategyBuilder.tsx'))
+  // 22 Nov 2026: the seed reads the live chain (/api/live/option-chain: Breeze overlay, NSE fallback in ui-api)
   check('L21 OSTR asks the live chain only in session, EOD otherwise and as the fallback',
-    /mode === 'live'\s*\?\s*getOptionChainLive\(symbol, expiry \?\? undefined\)/.test(sb) && /return eod\(\)/.test(sb) && /modeNow\.current\(\)/.test(sb))
+    /mode === 'live'\s*\?\s*getLiveOptionChain\(symbol, expiry \?\? undefined\)/.test(sb) && /return eod\(\)/.test(sb) && /modeNow\.current\(\)/.test(sb))
   const liveTrue = sb.match(/sourceOf\([^)]*live:\s*true[^)]*\)/g) ?? []
   check('L21 the legs / payoff chips come from the seed rule; the only live:true chip is the Breeze margin answer', (sb.match(/source=\{seedSrc \?\?/g) ?? []).length === 2
     && liveTrue.length === 1 && /source: 'BREEZE'/.test(liveTrue[0]), liveTrue)

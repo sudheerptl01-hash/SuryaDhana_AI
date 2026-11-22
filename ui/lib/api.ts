@@ -1,5 +1,6 @@
 import axios, { type AxiosResponse } from 'axios'
 import { createSharedCache } from './sharedFetch'
+import { normaliseLiveChain } from '../components/liveModel'   // pure (no React): receipt stamp + listed expiries
 
 // Use relative paths so Next.js rewrites proxy /api/* to the backend.
 // Works both in Docker (ui-api:8000 internal) and local dev (localhost:8010).
@@ -758,6 +759,55 @@ export const getOptionChain = (symbol: string, expiry?: string) =>
   client.get<OptionChain>(`/api/market/option-chain/${encodeURIComponent(symbol)}`, { params: { expiry }, timeout: 30000 })
 export const getOptionChainLive = (symbol: string, expiry?: string) =>
   client.get<OptionChain>(`/api/market/option-chain-live/${encodeURIComponent(symbol)}`, { params: { expiry }, timeout: 40000 })
+
+// The live option chain (22 Nov 2026): GET /api/live/option-chain/{symbol} (ui-api routers/live_option_chain.py) ←
+// data-service /live/option-chain (live_chain.py PAYLOAD_DOC). NSE's v3 frame (else the last F&O bhavcopy) with the Breeze
+// websocket overlaid on ATM ± width strikes, recomputed by the one chain(); ui-api falls back to NSE's chain alone
+// (`served_by: 'nse_fallback'`, no feed block). Chips / dimming: components/liveModel.ts (liveChainSource, chainSideFeed).
+export type LiveChainSideSource = 'breeze_ws' | 'nse' | 'eod'
+export interface LiveOptionSide extends OptionSide {
+  traded?: boolean; oi_contracts?: number | null; oi_chg_contracts?: number | null
+  /** breeze_ws (a live tick overlaid) | nse (NSE option-chain v3) | eod (the last F&O bhavcopy) */
+  source?: LiveChainSideSource | null
+  /** where the shown PRICE comes from: breeze_ws only when the contract traded today on the socket; an untraded live
+   *  strike keeps the base frame's price (nse | eod) while `source` stays breeze_ws (its OI / book / volume are live) */
+  price_source?: LiveChainSideSource | null
+  /** seconds since the tick arrived (breeze_ws) or since the base frame's own stamp, at the server's as_of */
+  age_s?: number | null
+  /** live | quiet | stale | not_vouched | feed_unhealthy | other_session | waiting_first_tick | not_subscribed | over_cap |
+   *  error | feed_off | no_master | outside_band */
+  tick_state?: string | null
+  key?: string | null; ltp?: number | null; bid?: number | null; ask?: number | null
+  /** shares (one lot = the chain's lot) */
+  bid_qty?: number | null; ask_qty?: number | null
+  ltt?: string | null; prev_close?: number | null; error?: string | null
+}
+export interface LiveChainFeed {
+  as_of: string | null; nse_as_of: string | null; eod_date: string | null; base: 'nse' | 'eod' | null; base_error: string | null
+  base_age_s: number | null; counts: Record<LiveChainSideSource, number>; master_error?: string | null
+  band: { centre: number | null; atm: number | null; step: number | null; width: number; strikes: number[]; recentred_at: string | null; pending_s: number | null }
+  underlying?: { name: string; price: number | null; source: string | null; tick_state: string; age_s: number | null }
+  futures?: { expiry: string; key: string; price: number | null; age_s: number | null; state: string }[]
+  expiry?: { chosen: string | null; source: string | null; requested: string | null; note: string | null; master_expiries: string[] }
+  subscription?: { engine: string; enabled: boolean; healthy: boolean; keys: number; live: number; subscribed: number
+    waiting_first_tick: number; over_cap: number; states?: Record<string, number>; errors?: Record<string, string>; cap?: number }
+  oi_chg_basis?: string[] | null; prev_oi_date?: string | null; lot?: number | null; lot_source?: string | null
+  rules?: { fresh_s: number; quiet_live_s: number; recentre_strikes: number; recentre_hold_s: number; memo_s: number }
+}
+export interface LiveOptionChain extends Omit<OptionChain, 'rows'> {
+  rows: { strike: number; band?: boolean; ce: LiveOptionSide; pe: LiveOptionSide }[]
+  t_days?: number | null; base?: 'nse' | 'eod' | null
+  /** the chain-level feed block; absent on ui-api's NSE fallback */
+  feed?: LiveChainFeed | null
+  /** which upstream answered: data-service's live chain, or NSE's chain alone */
+  served_by?: 'live_chain' | 'nse_fallback'
+  fallback_reason?: string | null
+  /** epoch ms this window received it (stamped by the getter: the snapshot clock for its chip) */
+  received_at?: number
+}
+export const getLiveOptionChain = (symbol: string, expiry?: string, width?: number) =>
+  client.get<LiveOptionChain>(`/api/live/option-chain/${encodeURIComponent(symbol)}`, { params: { expiry, width }, timeout: 40000 })
+    .then(r => ({ ...r, data: normaliseLiveChain(r.data, Date.now()) }))
 
 // Index F&O positioning by participant (FII / DII / Pro / Client)
 export interface ParticipantRow {

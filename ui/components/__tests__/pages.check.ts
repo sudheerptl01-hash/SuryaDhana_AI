@@ -601,8 +601,10 @@ const MINUS = '−'
   check('P1 no page keeps a request guard in useMemo', memoLeft.length === 0, memoLeft)
   const useSeq = src('components/useRequestSeq.ts')
   check('P1 useRequestSeq: one guard per mount in a ref, cancelled on unmount', useSeq.includes('useRef<RequestSeq | null>(null)') && useSeq.includes('useEffect(() => () => seq.cancel(), [seq])'))
+  // 22 Nov 2026: the cadence follows the chain on screen (liveModel.liveChainPollMs: 2.5 s live chain, 30 s NSE alone)
   check('P1 OMON refresh skips a tick while the same selection is in flight', ocs.includes('if (refresh && seq.busy(selection)) return')
-    && ocs.includes('setInterval(() => load(true), 30_000)') && ocs.includes('void run.finally(() => seq.settle(mine))'))
+    && ocs.includes('const pollMs = live ? liveChainPollMs(data) : 0') && ocs.includes("document.visibilityState === 'hidden') return; load(true) }, pollMs)")
+    && ocs.includes('void run.finally(() => seq.settle(mine))'))
   {
     const q = R.createRequestSeq()
     const a = q.begin('NIFTY|x|live')
