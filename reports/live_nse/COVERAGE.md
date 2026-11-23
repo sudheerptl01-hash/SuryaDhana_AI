@@ -156,3 +156,19 @@
   while its Breeze-priced sides are ≤ 10 s old; other sides dimmed); OSTR's seed is LIVE only as a ≤ 10 s snapshot; BRF's
   expected move is live; PCR, max pain and walls keep an NSE chip (they mix live and NSE OI).
 - Closed-market audit 44/44 both engines (05:30). Market-hours proof: the 23 Nov 09:26 acceptance.
+
+## 23 Nov market-hours acceptance (audit 09:26-09:39; the other checks ran 11:07-11:17, not at the open)
+
+- Proven: the 08:00 login (authenticator, no OTP pending); audit 44/44 in both engines; all 12 sector names `breeze_ws` live
+  (max age 0.2 s over 15 s; NIFTY PRIVATE BANK streams; both FINNIFTY spellings agree); NIFTY chain 42/42 band sides live
+  (max 1.5 s), 0 collisions, 0 first-tick mismatches; the socket dropped 4 times since 05:28 (08:45:01 for 24 s, 10:45:02 for
+  1.2 s among them) and the gap detector caught them.
+- NOT proven: the correctness of NSE-confirmed rows. 45 names, 9 min: 88 confirmed samples on 3 names (max age 185 s), and
+  none had a later trade inside the window to check against, so "0 wrong" is vacuous. NextApi 17 calls in 544 s.
+- Cap: with `LIVE_TICKS_MAX_OPTIONS=60` two chains (86 keys) do not fit: BANKNIFTY had 12 live / 26 `over_cap`, and OMON showed
+  17/122 LIVE during the audit (60 - 43 = 17). Owner approved 90; due 15:52.
+- Open: `unmapped_ticks` 0 at 09:26, 16 at 11:07, 25 at 11:09, rising with contract subscriptions (suspected: a tick between
+  the join and the token registration; unproven). First visit to EQS in Chromium read STALE · NSE EOD · 66h · 42/60 LIVE (18
+  rows still on Friday's close); WebKit's later visit was all LIVE. Also STALE / OFFLINE while the audit passed: BRF
+  (13 Nov), the scanner (14 Oct), GPLN (OFFLINE). The audit's live rule is met by one fresh chip per page, so a pane that
+  should be LIVE and is not does not fail it. The "re-subscribed N s ago" wording was not observed.

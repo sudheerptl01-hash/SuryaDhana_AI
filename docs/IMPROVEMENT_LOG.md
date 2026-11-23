@@ -5,6 +5,12 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**23 Nov 2026, market-hours acceptance: sectors and the NIFTY chain live; confirmed rows and the option cap are not settled.**
+- 44/44 pages, 12 sector names, NIFTY 42/42 band sides. The NSE-confirmation sample could not be checked (0 of 88 had a later
+  trade), a cap of 60 starved the second chain (90 due 15:52), `unmapped_ticks` rises with contract subscriptions.
+- Process: 51e705a9 was pushed without a secret scan, a82274fd with a keyword check only, and the scans since 22 Nov skipped
+  values under 8 characters. All five commits were rescanned on 23 Nov against 20 values, short ones included: no hits.
+
 **23 Nov 2026, 05:30: option chains live on the Breeze websocket (OMON, OSTR, BRF).**
 - NSE F&O contracts stream through the existing tick engine (tokens from ICICI's F&O master, rebuilt daily; a collision
   guard against cash tokens; a first-tick check; a separate cap), and `/live/option-chain/{symbol}` overlays the band's
