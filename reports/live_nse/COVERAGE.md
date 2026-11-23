@@ -139,5 +139,20 @@
   allIndices copy, labelled DELAYED per row. One Breeze token may now serve several spellings of an index (the sector board
   asks NSE's 'NIFTY FINANCIAL SERVICES', OMON asks 'NIFTY FIN SERVICE'); NIFTY PRIVATE BANK resolves to the master's
   'NIFTY PVT BANK' (streaming unproven until the open). The sector chip's fallback age now uses allIndices' own stamp.
-- **Still NSE by design**: breadth, 30d / 1y, P/E, P/B, yield (aggregates Breeze does not publish); the heatmap's ~300 names;
-  the option chain (live option contracts are the next build).
+- **Still NSE by design**: breadth, 30d / 1y, P/E, P/B, yield (aggregates Breeze does not publish); the heatmap's ~300 names.
+
+## 23 Nov: live option chains on the Breeze websocket (deployed 05:30; release 20261123-052840-9e3278e)
+
+- data-service `GET /live/option-chain/{symbol}?expiry=&width=` (`live_chain.py`): NSE option-chain v3 as the base (else
+  the last F&O bhavcopy), live Breeze ticks overlaid on ATM ± width (default 10) for strikes whose tick is fresh or
+  vouched quiet, then the unchanged `option_chain.chain()` (one IV method). Per side `source`, `price_source` (breeze_ws
+  only when the contract traded today on the socket), `tick_state`, `age_s`; a `feed` block. Expiries are read from ICICI's
+  master; the band recentres with hysteresis; an NSE failure is remembered 30 s.
+- live_ticks takes `NFO:<SYM>:<YYYY-MM-DD>:<STRIKE>:<CE|PE>` / `:FUT` contracts: tokens from FONSEScripMaster.txt (never
+  the SDK lookup, which fails silently), maps rebuilt per IST date (F&O tokens are reused), a cash-token collision guard,
+  a first-tick contract check, OI kept, no 25 % clamp, a separate cap (`LIVE_TICKS_MAX_OPTIONS`, 60 on the 23 Nov expiry
+  day, default 90). Option ticks are not persisted yet.
+- ui-api `GET /api/live/option-chain/{symbol}` with an NSE fallback. OMON polls it every 2.5 s in session (chip LIVE only
+  while its Breeze-priced sides are ≤ 10 s old; other sides dimmed); OSTR's seed is LIVE only as a ≤ 10 s snapshot; BRF's
+  expected move is live; PCR, max pain and walls keep an NSE chip (they mix live and NSE OI).
+- Closed-market audit 44/44 both engines (05:30). Market-hours proof: the 23 Nov 09:26 acceptance.

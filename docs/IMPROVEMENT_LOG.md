@@ -5,6 +5,13 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**23 Nov 2026, 05:30: option chains live on the Breeze websocket (OMON, OSTR, BRF).**
+- NSE F&O contracts stream through the existing tick engine (tokens from ICICI's F&O master, rebuilt daily; a collision
+  guard against cash tokens; a first-tick check; a separate cap), and `/live/option-chain/{symbol}` overlays the band's
+  live ticks on NSE's v3 chain before the unchanged IV maths. Review before the deploy: the equity / index path is
+  identical on a scripted day (GO). Untraded strikes keep NSE's price and say so (`price_source`). Option cap 60 on the
+  expiry day. Commits 67ac7e2e (backend), 9e3278ec (UI); `reports/live_nse/COVERAGE.md`, 23 Nov section.
+
 **22 Nov 2026: quiet names stay LIVE on NSE's confirmation; sector indices live; one Breeze token, several names.**
 - Owner approved (6 Nov decisions, "yes to all"). A genuinely quiet stock past 120 s stays LIVE while NSE's own copy shows the
   same price and volume after the last tick; every false-LIVE path the two 6 Nov reviews found is closed (transport gaps,
