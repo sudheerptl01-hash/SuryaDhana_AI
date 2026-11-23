@@ -172,3 +172,16 @@
   rows still on Friday's close); WebKit's later visit was all LIVE. Also STALE / OFFLINE while the audit passed: BRF
   (13 Nov), the scanner (14 Oct), GPLN (OFFLINE). The audit's live rule is met by one fresh chip per page, so a pane that
   should be LIVE and is not does not fail it. The "re-subscribed N s ago" wording was not observed.
+
+### 23 Nov, 12:27-15:25: NSE-confirmed rows judged against the next trade (45 stocks at 40-220 trades a day, polled every 5 s)
+
+- 1,166 confirmed spells on 40 stocks. Decidable: 641 (the next print was one trade): 616 right; 25 where that trade was already
+  done when the row still read LIVE, all by <= 6 s (15 at a different price), about the poll + 2 s cache + delivery delay; none
+  longer. Not decidable: 486 (several trades before the next print) and 39 (no later Breeze print; NSE showed no more volume).
+- So: no dead token and no long wrong-LIVE was seen in one afternoon; 45 % of the spells could not be judged. A first pass that
+  counted samples instead of spells (17,546 "right", 4 "wrong") used a later trade's time and is superseded.
+- 530 of the 1,153 spells that ended went to STALE: 45 quiet stocks at once exceed the queue's capacity (about 24-26), so rows
+  flip LIVE / STALE. NextApi 1,578 calls in 3 h, at most 19 in about 120 s (ceiling 20).
+- EQS cold start (40 unsubscribed stocks, 12:27): median 4.1 s to live, p90 26 s, 39/40 within 75 s; until then Friday's close reads
+  STALE. GPLN's OFFLINE chip: the tile works, its as_of is '23-Nov-2026 12:25' (not ISO). BRF (13 Nov) and the scanner (14 Oct)
+  are honest: their scans have not been run since.
